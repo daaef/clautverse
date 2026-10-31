@@ -36,6 +36,13 @@
       "when": 1793454130152,
       "tag": "0004_misty_gorilla_man",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793454323951,
+      "tag": "0005_mean_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

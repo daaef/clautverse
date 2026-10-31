@@ -294,3 +294,26 @@ export const badgeAward = pgTable('badge_award', {
   awardedBy: text('awarded_by'),
   awardedAt: timestamp('awarded_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [primaryKey({ columns: [t.badgeId, t.userId] }), index('badge_award_user_idx').on(t.userId, t.awardedAt)])
+
+// Decision 12: event listing + external link + "I'm going". Times stored UTC; timeZone is for display.
+export const watchParty = pgTable('watch_party', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  communityId: uuid('community_id').notNull().references(() => community.id),
+  hostId: text('host_id').references(() => user.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }),
+  timeZone: text('time_zone').notNull(),
+  link: text('link'),
+  status: text('status', { enum: ['scheduled', 'live', 'ended', 'cancelled'] }).notNull().default('scheduled'),
+  rsvpCount: integer('rsvp_count').notNull().default(0),
+  reminderSentAt: timestamp('reminder_sent_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [index('watch_party_start_idx').on(t.startsAt, t.id), index('watch_party_community_idx').on(t.communityId, t.startsAt)])
+
+export const watchPartyRsvp = pgTable('watch_party_rsvp', {
+  partyId: uuid('party_id').notNull().references(() => watchParty.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.partyId, t.userId] })])

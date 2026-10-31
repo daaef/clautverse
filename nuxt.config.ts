@@ -11,6 +11,7 @@ export default defineNuxtConfig({
     cursorSecret: '',
     appVersion: 'dev',
     authRateLimitEnabled: true,
+    cronSecret: '',
   },
   nitro: {
     errorHandler: '~~/server/error-handler.ts',

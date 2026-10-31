@@ -9,6 +9,7 @@ export const testEnv = {
   NUXT_BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-1234',
   NUXT_BETTER_AUTH_URL: 'http://localhost',
   NUXT_CURSOR_SECRET: 'cursor-secret',
+  NUXT_CRON_SECRET: 'test-cron-secret',
   NUXT_AUTH_RATE_LIMIT_ENABLED: 'false',
 }
 
