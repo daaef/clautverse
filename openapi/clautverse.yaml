@@ -761,7 +761,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-10
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -894,7 +894,7 @@ paths:
       tags:
       - DIS
       x-route-id: DIS-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1688,7 +1688,7 @@ paths:
       tags:
       - TAL
       x-route-id: TAL-06
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1701,7 +1701,7 @@ paths:
       tags:
       - TAL
       x-route-id: TAL-07
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
