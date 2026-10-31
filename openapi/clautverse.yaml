@@ -780,7 +780,7 @@ paths:
       tags:
       - FEED
       x-route-id: FEED-02
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -907,7 +907,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -920,7 +920,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-05
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -938,7 +938,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-02
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -956,7 +956,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-03
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -975,7 +975,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-04
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -994,7 +994,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-07
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1012,7 +1012,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-06
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1031,7 +1031,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-08
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1049,7 +1049,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-09
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1068,7 +1068,7 @@ paths:
       tags:
       - FEED
       x-route-id: FEED-01
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: communityId
         in: query
@@ -1550,7 +1550,7 @@ paths:
       tags:
       - DROP
       x-route-id: DROP-10
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
