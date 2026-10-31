@@ -16,7 +16,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-02
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: status
         in: query
@@ -45,7 +45,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-03
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -64,7 +64,26 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-04
-      x-status: planned
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/applications/{id}/decline:
+    post:
+      operationId: ADM_05
+      summary: ADM-04 POST /api/admin/applications/:id/decline · ADM-05 .../decline
+      tags:
+      - ADM
+      x-route-id: ADM-05
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -240,7 +259,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-06
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: status
         in: query
@@ -259,7 +278,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-07
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -278,7 +297,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-07b
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -297,7 +316,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-07a
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -366,7 +385,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1063,7 +1082,7 @@ paths:
       tags:
       - TAL
       x-route-id: TAL-05
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1554,7 +1573,7 @@ paths:
       tags:
       - TAL
       x-route-id: TAL-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1567,7 +1586,7 @@ paths:
       tags:
       - TAL
       x-route-id: TAL-03
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1586,7 +1605,7 @@ paths:
       tags:
       - TAL
       x-route-id: TAL-02
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1712,7 +1731,7 @@ paths:
       tags:
       - TAL
       x-route-id: TAL-04
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
