@@ -44,3 +44,11 @@ describe('API Reference ↔ openapi/clautverse.yaml', () => {
           expect(indexed.has(id!), `${id} in ${f}`).toBe(true)
   })
 })
+
+describe('API Reference index completeness', () => {
+  it('every non-deferred route lists its endpoint', () => {
+    const index = readFileSync(new URL('../../content/99.api-reference/0.index.md', import.meta.url), 'utf8')
+    const missing = [...index.matchAll(/^\| ([A-Z]+-\d+[a-z]?) \| — \| (\w+) \|/gm)].filter(m => m[2] !== 'deferred').map(m => m[1])
+    expect(missing).toEqual([])
+  })
+})

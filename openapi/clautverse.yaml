@@ -514,6 +514,25 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+  /api/admin/users/{id}/reinstate:
+    post:
+      operationId: ADM_11a
+      summary: ADM-11 POST /api/admin/users/:id/suspend · ADM-11a .../reinstate
+      tags:
+      - ADM
+      x-route-id: ADM-11a
+      x-status: planned
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
   /api/admin/xp-adjustments:
     post:
       operationId: ADM_17
@@ -1209,6 +1228,25 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-09
+      x-status: planned
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/mission-completions/{id}/reject:
+    post:
+      operationId: MIS_10
+      summary: MIS-09 POST /api/mission-completions/:id/approve · MIS-10 .../reject
+      tags:
+      - MIS
+      x-route-id: MIS-10
       x-status: planned
       parameters:
       - name: id
