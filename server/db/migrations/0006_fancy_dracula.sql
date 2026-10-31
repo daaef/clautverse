@@ -1,0 +1,1 @@
+ALTER TABLE "talent" ADD COLUMN "links" jsonb DEFAULT '[]'::jsonb NOT NULL;

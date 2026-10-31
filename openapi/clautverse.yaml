@@ -1,0 +1,2047 @@
+# Clautverse API contract (machine-readable source of truth).
+# guide/content/99.api-reference must agree with this file; guide/tests/unit/openapi-sync.test.ts enforces it.
+openapi: 3.1.0
+info:
+  title: Clautverse API
+  version: 2.0.0
+  description: 'Approved Clautverse API contract (v2). Unversioned /api paths; additive-only changes. x-status: implemented
+    | planned | deferred.'
+servers:
+- url: /
+paths:
+  /api/admin/applications:
+    get:
+      operationId: ADM_02
+      summary: ADM-02 GET /api/admin/applications?status=&limit=&cursor=
+      tags:
+      - ADM
+      x-route-id: ADM-02
+      x-status: implemented
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/applications/{id}:
+    get:
+      operationId: ADM_03
+      summary: ADM-03 GET /api/admin/applications/:id
+      tags:
+      - ADM
+      x-route-id: ADM-03
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/applications/{id}/accept:
+    post:
+      operationId: ADM_04
+      summary: ADM-04 POST /api/admin/applications/:id/accept · ADM-05 .../decline
+      tags:
+      - ADM
+      x-route-id: ADM-04
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/applications/{id}/decline:
+    post:
+      operationId: ADM_05
+      summary: ADM-04 POST /api/admin/applications/:id/decline · ADM-05 .../decline
+      tags:
+      - ADM
+      x-route-id: ADM-05
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/audit:
+    get:
+      operationId: ADM_14
+      summary: ADM-14 GET /api/admin/audit?actorId=&targetType=&targetId=&from=&to=
+      tags:
+      - ADM
+      x-route-id: ADM-14
+      x-status: implemented
+      parameters:
+      - name: actorId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: targetType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: targetId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/badges:
+    get:
+      operationId: ADM_16_get_api_admin_badges
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-16
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: ADM_16_patch_api_admin_badges
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-16
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: ADM_16_post_api_admin_badges
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-16
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/badges/{id}:
+    get:
+      operationId: ADM_16_get_api_admin_badges_id
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-16
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: ADM_16_patch_api_admin_badges_id
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-16
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: ADM_16_post_api_admin_badges_id
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-16
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/badges/{id}/awards:
+    post:
+      operationId: ADM_16b
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-16b
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/claims:
+    get:
+      operationId: ADM_06
+      summary: ADM-06 GET /api/admin/claims?status= · ADM-07 GET /api/admin/claims/:id
+      tags:
+      - ADM
+      x-route-id: ADM-06
+      x-status: implemented
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/claims/{id}:
+    get:
+      operationId: ADM_07
+      summary: ADM-06 GET /api/admin/claims?status= · ADM-07 GET /api/admin/claims/:id
+      tags:
+      - ADM
+      x-route-id: ADM-07
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/claims/{id}/reject:
+    post:
+      operationId: ADM_07b
+      summary: ADM-07a POST /api/admin/claims/:id/verify · ADM-07b POST /api/admin/claims/:id/reject
+      tags:
+      - ADM
+      x-route-id: ADM-07b
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/claims/{id}/verify:
+    post:
+      operationId: ADM_07a
+      summary: ADM-07a POST /api/admin/claims/:id/verify · ADM-07b POST /api/admin/claims/:id/reject
+      tags:
+      - ADM
+      x-route-id: ADM-07a
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/communities:
+    get:
+      operationId: ADM_08a
+      summary: ADM-08a GET /api/admin/communities?status=
+      tags:
+      - ADM
+      x-route-id: ADM-08a
+      x-status: implemented
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: ADM_08
+      summary: ADM-08 POST /api/admin/communities
+      tags:
+      - ADM
+      x-route-id: ADM-08
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/communities/{id}/veto:
+    post:
+      operationId: ADM_09
+      summary: ADM-09 POST /api/admin/communities/:id/veto · ADM-09a .../restore
+      tags:
+      - ADM
+      x-route-id: ADM-09
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/communities/{id}/restore:
+    post:
+      operationId: ADM_09a
+      summary: ADM-09 POST /api/admin/communities/:id/veto · ADM-09a .../restore
+      tags:
+      - ADM
+      x-route-id: ADM-09a
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/dashboard:
+    get:
+      operationId: ADM_01
+      summary: ADM-01 GET /api/admin/dashboard
+      tags:
+      - ADM
+      x-route-id: ADM-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/missions:
+    get:
+      operationId: ADM_18
+      summary: ADM-18 GET /api/admin/missions
+      tags:
+      - ADM
+      x-route-id: ADM-18
+      x-status: deferred
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/reports:
+    get:
+      operationId: ADM_12
+      summary: ADM-12 GET /api/admin/reports?status=&targetType=
+      tags:
+      - ADM
+      x-route-id: ADM-12
+      x-status: implemented
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: targetType
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/reports/{id}/actions:
+    post:
+      operationId: ADM_13
+      summary: ADM-13 POST /api/admin/reports/:id/actions
+      tags:
+      - ADM
+      x-route-id: ADM-13
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/users:
+    get:
+      operationId: ADM_10
+      summary: ADM-10 GET /api/admin/users?q=&status=&role=
+      tags:
+      - ADM
+      x-route-id: ADM-10
+      x-status: implemented
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: role
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/users/{id}/suspend:
+    post:
+      operationId: ADM_11
+      summary: ADM-11 POST /api/admin/users/:id/suspend · ADM-11a .../reinstate
+      tags:
+      - ADM
+      x-route-id: ADM-11
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/users/{id}/reinstate:
+    post:
+      operationId: ADM_11a
+      summary: ADM-11 POST /api/admin/users/:id/suspend · ADM-11a .../reinstate
+      tags:
+      - ADM
+      x-route-id: ADM-11a
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/xp-adjustments:
+    post:
+      operationId: ADM_17
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-17
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/xp-rules:
+    get:
+      operationId: ADM_15_get_api_admin_xp_rules
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-15
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: ADM_15_put_api_admin_xp_rules
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
+        · ADM-17 POST /api/admin/xp-adjustments
+      tags:
+      - ADM
+      x-route-id: ADM-15
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/request-password-reset:
+    post:
+      operationId: AUTH_04_post_api_auth_request_password_reset
+      summary: 'AUTH-04 Password reset: request + confirm (Better Auth)'
+      tags:
+      - AUTH
+      x-route-id: AUTH-04
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/reset-password:
+    post:
+      operationId: AUTH_04_post_api_auth_reset_password
+      summary: 'AUTH-04 Password reset: request + confirm (Better Auth)'
+      tags:
+      - AUTH
+      x-route-id: AUTH-04
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/send-verification-email:
+    post:
+      operationId: AUTH_04b_post_api_auth_send_verification_email
+      summary: 'AUTH-04b Email verification: verify link + resend (Better Auth)'
+      tags:
+      - AUTH
+      x-route-id: AUTH-04b
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/sign-in/email:
+    post:
+      operationId: AUTH_02
+      summary: AUTH-02 POST /api/auth/sign-in/email (Better Auth)
+      tags:
+      - AUTH
+      x-route-id: AUTH-02
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/sign-out:
+    post:
+      operationId: AUTH_03
+      summary: AUTH-03 POST /api/auth/sign-out (Better Auth)
+      tags:
+      - AUTH
+      x-route-id: AUTH-03
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/sign-up/email:
+    post:
+      operationId: AUTH_01
+      summary: AUTH-01 POST /api/auth/sign-up/email (Better Auth)
+      tags:
+      - AUTH
+      x-route-id: AUTH-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/username-check:
+    get:
+      operationId: AUTH_05
+      summary: AUTH-05 GET /api/auth/username-check?username=
+      tags:
+      - AUTH
+      x-route-id: AUTH-05
+      x-status: implemented
+      parameters:
+      - name: username
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/auth/verify-email:
+    get:
+      operationId: AUTH_04b_get_api_auth_verify_email
+      summary: 'AUTH-04b Email verification: verify link + resend (Better Auth)'
+      tags:
+      - AUTH
+      x-route-id: AUTH-04b
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/badges:
+    get:
+      operationId: BDG_02
+      summary: BDG-02 GET /api/badges
+      tags:
+      - BDG
+      x-route-id: BDG-02
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/badges/me:
+    get:
+      operationId: BDG_01
+      summary: BDG-01 GET /api/badges/me
+      tags:
+      - BDG
+      x-route-id: BDG-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/categories:
+    get:
+      operationId: CAT_01
+      summary: CAT-01 GET /api/categories
+      tags:
+      - CAT
+      x-route-id: CAT-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/communities:
+    get:
+      operationId: COM_01
+      summary: COM-01 GET /api/communities
+      tags:
+      - COM
+      x-route-id: COM-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/communities/{id}:
+    get:
+      operationId: COM_02
+      summary: COM-02 GET /api/communities/:id
+      tags:
+      - COM
+      x-route-id: COM-02
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: COM_10
+      summary: COM-10 PATCH /api/communities/:id
+      tags:
+      - COM
+      x-route-id: COM-10
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/communities/{id}/drops:
+    get:
+      operationId: FEED_02
+      summary: FEED-02 GET /api/communities/:id/drops
+      tags:
+      - FEED
+      x-route-id: FEED-02
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/communities/{id}/join:
+    post:
+      operationId: COM_03
+      summary: COM-03 POST /api/communities/:id/join
+      tags:
+      - COM
+      x-route-id: COM-03
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/communities/{id}/leave:
+    post:
+      operationId: COM_04
+      summary: COM-04 POST /api/communities/:id/leave
+      tags:
+      - COM
+      x-route-id: COM-04
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/communities/{id}/members:
+    get:
+      operationId: COM_07
+      summary: COM-07 GET /api/communities/:id/members
+      tags:
+      - COM
+      x-route-id: COM-07
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/communities/{id}/originals:
+    get:
+      operationId: COM_08
+      summary: COM-08 GET /api/communities/:id/originals
+      tags:
+      - COM
+      x-route-id: COM-08
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/countries:
+    get:
+      operationId: CAT_02
+      summary: CAT-02 GET /api/countries?categoryId=
+      tags:
+      - CAT
+      x-route-id: CAT-02
+      x-status: implemented
+      parameters:
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/discover:
+    get:
+      operationId: DIS_01
+      summary: DIS-01 GET /api/discover
+      tags:
+      - DIS
+      x-route-id: DIS-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/drops:
+    post:
+      operationId: DROP_01
+      summary: DROP-01 POST /api/drops
+      tags:
+      - DROP
+      x-route-id: DROP-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/drops/{id}:
+    delete:
+      operationId: DROP_05
+      summary: DROP-05 DELETE /api/drops/:id
+      tags:
+      - DROP
+      x-route-id: DROP-05
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      operationId: DROP_02
+      summary: DROP-02 GET /api/drops/:id
+      tags:
+      - DROP
+      x-route-id: DROP-02
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: DROP_03
+      summary: DROP-03 PATCH /api/drops/:id
+      tags:
+      - DROP
+      x-route-id: DROP-03
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/drops/{id}/publish:
+    post:
+      operationId: DROP_04
+      summary: DROP-04 POST /api/drops/:id/publish
+      tags:
+      - DROP
+      x-route-id: DROP-04
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/drops/{id}/reactions/me:
+    delete:
+      operationId: DROP_07
+      summary: DROP-07 DELETE /api/drops/:id/reactions/me
+      tags:
+      - DROP
+      x-route-id: DROP-07
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: DROP_06
+      summary: DROP-06 PUT /api/drops/:id/reactions/me
+      tags:
+      - DROP
+      x-route-id: DROP-06
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/drops/{id}/replies:
+    get:
+      operationId: DROP_08
+      summary: DROP-08 GET /api/drops/:id/replies
+      tags:
+      - DROP
+      x-route-id: DROP-08
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: DROP_09
+      summary: DROP-09 POST /api/drops/:id/replies
+      tags:
+      - DROP
+      x-route-id: DROP-09
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/feed:
+    get:
+      operationId: FEED_01
+      summary: FEED-01 GET /api/feed?communityId=&from=&to=&limit=&cursor=
+      tags:
+      - FEED
+      x-route-id: FEED-01
+      x-status: implemented
+      parameters:
+      - name: communityId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/health:
+    get:
+      operationId: OPS_01
+      summary: OPS-01 GET /api/health
+      tags:
+      - OPS
+      x-route-id: OPS-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/identity-claims/me:
+    get:
+      operationId: TAL_05
+      summary: TAL-05 GET /api/identity-claims/me
+      tags:
+      - TAL
+      x-route-id: TAL-05
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/internal/jobs/notifications:
+    post:
+      operationId: OPS_02
+      summary: OPS-02 POST /api/internal/jobs/notifications · OPS-03 POST /api/internal/jobs/purge
+      tags:
+      - OPS
+      x-route-id: OPS-02
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/internal/jobs/purge:
+    post:
+      operationId: OPS_03
+      summary: OPS-02 POST /api/internal/jobs/notifications · OPS-03 POST /api/internal/jobs/purge
+      tags:
+      - OPS
+      x-route-id: OPS-03
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/me:
+    delete:
+      operationId: AUTH_08
+      summary: AUTH-08 DELETE /api/me
+      tags:
+      - AUTH
+      x-route-id: AUTH-08
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    get:
+      operationId: AUTH_06
+      summary: AUTH-06 GET /api/me
+      tags:
+      - AUTH
+      x-route-id: AUTH-06
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: AUTH_07
+      summary: AUTH-07 PATCH /api/me
+      tags:
+      - AUTH
+      x-route-id: AUTH-07
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/me/memberships:
+    get:
+      operationId: COM_05
+      summary: COM-05 GET /api/me/memberships
+      tags:
+      - COM
+      x-route-id: COM-05
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/memberships/{id}:
+    patch:
+      operationId: COM_06
+      summary: COM-06 PATCH /api/memberships/:id
+      tags:
+      - COM
+      x-route-id: COM-06
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/mission-completions/{id}/approve:
+    post:
+      operationId: MIS_09
+      summary: MIS-09 POST /api/mission-completions/:id/approve · MIS-10 .../reject
+      tags:
+      - MIS
+      x-route-id: MIS-09
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/mission-completions/{id}/reject:
+    post:
+      operationId: MIS_10
+      summary: MIS-09 POST /api/mission-completions/:id/approve · MIS-10 .../reject
+      tags:
+      - MIS
+      x-route-id: MIS-10
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/missions:
+    get:
+      operationId: MIS_01
+      summary: MIS-01 GET /api/missions?communityId=&status=&limit=&cursor=
+      tags:
+      - MIS
+      x-route-id: MIS-01
+      x-status: implemented
+      parameters:
+      - name: communityId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: MIS_03
+      summary: MIS-03 POST /api/missions
+      tags:
+      - MIS
+      x-route-id: MIS-03
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/missions/{id}:
+    get:
+      operationId: MIS_02
+      summary: MIS-02 GET /api/missions/:id
+      tags:
+      - MIS
+      x-route-id: MIS-02
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/missions/{id}/approve:
+    post:
+      operationId: MIS_04
+      summary: MIS-04 POST /api/missions/:id/approve / MIS-05 POST /api/missions/:id/reject
+      tags:
+      - MIS
+      x-route-id: MIS-04
+      x-status: deferred
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/missions/{id}/completions:
+    get:
+      operationId: MIS_08
+      summary: MIS-08 GET /api/missions/:id/completions
+      tags:
+      - MIS
+      x-route-id: MIS-08
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: MIS_06
+      summary: MIS-06 POST /api/missions/:id/completions
+      tags:
+      - MIS
+      x-route-id: MIS-06
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/missions/{id}/completions/me:
+    get:
+      operationId: MIS_07
+      summary: MIS-07 GET /api/missions/:id/completions/me
+      tags:
+      - MIS
+      x-route-id: MIS-07
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/missions/{id}/reject:
+    post:
+      operationId: MIS_05
+      summary: MIS-04 POST /api/missions/:id/approve / MIS-05 POST /api/missions/:id/reject
+      tags:
+      - MIS
+      x-route-id: MIS-05
+      x-status: deferred
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/notifications:
+    get:
+      operationId: NOT_01
+      summary: NOT-01 GET /api/notifications?unreadOnly=&limit=&cursor=
+      tags:
+      - NOT
+      x-route-id: NOT-01
+      x-status: implemented
+      parameters:
+      - name: unreadOnly
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/notifications/{id}/read:
+    post:
+      operationId: NOT_03
+      summary: NOT-03 POST /api/notifications/:id/read
+      tags:
+      - NOT
+      x-route-id: NOT-03
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/notifications/read-all:
+    post:
+      operationId: NOT_04
+      summary: NOT-04 POST /api/notifications/read-all
+      tags:
+      - NOT
+      x-route-id: NOT-04
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/notifications/unread-count:
+    get:
+      operationId: NOT_02
+      summary: NOT-02 GET /api/notifications/unread-count
+      tags:
+      - NOT
+      x-route-id: NOT-02
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/onboarding:
+    get:
+      operationId: ONB_01
+      summary: ONB-01 GET /api/onboarding
+      tags:
+      - ONB
+      x-route-id: ONB-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: ONB_02
+      summary: ONB-02 PUT /api/onboarding
+      tags:
+      - ONB
+      x-route-id: ONB-02
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/onboarding/complete:
+    post:
+      operationId: ONB_03
+      summary: ONB-03 POST /api/onboarding/complete
+      tags:
+      - ONB
+      x-route-id: ONB-03
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/plans:
+    get:
+      operationId: PLN_01
+      summary: PLN-01 GET /api/plans
+      tags:
+      - PLN
+      x-route-id: PLN-01
+      x-status: deferred
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/replies/{id}:
+    delete:
+      operationId: DROP_10
+      summary: DROP-10 DELETE /api/replies/:id
+      tags:
+      - DROP
+      x-route-id: DROP-10
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/reports:
+    post:
+      operationId: RPT_01
+      summary: RPT-01 POST /api/reports
+      tags:
+      - RPT
+      x-route-id: RPT-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/seasons:
+    get:
+      operationId: CAT_04
+      summary: CAT-04 GET /api/seasons?showId=
+      tags:
+      - CAT
+      x-route-id: CAT-04
+      x-status: implemented
+      parameters:
+      - name: showId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/shows:
+    get:
+      operationId: CAT_03
+      summary: CAT-03 GET /api/shows?countryId=&categoryId=&q=
+      tags:
+      - CAT
+      x-route-id: CAT-03
+      x-status: implemented
+      parameters:
+      - name: countryId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent-applications:
+    post:
+      operationId: TAL_01
+      summary: TAL-01 POST /api/talent-applications
+      tags:
+      - TAL
+      x-route-id: TAL-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent-applications/{id}:
+    patch:
+      operationId: TAL_03
+      summary: TAL-03 PATCH /api/talent-applications/:id
+      tags:
+      - TAL
+      x-route-id: TAL-03
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent-applications/me:
+    get:
+      operationId: TAL_02
+      summary: TAL-02 GET /api/talent-applications/me
+      tags:
+      - TAL
+      x-route-id: TAL-02
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent/analytics:
+    get:
+      operationId: TAL_08
+      summary: TAL-08 GET /api/talent/analytics
+      tags:
+      - TAL
+      x-route-id: TAL-08
+      x-status: deferred
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent/dashboard:
+    get:
+      operationId: TAL_06
+      summary: TAL-06 GET /api/talent/dashboard
+      tags:
+      - TAL
+      x-route-id: TAL-06
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent/profile:
+    patch:
+      operationId: TAL_07
+      summary: TAL-07 PATCH /api/talent/profile
+      tags:
+      - TAL
+      x-route-id: TAL-07
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent/subscription:
+    get:
+      operationId: PLN_02
+      summary: PLN-02 GET /api/talent/subscription, PLN-03 POST /api/talent/subscription/checkout, PLN-04 billing webhook
+      tags:
+      - PLN
+      x-route-id: PLN-02
+      x-status: deferred
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talent/subscription/checkout:
+    post:
+      operationId: PLN_03
+      summary: PLN-02 GET /api/talent/subscription, PLN-03 POST /api/talent/subscription/checkout, PLN-04 billing webhook
+      tags:
+      - PLN
+      x-route-id: PLN-03
+      x-status: deferred
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talents:
+    get:
+      operationId: CAT_05
+      summary: CAT-05 GET /api/talents?seasonId=&showId=&q=
+      tags:
+      - CAT
+      x-route-id: CAT-05
+      x-status: implemented
+      parameters:
+      - name: seasonId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: showId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talents/{id}:
+    get:
+      operationId: CAT_06
+      summary: CAT-06 GET /api/talents/:id
+      tags:
+      - CAT
+      x-route-id: CAT-06
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/talents/{id}/claims:
+    post:
+      operationId: TAL_04
+      summary: TAL-04 POST /api/talents/:id/claims
+      tags:
+      - TAL
+      x-route-id: TAL-04
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/uploads:
+    post:
+      operationId: MED_01
+      summary: MED-01 POST /api/uploads
+      tags:
+      - MED
+      x-route-id: MED-01
+      x-status: planned
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/watch-parties:
+    get:
+      operationId: WP_01
+      summary: WP-01 GET /api/watch-parties?status=upcoming|past&communityId=&limit=&cursor=
+      tags:
+      - WP
+      x-route-id: WP-01
+      x-status: implemented
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: communityId
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: WP_03
+      summary: WP-03 POST /api/watch-parties
+      tags:
+      - WP
+      x-route-id: WP-03
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/watch-parties/{id}:
+    get:
+      operationId: WP_02
+      summary: WP-02 GET /api/watch-parties/:id
+      tags:
+      - WP
+      x-route-id: WP-02
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      operationId: WP_04
+      summary: WP-04 PATCH /api/watch-parties/:id
+      tags:
+      - WP
+      x-route-id: WP-04
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/watch-parties/{id}/cancel:
+    post:
+      operationId: WP_05
+      summary: WP-05 POST /api/watch-parties/:id/cancel
+      tags:
+      - WP
+      x-route-id: WP-05
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/watch-parties/{id}/rsvp:
+    delete:
+      operationId: WP_08
+      summary: WP-07 PUT /api/watch-parties/:id/rsvp · WP-08 DELETE /api/watch-parties/:id/rsvp
+      tags:
+      - WP
+      x-route-id: WP-08
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: WP_07
+      summary: WP-07 PUT /api/watch-parties/:id/rsvp · WP-08 DELETE /api/watch-parties/:id/rsvp
+      tags:
+      - WP
+      x-route-id: WP-07
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/xp/me:
+    get:
+      operationId: XP_01
+      summary: XP-01 GET /api/xp/me
+      tags:
+      - XP
+      x-route-id: XP-01
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/xp/me/transactions:
+    get:
+      operationId: XP_02
+      summary: XP-02 GET /api/xp/me/transactions
+      tags:
+      - XP
+      x-route-id: XP-02
+      x-status: implemented
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+  schemas:
+    Error:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          - requestId
+          properties:
+            code:
+              type: string
+              enum:
+              - VALIDATION_FAILED
+              - UNAUTHENTICATED
+              - FORBIDDEN
+              - ACCOUNT_SUSPENDED
+              - EMAIL_NOT_VERIFIED
+              - NOT_FOUND
+              - CONFLICT
+              - INVALID_STATE
+              - ONBOARDING_REQUIRED
+              - FEATURE_DISABLED
+              - PAYLOAD_TOO_LARGE
+              - RATE_LIMITED
+              - INTERNAL
+            message:
+              type: string
+            requestId:
+              type:
+              - string
+              - 'null'
+            details:
+              type: object
+    Page:
+      type: object
+      required:
+      - items
+      - nextCursor
+      properties:
+        items:
+          type: array
+          items: {}
+        nextCursor:
+          type:
+          - string
+          - 'null'
+  responses:
+    Error:
+      description: Error envelope
+      headers:
+        X-Request-Id:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

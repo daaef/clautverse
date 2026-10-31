@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793452082340,
+      "tag": "0000_keen_doctor_faustus",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793452997770,
+      "tag": "0001_elite_toad_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793453730398,
+      "tag": "0002_sticky_black_tom",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793453934556,
+      "tag": "0003_rapid_nemesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793454130152,
+      "tag": "0004_misty_gorilla_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793454323951,
+      "tag": "0005_mean_gabe_jones",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793454538771,
+      "tag": "0006_fancy_dracula",
+      "breakpoints": true
+    }
+  ]
+}

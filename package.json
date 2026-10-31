@@ -1,0 +1,40 @@
+{
+  "name": "clautverse",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "node scripts/seed.mjs",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e"
+  },
+  "dependencies": {
+    "better-auth": "^1.7.14",
+    "drizzle-orm": "^0.45.4",
+    "nuxt": "^4.6.3",
+    "postgres": "3.4.9",
+    "resend": "^6.37.0",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "^4.3.4",
+    "@types/node": "^24.19.2",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.12",
+    "vue-tsc": "^3.3.14"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
