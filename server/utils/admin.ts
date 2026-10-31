@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { eq, sql } from 'drizzle-orm'
+import { z } from 'zod'
 
 export type Tx = Parameters<Parameters<ReturnType<typeof useDb>['transaction']>[0]>[0]
 export type DbOrTx = ReturnType<typeof useDb> | Tx
@@ -52,3 +53,24 @@ export async function ensureTalentCommunity(tx: DbOrTx, talentRow: typeof schema
 
 export const publicUser = (u: Pick<typeof schema.user.$inferSelect, 'id' | 'username' | 'displayName' | 'image'>) =>
   ({ id: u.id, username: u.username, displayName: u.displayName, avatarUrl: u.image })
+
+export const adminUserView = (u: DbUser) => ({
+  id: u.id, email: u.email, username: u.username, displayName: u.displayName, image: u.image,
+  roles: userRoles(u), status: u.status, onboardingStatus: u.onboardingStatus, emailVerified: u.emailVerified,
+  createdAt: u.createdAt.toISOString(),
+})
+
+export const adminActionBody = z.object({ reason: z.string().trim().min(1).max(500), internalNote: z.string().trim().max(2000).optional() }).strict()
+
+/** ADM-11: suspend logs the user out everywhere. Admins cannot suspend themselves or other admins. */
+export async function suspendUser(tx: DbOrTx, actor: DbUser, userId: string, input: { reason: string, internalNote?: string }) {
+  const [target] = await tx.select().from(schema.user).where(eq(schema.user.id, userId)).for('update').limit(1)
+  if (!target) throw apiError('NOT_FOUND', 'User not found.')
+  if (target.id === actor.id || userRoles(target).includes(SUPER_ADMIN)) throw apiError('FORBIDDEN', 'Admins cannot be suspended.')
+  if (target.status === 'pending_deletion') throw apiError('INVALID_STATE', 'This account is being deleted.')
+  if (target.status === 'suspended') return target
+  const [updated] = await tx.update(schema.user).set({ status: 'suspended' }).where(eq(schema.user.id, userId)).returning()
+  await tx.delete(schema.session).where(eq(schema.session.userId, userId))
+  await audit(tx, actor.id, 'user.suspended', 'user', userId, { reason: input.reason, internalNote: input.internalNote ?? null })
+  return updated!
+}

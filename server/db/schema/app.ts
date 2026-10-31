@@ -201,3 +201,22 @@ export const idempotencyKey = pgTable('idempotency_key', {
   resourceId: text('resource_id').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [primaryKey({ columns: [t.userId, t.scope, t.key] })])
+
+// RPT-01 / ADM-12..13: reporters are never revealed to the reported user.
+export const report = pgTable('report', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  reporterId: text('reporter_id').references(() => user.id, { onDelete: 'set null' }),
+  targetType: text('target_type', { enum: ['drop', 'reply', 'user', 'community', 'mission'] }).notNull(),
+  targetId: text('target_id').notNull(),
+  reason: text('reason', { enum: ['spam', 'harassment', 'hate', 'sexual', 'impersonation', 'other'] }).notNull(),
+  details: text('details'),
+  status: text('status', { enum: ['open', 'actioned', 'dismissed'] }).notNull().default('open'),
+  action: text('action'),
+  internalNote: text('internal_note'),
+  decidedBy: text('decided_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+}, t => [
+  uniqueIndex('report_one_open_uq').on(t.reporterId, t.targetType, t.targetId).where(sql`status = 'open'`),
+  index('report_queue_idx').on(t.status, t.createdAt, t.id),
+])

@@ -38,3 +38,10 @@ export function readIdParam(event: H3Event) {
   if (!result.success) throw apiError('NOT_FOUND', 'Not found.')
   return result.data.id
 }
+
+/** Better Auth user ids are opaque strings, not UUIDs. */
+export function readUserIdParam(event: H3Event) {
+  const id = getRouterParam(event, 'id')
+  if (!id || id.length > 100 || !/^[\w-]+$/.test(id)) throw apiError('NOT_FOUND', 'Not found.')
+  return id
+}
