@@ -1,4 +1,4 @@
-import { betterAuth } from 'better-auth'
+import { betterAuth, getCurrentAdapter } from 'better-auth'
 import { APIError } from 'better-auth/api'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { eq } from 'drizzle-orm'
@@ -41,13 +41,14 @@ function createAuth() {
         roles: { type: 'string', required: false, input: false, defaultValue: 'fan' },
         status: { type: 'string', required: false, input: false, defaultValue: 'active' },
         onboardingStatus: { type: 'string', required: false, input: false, defaultValue: 'not_started' },
+        deletionRequestedAt: { type: 'date', required: false, input: false, returned: false },
       },
     },
     rateLimit: { enabled: config.authRateLimitEnabled !== false, storage: 'database', window: 60, max: 30 },
     databaseHooks: {
       user: {
         create: {
-          before: async (input) => {
+          before: async (input, ctx) => {
             const username = String(input.username ?? '').trim().toLowerCase()
             if (!USERNAME_RE.test(username) || RESERVED_USERNAMES.has(username))
               throw new APIError('BAD_REQUEST', { code: 'VALIDATION_FAILED', message: 'username must be 3-30 characters: a-z, 0-9 or _' })
@@ -56,7 +57,12 @@ function createAuth() {
               throw new APIError('BAD_REQUEST', { code: 'VALIDATION_FAILED', message: 'dateOfBirth must be YYYY-MM-DD' })
             if (ageOn(dob) < MINIMUM_AGE)
               throw new APIError('BAD_REQUEST', { code: 'UNDER_MINIMUM_AGE', message: `You must be ${MINIMUM_AGE} or older to join Clautverse.` })
-            const [taken] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.username, username)).limit(1)
+            // Query through Better Auth's active transaction: a separate pool connection here
+            // deadlocks the pool when many sign-ups run at once.
+            const adapter = ctx ? await getCurrentAdapter(ctx.context.adapter) : null
+            const taken = adapter
+              ? await adapter.findOne({ model: 'user', where: [{ field: 'username', value: username }] })
+              : (await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.username, username)).limit(1))[0]
             if (taken) throw new APIError('BAD_REQUEST', { code: 'USERNAME_TAKEN', message: 'That username is taken.' })
             return { data: { ...input, username, roles: 'fan', status: 'active', onboardingStatus: 'not_started' } }
           },
@@ -64,15 +70,19 @@ function createAuth() {
       },
       session: {
         create: {
-          before: async (session) => {
-            const [u] = await db.select().from(schema.user).where(eq(schema.user.id, session.userId)).limit(1)
+          before: async (session, ctx) => {
+            const adapter = ctx ? await getCurrentAdapter(ctx.context.adapter) : null
+            const u = adapter
+              ? await adapter.findOne<DbUser>({ model: 'user', where: [{ field: 'id', value: session.userId }] })
+              : (await db.select().from(schema.user).where(eq(schema.user.id, session.userId)).limit(1))[0]
             if (!u) return false
             if (u.status === 'suspended') throw new APIError('FORBIDDEN', { code: 'ACCOUNT_SUSPENDED', message: 'This account is suspended.' })
             if (u.status === 'pending_deletion') {
               const cutoff = Date.now() - DELETION_GRACE_DAYS * 86_400_000
-              if (!u.deletionRequestedAt || u.deletionRequestedAt.getTime() < cutoff) return false
+              if (!u.deletionRequestedAt || new Date(u.deletionRequestedAt).getTime() < cutoff) return false
               // Signing in during the grace period restores the account (decision 17).
-              await db.update(schema.user).set({ status: 'active', deletionRequestedAt: null }).where(eq(schema.user.id, u.id))
+              if (adapter) await adapter.update({ model: 'user', where: [{ field: 'id', value: u.id }], update: { status: 'active', deletionRequestedAt: null } })
+              else await db.update(schema.user).set({ status: 'active', deletionRequestedAt: null }).where(eq(schema.user.id, u.id))
             }
           },
         },
