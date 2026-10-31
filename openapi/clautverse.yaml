@@ -142,7 +142,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-16
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -155,7 +155,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-16
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -168,7 +168,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-16
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -182,7 +182,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-16
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -201,7 +201,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-16
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -220,7 +220,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-16
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -240,7 +240,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-16b
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -541,7 +541,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-17
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -555,7 +555,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-15
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -568,7 +568,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-15
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -691,7 +691,7 @@ paths:
       tags:
       - BDG
       x-route-id: BDG-02
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -704,7 +704,7 @@ paths:
       tags:
       - BDG
       x-route-id: BDG-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1228,7 +1228,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-09
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1247,7 +1247,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-10
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1266,7 +1266,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-01
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: communityId
         in: query
@@ -1299,7 +1299,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-03
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1312,7 +1312,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-02
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1350,7 +1350,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-08
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1368,7 +1368,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-06
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1387,7 +1387,7 @@ paths:
       tags:
       - MIS
       x-route-id: MIS-07
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1959,7 +1959,7 @@ paths:
       tags:
       - XP
       x-route-id: XP-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1972,7 +1972,7 @@ paths:
       tags:
       - XP
       x-route-id: XP-02
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
