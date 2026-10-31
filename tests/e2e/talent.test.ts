@@ -110,3 +110,21 @@ describe('identity claims (TAL-04..05, ADM-06..07b)', () => {
     expect(dash.body.counts.users).toBeGreaterThan(0)
   })
 })
+
+describe('audit log (ADM-14)', () => {
+  it('is admin-only, filterable and paginated newest first', async () => {
+    const fan = await verifiedSession()
+    const admin = await adminSession()
+    expect((await api('/api/admin/audit', { cookie: fan.cookie })).status).toBe(403)
+    const first = await api('/api/admin/audit?targetType=identity_claim&limit=1', { cookie: admin.cookie })
+    expect(first.status).toBe(200)
+    expect(first.body.items).toHaveLength(1)
+    expect(first.body.items[0].targetType).toBe('identity_claim')
+    if (first.body.nextCursor) {
+      const next = await api(`/api/admin/audit?targetType=identity_claim&limit=1&cursor=${encodeURIComponent(first.body.nextCursor)}`, { cookie: admin.cookie })
+      expect(next.body.items[0].id).not.toBe(first.body.items[0].id)
+    }
+    expect((await api('/api/admin/audit?cursor=bogus', { cookie: admin.cookie })).status).toBe(400)
+    expect((await api(`/api/admin/audit/${first.body.items[0].id}`, { method: 'DELETE', cookie: admin.cookie })).status).toBe(404)
+  })
+})
