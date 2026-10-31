@@ -1,0 +1,3 @@
+/* WCAG AA contrast: Nuxt UI's default primary-500 is too light on white. */
+:root { --ui-primary: var(--ui-color-primary-700); }
+.dark { --ui-primary: var(--ui-color-primary-300); }

@@ -1,0 +1,4 @@
+{
+  "framework": "nuxtjs",
+  "buildCommand": "pnpm build"
+}
