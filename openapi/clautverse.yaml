@@ -430,7 +430,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-12
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: status
         in: query
@@ -454,7 +454,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-13
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -473,7 +473,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-10
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: q
         in: query
@@ -502,7 +502,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-11
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -521,7 +521,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-11a
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1569,7 +1569,7 @@ paths:
       tags:
       - RPT
       x-route-id: RPT-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
