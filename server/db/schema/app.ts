@@ -1,4 +1,5 @@
-import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uuid, unique } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid, unique, uniqueIndex } from 'drizzle-orm/pg-core'
 import { user } from './auth'
 
 // Fixed-window counters for Clautverse's own routes (decision: rate limits in Postgres).
@@ -65,3 +66,93 @@ export const onboarding = pgTable('onboarding', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+export type Link = { label: string, url: string }
+
+// Decision 14: one talent owns one community (unique owner_talent_id).
+export const community = pgTable('community', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerTalentId: uuid('owner_talent_id').unique().references(() => talent.id),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description'),
+  rules: text('rules'),
+  imageUrl: text('image_url'),
+  status: text('status', { enum: ['active', 'vetoed'] }).notNull().default('active'),
+  memberCount: integer('member_count').notNull().default(0),
+  // Row-locked counter: positions 1..100 are handed out once and never reused (decision 6).
+  originalsAssigned: integer('originals_assigned').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [index('community_popular_idx').on(t.memberCount, t.id)])
+
+export const membership = pgTable('membership', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  communityId: uuid('community_id').notNull().references(() => community.id),
+  status: text('status', { enum: ['active', 'left', 'removed'] }).notNull().default('active'),
+  alertsEnabled: boolean('alerts_enabled').notNull().default(true),
+  lane: text('lane'), // reserved: lanes not defined yet
+  originalPosition: integer('original_position'),
+  joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  leftAt: timestamp('left_at', { withTimezone: true }),
+}, t => [
+  unique('membership_user_community_uq').on(t.userId, t.communityId),
+  unique('membership_original_position_uq').on(t.communityId, t.originalPosition),
+])
+
+export const talentApplication = pgTable('talent_application', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  categoryId: uuid('category_id').notNull().references(() => category.id),
+  displayName: text('display_name').notNull(),
+  bio: text('bio').notNull().default(''),
+  links: jsonb('links').$type<Link[]>().notNull().default([]),
+  status: text('status', { enum: ['pending', 'accepted', 'declined'] }).notNull().default('pending'),
+  decisionReason: text('decision_reason'),
+  internalNote: text('internal_note'),
+  talentId: uuid('talent_id').references(() => talent.id),
+  decidedBy: text('decided_by'),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+}, t => [
+  uniqueIndex('talent_application_one_pending_uq').on(t.userId).where(sql`status = 'pending'`),
+  index('talent_application_queue_idx').on(t.status, t.submittedAt, t.id),
+])
+
+export const identityClaim = pgTable('identity_claim', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  talentId: uuid('talent_id').notNull().references(() => talent.id),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  evidenceLinks: text('evidence_links').array().notNull().default([]),
+  message: text('message'),
+  status: text('status', { enum: ['pending', 'verified', 'rejected'] }).notNull().default('pending'),
+  decisionReason: text('decision_reason'),
+  internalNote: text('internal_note'),
+  decidedBy: text('decided_by'),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }),
+}, t => [
+  uniqueIndex('identity_claim_one_pending_uq').on(t.userId, t.talentId).where(sql`status = 'pending'`),
+  index('identity_claim_queue_idx').on(t.status, t.submittedAt, t.id),
+])
+
+// Append-only: the app never updates or deletes audit rows. actor_id is kept as plain text so
+// rows survive account erasure (decision 17).
+export const adminAudit = pgTable('admin_audit', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  actorId: text('actor_id').notNull(),
+  action: text('action').notNull(),
+  targetType: text('target_type').notNull(),
+  targetId: text('target_id').notNull(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [index('admin_audit_created_idx').on(t.createdAt, t.id), index('admin_audit_target_idx').on(t.targetType, t.targetId)])
+
+export const notification = pgTable('notification', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  data: jsonb('data').$type<Record<string, unknown>>().notNull().default({}),
+  readAt: timestamp('read_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [index('notification_user_idx').on(t.userId, t.createdAt, t.id)])
