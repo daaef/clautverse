@@ -220,3 +220,77 @@ export const report = pgTable('report', {
   uniqueIndex('report_one_open_uq').on(t.reporterId, t.targetType, t.targetId).where(sql`status = 'open'`),
   index('report_queue_idx').on(t.status, t.createdAt, t.id),
 ])
+
+// Admin-configurable settings, e.g. xp_rules = { missionXpMin, missionXpMax } (decision 11).
+export const appSetting = pgTable('app_setting', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').$type<Record<string, unknown>>().notNull(),
+  updatedBy: text('updated_by'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// Decision 10: talent picks auto-approve or owner review per mission; one completion per fan.
+export const mission = pgTable('mission', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  communityId: uuid('community_id').notNull().references(() => community.id),
+  creatorId: text('creator_id').references(() => user.id, { onDelete: 'set null' }),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  xpReward: integer('xp_reward').notNull(),
+  deadline: timestamp('deadline', { withTimezone: true }),
+  status: text('status', { enum: ['pending', 'approved', 'rejected', 'closed'] }).notNull().default('approved'),
+  review: text('review', { enum: ['auto', 'owner'] }).notNull(),
+  proof: text('proof', { enum: ['none', 'link', 'text'] }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [index('mission_community_idx').on(t.communityId, t.deadline, t.id)])
+
+export const missionCompletion = pgTable('mission_completion', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  missionId: uuid('mission_id').notNull().references(() => mission.id),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  status: text('status', { enum: ['submitted', 'approved', 'rejected'] }).notNull(),
+  proofLink: text('proof_link'),
+  proofText: text('proof_text'),
+  rejectionReason: text('rejection_reason'),
+  xpTransactionId: uuid('xp_transaction_id'),
+  reviewedBy: text('reviewed_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+}, t => [
+  unique('mission_completion_once_uq').on(t.missionId, t.userId),
+  index('mission_completion_queue_idx').on(t.missionId, t.status, t.createdAt, t.id),
+])
+
+// Append-only XP ledger. Balance = SUM(amount). The unique key makes grants idempotent.
+// user_id is nulled (anonymised) on account erasure; rows are never edited or deleted.
+export const xpTransaction = pgTable('xp_transaction', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+  amount: integer('amount').notNull(),
+  sourceType: text('source_type', { enum: ['mission_completion', 'admin_adjustment'] }).notNull(),
+  sourceId: text('source_id').notNull(),
+  actorId: text('actor_id'),
+  reason: text('reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [
+  unique('xp_transaction_source_uq').on(t.userId, t.sourceType, t.sourceId),
+  index('xp_transaction_user_idx').on(t.userId, t.createdAt, t.id),
+])
+
+export const badge = pgTable('badge', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  iconUrl: text('icon_url'),
+  communityId: uuid('community_id').references(() => community.id),
+  sortOrder: integer('sort_order').notNull().default(0),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const badgeAward = pgTable('badge_award', {
+  badgeId: uuid('badge_id').notNull().references(() => badge.id),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  awardedBy: text('awarded_by'),
+  awardedAt: timestamp('awarded_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.badgeId, t.userId] }), index('badge_award_user_idx').on(t.userId, t.awardedAt)])
