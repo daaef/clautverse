@@ -45,6 +45,7 @@ export const talent = pgTable('talent', {
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
   bio: text('bio'),
+  links: jsonb('links').$type<{ label: string, url: string }[]>().notNull().default([]),
   imageUrl: text('image_url'),
   userId: text('user_id').unique().references(() => user.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
