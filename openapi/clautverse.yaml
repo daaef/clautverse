@@ -335,7 +335,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-08a
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: status
         in: query
@@ -353,7 +353,7 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-08
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -366,7 +366,26 @@ paths:
       tags:
       - ADM
       x-route-id: ADM-09
-      x-status: planned
+      x-status: implemented
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success
+        default:
+          $ref: '#/components/responses/Error'
+  /api/admin/communities/{id}/restore:
+    post:
+      operationId: ADM_09a
+      summary: ADM-09 POST /api/admin/communities/:id/veto · ADM-09a .../restore
+      tags:
+      - ADM
+      x-route-id: ADM-09a
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -692,7 +711,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-01
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -705,7 +724,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-02
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -761,7 +780,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-03
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -780,7 +799,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-04
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -799,7 +818,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-07
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -818,7 +837,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-08
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
@@ -1158,7 +1177,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-05
-      x-status: planned
+      x-status: implemented
       responses:
         '200':
           description: Success
@@ -1171,7 +1190,7 @@ paths:
       tags:
       - COM
       x-route-id: COM-06
-      x-status: planned
+      x-status: implemented
       parameters:
       - name: id
         in: path
