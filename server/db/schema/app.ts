@@ -156,3 +156,48 @@ export const notification = pgTable('notification', {
   readAt: timestamp('read_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, t => [index('notification_user_idx').on(t.userId, t.createdAt, t.id)])
+
+// Decisions 7–9: talents post; audience public | members (default) | originals_only.
+// A drop is live when status is published/scheduled and publish_at <= now() (no job needed).
+export const drop = pgTable('drop', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  communityId: uuid('community_id').notNull().references(() => community.id),
+  authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+  type: text('type', { enum: ['text', 'voice', 'image'] }).notNull(),
+  body: text('body'),
+  teaser: text('teaser'),
+  audience: text('audience', { enum: ['public', 'members', 'originals_only'] }).notNull().default('members'),
+  status: text('status', { enum: ['draft', 'scheduled', 'published', 'archived', 'removed'] }).notNull().default('draft'),
+  publishAt: timestamp('publish_at', { withTimezone: true }),
+  likeCount: integer('like_count').notNull().default(0),
+  replyCount: integer('reply_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  editedAt: timestamp('edited_at', { withTimezone: true }),
+}, t => [index('drop_timeline_idx').on(t.communityId, t.publishAt, t.id)])
+
+export const dropReaction = pgTable('drop_reaction', {
+  dropId: uuid('drop_id').notNull().references(() => drop.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  type: text('type', { enum: ['like'] }).notNull().default('like'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.dropId, t.userId] })])
+
+export const reply = pgTable('reply', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dropId: uuid('drop_id').notNull().references(() => drop.id, { onDelete: 'cascade' }),
+  authorId: text('author_id').references(() => user.id, { onDelete: 'set null' }),
+  parentReplyId: uuid('parent_reply_id'),
+  body: text('body').notNull(),
+  status: text('status', { enum: ['active', 'deleted', 'removed'] }).notNull().default('active'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  editedAt: timestamp('edited_at', { withTimezone: true }),
+}, t => [index('reply_drop_idx').on(t.dropId, t.createdAt, t.id)])
+
+// Optional Idempotency-Key header: replaying the same key returns the original resource.
+export const idempotencyKey = pgTable('idempotency_key', {
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  scope: text('scope').notNull(),
+  key: text('key').notNull(),
+  resourceId: text('resource_id').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.userId, t.scope, t.key] })])

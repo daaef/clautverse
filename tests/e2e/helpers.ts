@@ -35,10 +35,10 @@ export async function verifiedSession(overrides: Record<string, unknown> = {}) {
   return { user: u, cookie }
 }
 
-export async function api(path: string, init: { method?: string, body?: unknown, cookie?: string } = {}) {
+export async function api(path: string, init: { method?: string, body?: unknown, cookie?: string, headers?: Record<string, string> } = {}) {
   const res = await fetch(path, {
     method: init.method ?? 'GET',
-    headers: { 'content-type': 'application/json', ...(init.cookie ? { cookie: init.cookie } : {}) },
+    headers: { 'content-type': 'application/json', ...(init.cookie ? { cookie: init.cookie } : {}), ...init.headers },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   })
   const text = await res.text()
