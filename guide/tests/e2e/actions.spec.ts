@@ -88,9 +88,17 @@ for (const width of [375, 768, 1280]) {
   })
 }
 
-for (const path of ['/', PAGE, '/api-reference']) {
-  test(`no serious a11y violations on ${path}`, async ({ page }) => {
-    await page.goto(path)
-    expect(await seriousViolations(page)).toEqual([])
+const API_DOMAINS = ['auth', 'onboarding', 'communities', 'feed', 'missions-xp', 'watch-parties', 'talent-admin', 'discover-plans']
+const A11Y_PATHS = ['/', PAGE, '/api-reference', ...API_DOMAINS.map(d => `/api-reference/${d}`)]
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test.describe(`${colorScheme} mode`, () => {
+    test.use({ colorScheme })
+    for (const path of A11Y_PATHS) {
+      test(`no serious a11y violations on ${path}`, async ({ page }) => {
+        await page.goto(path)
+        expect(await seriousViolations(page)).toEqual([])
+      })
+    }
   })
 }
