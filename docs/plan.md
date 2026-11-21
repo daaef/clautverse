@@ -41,7 +41,7 @@ Earlier rulings still stand. Lane codes: `rider`, `fandom_builder`, `builder`, `
 | # | Task | Status |
 |---|---|---|
 | 1 | Safety baseline: lane join, blocks, removal rules, reinstate | Done, `6aec313` (e2e 71/71) |
-| 2 | Remove the guide app and the guide pages. Keep the API Explorer. | Next |
+| 2 | Remove the guide app and the guide pages. Keep the API Explorer. | Done |
 | 3 | Remove identity claims (decision 4) | To do |
 | 4 | Remove shows and seasons. Onboarding becomes categories plus favourite Stars. Stars get a category. (Decisions 2, 3) | To do |
 | 5 | Seed fictional pilot data (no real people or brands) | To do |

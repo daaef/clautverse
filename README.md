@@ -1,7 +1,7 @@
 # Clautverse
 
-Reality-TV fan platform: Nuxt 4 / Nitro API on Neon Postgres (Drizzle), Better Auth, Zod.
-The implementation guide (Docus) lives in [`/guide`](./guide).
+Fan ecosystem platform: Nuxt 4 / Nitro API on Neon Postgres (Drizzle), Better Auth, Zod.
+Open the app root (`/`) for the interactive API Explorer. The plan is in [`docs/plan.md`](./docs/plan.md).
 
 ## Local setup
 

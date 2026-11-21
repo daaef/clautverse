@@ -1,18 +1,45 @@
 <script setup lang="ts">
-useHead({ title: 'Clautverse' })
+// API Explorer — the only page in this app. Lists every operation in
+// openapi/clautverse.yaml and lets you send real requests as your session.
+const { data: spec } = useOpenApi()
+const tagGroups = computed(() => groupByTag(specOperations(spec.value)))
+const filter = ref('')
+const navOpen = ref(false)
+const visible = computed(() => {
+  const f = filter.value.trim().toLowerCase()
+  if (!f) return tagGroups.value
+  return tagGroups.value
+    .map(g => ({ tag: g.tag, items: g.items.filter(o => `${o.method} ${o.path} ${o.summary ?? ''}`.toLowerCase().includes(f)) }))
+    .filter(g => g.items.length)
+})
+
+useHead({ title: 'API Explorer · Clautverse' })
 </script>
 
 <template>
   <div class="docs">
-    <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh">
-      <div style="text-align: center; max-width: 34rem; padding: 2rem">
-        <img src="/clautverse-ghost.png" alt="Clautverse" style="width: 4rem; height: 4rem; border-radius: 1rem; margin: 0 auto 1.5rem">
-        <h1 style="color: var(--d-text-strong); font-size: 1.875rem; font-weight: 700; margin: 0 0 0.75rem">Clautverse</h1>
-        <p style="color: var(--d-text); margin: 0 0 2rem">Fan ecosystem platform — Nuxt full-stack app with the Nitro API under <code>/api</code>.</p>
-        <div style="display: flex; gap: 0.75rem; justify-content: center">
-          <NuxtLink to="/docs" class="docs-badge" style="font-size: 0.875rem; padding: 0.5rem 1rem; text-decoration: none">Documentation</NuxtLink>
-          <NuxtLink to="/docs/api" class="docs-badge neutral" style="font-size: 0.875rem; padding: 0.5rem 1rem; text-decoration: none">API Explorer</NuxtLink>
-        </div>
+    <DocsTopbar @toggle-nav="navOpen = !navOpen" />
+    <div class="docs-layout">
+      <DocsSidebar :groups="visible" :open="navOpen" @navigate="navOpen = false" />
+      <div class="docs-content">
+        <article class="docs-article docs-prose">
+          <p class="docs-tag">Live contract</p>
+          <h1>API Explorer</h1>
+          <p class="docs-lead">
+            Every operation in <code>openapi/clautverse.yaml</code>, with a live request panel.
+            Sign in below — requests run as your session against this app's API.
+          </p>
+          <DocsAuthPanel />
+          <input v-model="filter" class="docs-api-filter" type="search" placeholder="Filter operations… e.g. communities, missions, XP">
+          <template v-if="spec">
+            <section v-for="g in visible" :id="`tag-${g.tag}`" :key="g.tag" class="docs-api-group">
+              <h2 class="docs-api-tag-title"><code>{{ g.tag }}</code> <span class="docs-api-count">{{ g.items.length }}</span></h2>
+              <ApiEndpoint v-for="op in g.items" :key="`${op.method}-${op.path}`" :method="op.method" :path="op.path" />
+            </section>
+            <p v-if="!visible.length" class="docs-search-empty">No operations match “{{ filter }}”.</p>
+          </template>
+          <p v-else class="docs-search-empty">Loading specification…</p>
+        </article>
       </div>
     </div>
   </div>

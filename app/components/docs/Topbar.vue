@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const emit = defineEmits<{ 'open-search': [], 'toggle-nav': [] }>()
+const emit = defineEmits<{ 'toggle-nav': [] }>()
 
 const light = ref(false)
 onMounted(() => { light.value = document.documentElement.classList.contains('docs-light') })
@@ -16,16 +16,12 @@ function toggle() {
       <button type="button" class="docs-icon-btn docs-burger" aria-label="Toggle navigation" @click="emit('toggle-nav')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
       </button>
-      <NuxtLink to="/docs" class="docs-logo" aria-label="Clautverse docs home">
+      <NuxtLink to="/" class="docs-logo" aria-label="Clautverse API Explorer">
         <img src="/clautverse-ghost.png" alt="" class="docs-logo-img">
-        <span class="docs-logo-text">Clautverse <span class="docs-logo-sub">Docs</span></span>
+        <span class="docs-logo-text">Clautverse <span class="docs-logo-sub">API</span></span>
       </NuxtLink>
     </div>
-    <button type="button" class="docs-search-btn" @click="emit('open-search')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.35-4.35" /></svg>
-      Search documentation
-      <span class="docs-search-kbd">⌘K</span>
-    </button>
+    <div />
     <div class="docs-top-right">
       <button type="button" class="docs-icon-btn" :aria-label="light ? 'Switch to dark theme' : 'Switch to light theme'" @click="toggle">
         <svg v-if="light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" /></svg>

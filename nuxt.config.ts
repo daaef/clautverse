@@ -2,7 +2,6 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/content'],
   css: ['~/assets/css/docs.css'],
   runtimeConfig: {
     databaseUrl: '',
@@ -16,6 +15,7 @@ export default defineNuxtConfig({
     authRateLimitEnabled: true,
     cronSecret: '',
   },
+  routeRules: { '/docs/**': { redirect: '/' } },
   nitro: {
     errorHandler: '~~/server/error-handler.ts',
   },

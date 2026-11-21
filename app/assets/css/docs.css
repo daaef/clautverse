@@ -74,7 +74,7 @@ html.docs-light .docs {
 /* ---------- 3-column layout ---------- */
 .docs-layout {
   display: grid;
-  grid-template-columns: 17rem minmax(0, 1fr) 15rem;
+  grid-template-columns: 17rem minmax(0, 1fr);
   align-items: start;
   min-height: calc(100vh - 3.5rem);
 }

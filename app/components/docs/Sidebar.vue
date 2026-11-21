@@ -1,38 +1,19 @@
 <script setup lang="ts">
-import type { DocsNavGroup } from '~/composables/useDocs'
-
-const props = defineProps<{
-  groups: DocsNavGroup[]
-  currentUrl: string
-  open?: boolean
-}>()
+// Left rail: one link per API tag, jumping to that group on the page.
+defineProps<{ groups: { tag: string, items: unknown[] }[], open?: boolean }>()
 const emit = defineEmits<{ navigate: [] }>()
-const isActive = (url: string) => url === props.currentUrl
 </script>
 
 <template>
   <aside class="docs-side" :class="{ open }">
-    <nav class="docs-nav" aria-label="Documentation">
-      <NuxtLink
-        to="/docs/api"
-        class="docs-nav-explorer"
-        :class="{ active: isActive('/docs/api') }"
+    <nav class="docs-nav" aria-label="API groups">
+      <h2 class="docs-nav-title">API groups</h2>
+      <a
+        v-for="g in groups" :key="g.tag"
+        :href="`#tag-${g.tag}`"
+        class="docs-nav-link"
         @click="emit('navigate')"
-      >
-        <span>API Explorer</span>
-        <span class="docs-badge">live</span>
-      </NuxtLink>
-      <div v-for="g in groups" :key="g.title" class="docs-nav-group">
-        <h2 class="docs-nav-title">{{ g.title }}</h2>
-        <NuxtLink
-          v-for="item in g.items" :key="item.url"
-          :to="item.url"
-          class="docs-nav-link"
-          :class="{ active: isActive(item.url) }"
-          :aria-current="isActive(item.url) ? 'page' : undefined"
-          @click="emit('navigate')"
-        >{{ item.title }}</NuxtLink>
-      </div>
+      >{{ g.tag }} <span class="docs-api-count">{{ g.items.length }}</span></a>
     </nav>
   </aside>
 </template>

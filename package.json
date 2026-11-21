@@ -17,9 +17,7 @@
     "test:e2e": "vitest run --project e2e"
   },
   "dependencies": {
-    "@nuxt/content": "^3.16.2",
     "better-auth": "^1.7.14",
-    "better-sqlite3": "^13.1.1",
     "drizzle-orm": "^0.45.4",
     "nuxt": "^4.6.3",
     "postgres": "3.4.9",
