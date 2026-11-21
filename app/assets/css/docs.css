@@ -373,3 +373,6 @@ html.docs-light .docs {
 .docs-fields td, .docs-fields th { padding: 0.35rem 0.5rem; vertical-align: top; }
 .docs-fields td:last-child code { word-break: break-all; }
 .docs-fields em { font-style: normal; font-size: 0.7rem; color: var(--d-accent); }
+.docs-fields .docs-param-input { width: 100%; min-width: 9rem; }
+.docs-multi { height: auto; min-height: 4rem; padding: 0.25rem; }
+select.docs-param-input { cursor: pointer; }

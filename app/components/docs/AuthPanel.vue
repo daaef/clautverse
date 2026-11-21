@@ -16,6 +16,7 @@ const busy = ref(false)
 async function refresh() {
   try { session.value = await $fetch<typeof session.value, string>('/api/auth/get-session', { credentials: 'same-origin' }) }
   catch { session.value = null }
+  reloadLookups()
 }
 onMounted(refresh)
 

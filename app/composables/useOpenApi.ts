@@ -70,13 +70,13 @@ export function describeSchema(s?: ApiSchema): string {
 }
 
 /** Flattens body fields (one level of nesting) into rows for a table. */
-export function bodyFields(s?: ApiSchema): { name: string, required: boolean, rule: string, example: string, note?: string }[] {
-  const rows: { name: string, required: boolean, rule: string, example: string, note?: string }[] = []
+export function bodyFields(s?: ApiSchema): { name: string, required: boolean, rule: string, example: string, note?: string, schema: ApiSchema }[] {
+  const rows: { name: string, required: boolean, rule: string, example: string, note?: string, schema: ApiSchema }[] = []
   const walk = (sch: ApiSchema | undefined, prefix: string) => {
     for (const [k, v] of Object.entries(sch?.properties ?? {})) {
       const name = prefix + k
       if (v.type === 'object' && v.properties) { walk(v, `${name}.`); continue }
-      rows.push({ name, required: !!sch?.required?.includes(k), rule: describeSchema(v), example: JSON.stringify(v.example), note: v.description })
+      rows.push({ name, required: !!sch?.required?.includes(k), rule: describeSchema(v), example: JSON.stringify(v.example), note: v.description, schema: v })
     }
   }
   walk(s, '')

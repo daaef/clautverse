@@ -18,11 +18,32 @@ const headerParams = computed(() => op.value?.parameters.filter(p => p.in === 'h
 const hasBody = computed(() => !!op.value?.body)
 const fields = computed(() => bodyFields(op.value?.body?.schema))
 const sample = (v: unknown) => (v === undefined || v === '' ? '' : String(v))
+const leaf = (name: string) => name.split('.').pop()!
 
-const pathValues = reactive<Record<string, string>>({})
-const queryValues = reactive<Record<string, string>>({})
+const pathValues = reactive<Record<string, unknown>>({})
+const queryValues = reactive<Record<string, unknown>>({})
 const headerValues = reactive<Record<string, string>>({})
 const bodyText = ref('')
+
+// Body form ⇄ JSON box: editing either one updates the other.
+const bodyObj = ref<Record<string, unknown>>({})
+function getField(name: string) {
+  return name.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], bodyObj.value)
+}
+function setField(name: string, value: unknown) {
+  const keys = name.split('.')
+  const next = structuredClone(toRaw(bodyObj.value))
+  let o = next as Record<string, unknown>
+  for (const k of keys.slice(0, -1)) o = (o[k] ??= {}) as Record<string, unknown>
+  if (value === undefined) delete o[keys.at(-1)!]
+  else o[keys.at(-1)!] = value
+  bodyObj.value = next
+  bodyText.value = Object.keys(next).length ? JSON.stringify(next, null, 2) : ''
+}
+watch(bodyText, (txt) => {
+  try { const v = txt.trim() ? JSON.parse(txt) : {}; if (v && typeof v === 'object') bodyObj.value = v }
+  catch {}
+})
 const open = ref(false)
 
 interface Result { status: number, ms: number, body: string, error?: string }
@@ -36,16 +57,27 @@ function generateIdemKey() {
 // Fills every input with the contract's sample values. Sample ids are fake:
 // swap them for real ids from a GET response before sending.
 function fillSamples() {
-  for (const p of pathParams.value) pathValues[p.name] = sample(p.schema?.example)
-  for (const p of queryParams.value) queryValues[p.name] = sample(p.schema?.example)
+  for (const p of pathParams.value) pathValues[p.name] = firstReal(p.name) ?? p.schema?.example
+  for (const p of queryParams.value) queryValues[p.name] = p.schema?.example === '' ? undefined : p.schema?.example
   for (const p of headerParams.value) headerValues[p.name] = sample(p.schema?.example)
-  if (op.value?.body?.example) bodyText.value = JSON.stringify(op.value.body.example, null, 2)
+  if (op.value?.body?.example) {
+    const ex = structuredClone(op.value.body.example) as Record<string, unknown>
+    // Prefer a real record over the made-up uuid where we can look one up.
+    for (const k of Object.keys(ex)) {
+      const real = firstReal(k)
+      if (real) ex[k] = Array.isArray(ex[k]) ? [real] : real
+    }
+    bodyText.value = JSON.stringify(ex, null, 2)
+  }
+}
+function firstReal(field: string) {
+  return useLookup(lookupUrl(field, props.path)).value[0]?.value
 }
 
 function resolvedPath() {
   let p = props.path
-  for (const [k, v] of Object.entries(pathValues)) p = p.replaceAll(`{${k}}`, encodeURIComponent(v || `{${k}}`))
-  const qs = Object.entries(queryValues).filter(([, v]) => v !== '').map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+  for (const [k, v] of Object.entries(pathValues)) p = p.replaceAll(`{${k}}`, v ? encodeURIComponent(String(v)) : `{${k}}`)
+  const qs = Object.entries(queryValues).filter(([, v]) => v !== '' && v !== undefined).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
   return qs.length ? `${p}?${qs.join('&')}` : p
 }
 
@@ -109,12 +141,12 @@ const statusClass = computed(() => {
         <p class="docs-params-title">Parameters</p>
         <label v-for="p in pathParams" :key="`p-${p.name}`" class="docs-param-row">
           <span class="docs-param-name">{{ p.name }} <em>path{{ p.required ? ' · required' : '' }}</em></span>
-          <input v-model="pathValues[p.name]" class="docs-param-input" :placeholder="sample(p.schema?.example) || p.name">
+          <FieldInput v-model="pathValues[p.name]" :name="p.name" :schema="p.schema" :required="p.required" :path="path" />
           <small class="docs-param-hint">{{ describeSchema(p.schema) }}<template v-if="p.schema?.description"> — {{ p.schema.description }}</template></small>
         </label>
         <label v-for="p in queryParams" :key="`q-${p.name}`" class="docs-param-row">
           <span class="docs-param-name">{{ p.name }} <em>query{{ p.required ? ' · required' : '' }}</em></span>
-          <input v-model="queryValues[p.name]" class="docs-param-input" :placeholder="sample(p.schema?.example) || p.name">
+          <FieldInput v-model="queryValues[p.name]" :name="p.name" :schema="p.schema" :required="p.required" />
           <small class="docs-param-hint">{{ describeSchema(p.schema) }}<template v-if="p.schema?.description"> — {{ p.schema.description }}</template></small>
         </label>
       </div>
@@ -138,12 +170,12 @@ const statusClass = computed(() => {
       <div v-if="hasBody">
         <p class="docs-params-title">Body <span class="docs-hint">(JSON{{ op?.body?.required ? '' : ' · optional' }})</span></p>
         <table v-if="fields.length" class="docs-fields">
-          <thead><tr><th>Field</th><th>Rule</th><th>Sample</th></tr></thead>
+          <thead><tr><th>Field</th><th>Rule · sample</th><th>Value</th></tr></thead>
           <tbody>
             <tr v-for="f in fields" :key="f.name">
               <td><code>{{ f.name }}</code><em v-if="f.required"> required</em></td>
-              <td>{{ f.rule }}<template v-if="f.note"><br><small>{{ f.note }}</small></template></td>
-              <td><code>{{ f.example }}</code></td>
+              <td>{{ f.rule }}<br><code>{{ f.example }}</code><template v-if="f.note"><br><small>{{ f.note }}</small></template></td>
+              <td><FieldInput :model-value="getField(f.name)" :name="leaf(f.name)" :schema="f.schema" :required="f.required" @update:model-value="setField(f.name, $event)" /></td>
             </tr>
           </tbody>
         </table>
@@ -152,7 +184,7 @@ const statusClass = computed(() => {
 
       <p class="docs-param-hint">
         <button type="button" class="docs-mini-btn" @click="fillSamples">Fill with sample data</button>
-        Sample ids are made up — replace them with real ids from a list endpoint before sending.
+        Dropdowns list real records when the API returns some (sign in first for private lists). Anything left as a made-up id will return “not found”.
       </p>
 
       <div class="docs-send-row">
