@@ -7,6 +7,7 @@ const body = z.object({ alertsEnabled: z.boolean() }).strict()
 export default defineEventHandler(async (event) => {
   const u = await requireUser(event)
   const id = readIdParam(event)
+  await rateLimit(event, 'membership-update', u.id, 60, 60)
   const { alertsEnabled } = await readJsonBody(event, body)
   const m = schema.membership
   const db = useDb()

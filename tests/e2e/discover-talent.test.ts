@@ -42,7 +42,7 @@ describe('Discover, community edit, talent dashboard and profile (DIS-01, COM-10
     const before = (await api('/api/discover', { cookie: f.cookie })).body
     expect(keys(before)).toEqual(['for_you', 'popular_communities', 'new_talents'])
     expect(section(before, 'for_you')).toEqual([communityId])
-    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: f.cookie, body: {} })
+    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: f.cookie, body: { lane: 'rider' } })
     const after = (await api('/api/discover', { cookie: f.cookie })).body
     expect(section(after, 'for_you')).toEqual([])
     expect(section(after, 'popular_communities')).not.toContain(communityId)
@@ -55,7 +55,7 @@ describe('Discover, community edit, talent dashboard and profile (DIS-01, COM-10
     const { talent, communityId, talentId } = await talentWithCommunity(a)
     const f = await fan()
     expect((await api('/api/talent/dashboard', { cookie: f.cookie })).status).toBe(403)
-    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: f.cookie, body: {} })
+    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: f.cookie, body: { lane: 'rider' } })
     const m = (await api('/api/missions', { method: 'POST', cookie: talent.cookie, body: { communityId, title: 'Share', xpReward: 10, completionPolicy: { review: 'owner', proof: 'text' } } })).body
     await api(`/api/missions/${m.id}/completions`, { method: 'POST', cookie: f.cookie, body: { proof: { text: 'done' } } })
     const p = (await api('/api/watch-parties', { method: 'POST', cookie: talent.cookie, body: { communityId, title: 'Live', startsAt: new Date(Date.now() + 86400_000).toISOString(), timeZone: 'Africa/Lagos' } })).body

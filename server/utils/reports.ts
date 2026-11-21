@@ -24,6 +24,7 @@ export async function assertReportTarget(type: Report['targetType'], id: string,
     const [t] = await useDb().select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.id, id)).limit(1)
     if (!t) throw notFound()
   }
+  else if (type === 'mission') await loadMission(id, viewer)
   else throw notFound()
 }
 
@@ -45,17 +46,33 @@ export async function reportSubject(tx: DbOrTx, r: Report) {
     return x ? { userId: x.reply.authorId, communityId: x.communityId, reply: x.reply } : null
   }
   if (r.targetType === 'community') return { userId: null, communityId: r.targetId }
+  if (r.targetType === 'mission') {
+    const [m] = await tx.select().from(schema.mission).where(eq(schema.mission.id, r.targetId)).limit(1)
+    return m ? { userId: m.creatorId, communityId: m.communityId } : null
+  }
   if (r.targetType === 'user') return { userId: r.targetId, communityId: null }
   return null
 }
 
-/** Removal retires the Originals position: the row keeps it, and the counter never hands it out again. */
+/**
+ * Removal retires the Originals position: the row keeps it, and the counter never hands it out again.
+ * DEC-03: removal #1 sets blockedUntil = removedAt + 30 days; #2+ is a permanent ban (blockedUntil
+ * is irrelevant once removalCount >= 2). DEC-10: the removed fan gets a membership.removed
+ * notification — distinct from the admin_audit row, which is not user-facing.
+ */
 export async function removeMember(tx: DbOrTx, actorId: string, userId: string, communityId: string) {
   const m = schema.membership
   const [row] = await tx.select().from(m).where(sql`${m.userId} = ${userId} and ${m.communityId} = ${communityId}`).for('update').limit(1)
   if (!row) throw apiError('VALIDATION_FAILED', 'That user is not a member of this community.', { fields: { action: 'not_member' } })
   if (row.status === 'removed') return
-  await tx.update(m).set({ status: 'removed', leftAt: new Date() }).where(eq(m.id, row.id))
+  const removalCount = row.removalCount + 1
+  const removedAt = new Date()
+  const blockedUntil = removalCount >= 2 ? null : new Date(removedAt.getTime() + 30 * 86_400_000)
+  await tx.update(m).set({ status: 'removed', leftAt: removedAt, removalCount, blockedUntil }).where(eq(m.id, row.id))
   if (row.status === 'active') await tx.update(schema.community).set({ memberCount: sql`greatest(${schema.community.memberCount} - 1, 0)` }).where(eq(schema.community.id, communityId))
-  await audit(tx, actorId, 'membership.removed', 'membership', row.id, { userId, communityId, originalPosition: row.originalPosition })
+  await audit(tx, actorId, 'membership.removed', 'membership', row.id, {
+    userId, communityId, originalPosition: row.originalPosition, removalCount, blockedUntil: blockedUntil?.toISOString() ?? null,
+  })
+  const [comm] = await tx.select({ name: schema.community.name }).from(schema.community).where(eq(schema.community.id, communityId)).limit(1)
+  await notify(tx, userId, 'membership.removed', { communityId, communityName: comm?.name ?? null, removalCount })
 }

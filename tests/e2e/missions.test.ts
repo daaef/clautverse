@@ -26,7 +26,7 @@ async function talentWithCommunity(a: S) {
   const [c] = await sql`select c.id from community c join talent tl on tl.id = c.owner_talent_id where tl.user_id = ${t.id}`
   return { talent: t, communityId: c!.id as string }
 }
-const join = (s: S, id: string) => api(`/api/communities/${id}/join`, { method: 'POST', cookie: s.cookie, body: {} })
+const join = (s: S, id: string) => api(`/api/communities/${id}/join`, { method: 'POST', cookie: s.cookie, body: { lane: 'rider' } })
 const createMission = (s: S, body: Record<string, unknown>) => api('/api/missions', { method: 'POST', cookie: s.cookie, body: { title: 'Vote tonight', xpReward: 50, completionPolicy: { review: 'auto', proof: 'none' }, ...body } })
 const complete = (s: S, id: string, body: Record<string, unknown> = {}) => api(`/api/missions/${id}/completions`, { method: 'POST', cookie: s.cookie, body })
 const balance = async (s: S) => (await api('/api/xp/me', { cookie: s.cookie })).body

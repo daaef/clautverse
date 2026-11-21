@@ -27,7 +27,7 @@ async function talentWithCommunity(a: S) {
   const [c] = await sql`select c.id from community c join talent tl on tl.id = c.owner_talent_id join "user" u on u.id = tl.user_id where u.email = ${t.user.email}`
   return { talent: t, communityId: c!.id as string }
 }
-const join = (s: S, id: string) => api(`/api/communities/${id}/join`, { method: 'POST', cookie: s.cookie, body: {} })
+const join = (s: S, id: string) => api(`/api/communities/${id}/join`, { method: 'POST', cookie: s.cookie, body: { lane: 'rider' } })
 const post = (s: S, body: Record<string, unknown>, headers?: Record<string, string>) => api('/api/drops', { method: 'POST', cookie: s.cookie, body, headers })
 
 describe('drops, feed, likes and replies (FEED-01..02, DROP-01..10)', () => {

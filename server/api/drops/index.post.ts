@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
     const r = await loadDrop(replay, u)
     return dropView(r.drop, r.talent, true)
   }
+  await rateLimit(event, 'drop', u.id, 30, 60)
   if (input.type !== 'text') throw apiError('FEATURE_DISABLED', 'Voice and image drops arrive with uploads. Post a text drop for now.')
   rejectMediaIds(input.mediaIds)
   if (!input.body) throw apiError('VALIDATION_FAILED', 'Text drops need a body.', { fields: { body: 'required' } })

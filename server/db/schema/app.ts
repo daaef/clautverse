@@ -92,10 +92,13 @@ export const membership = pgTable('membership', {
   communityId: uuid('community_id').notNull().references(() => community.id),
   status: text('status', { enum: ['active', 'left', 'removed'] }).notNull().default('active'),
   alertsEnabled: boolean('alerts_enabled').notNull().default(true),
-  lane: text('lane'), // reserved: lanes not defined yet
+  lane: text('lane'), // Canonical lane codes are validated by the join route (TASK-0004).
   originalPosition: integer('original_position'),
   joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
   leftAt: timestamp('left_at', { withTimezone: true }),
+  // DEC-03: per-(user, community) admin-removal counter; first removal sets blockedUntil = removedAt + 30d.
+  removalCount: integer('removal_count').notNull().default(0),
+  blockedUntil: timestamp('blocked_until', { withTimezone: true }),
 }, t => [
   unique('membership_user_community_uq').on(t.userId, t.communityId),
   unique('membership_original_position_uq').on(t.communityId, t.originalPosition),
@@ -221,6 +224,15 @@ export const report = pgTable('report', {
   uniqueIndex('report_one_open_uq').on(t.reporterId, t.targetType, t.targetId).where(sql`status = 'open'`),
   index('report_queue_idx').on(t.status, t.createdAt, t.id),
 ])
+
+// PRD §12 "Block unwanted accounts": one-directional, visibility-only. A block exists or it
+// does not — unblocking deletes the row. Self-blocks are rejected at the route level.
+export const block = pgTable('block', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  blockerId: text('blocker_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  blockedId: text('blocked_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [unique('block_blocker_blocked_uq').on(t.blockerId, t.blockedId)])
 
 // Admin-configurable settings, e.g. xp_rules = { missionXpMin, missionXpMax } (decision 11).
 export const appSetting = pgTable('app_setting', {

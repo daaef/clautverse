@@ -12,9 +12,10 @@ export default defineEventHandler(async (event) => {
   const scope = `com-drops-${id}-${type ?? 'all'}`
   const cur = readCursor<{ t: string, id: string }>(cursor, scope)
   const d = schema.drop
+  const blocked = await blockedAuthorIds(viewer?.id)
   const rows = await useDb().select({ drop: d, talent: schema.talent }).from(d)
     .leftJoin(schema.talent, eq(schema.talent.id, sql`${comm.ownerTalentId}::uuid`))
-    .where(and(eq(d.communityId, id), liveFilter(), type ? eq(d.type, type) : undefined,
+    .where(and(eq(d.communityId, id), liveFilter(), notAuthoredByBlocked(d.authorId, blocked), type ? eq(d.type, type) : undefined,
       cur ? sql`(${d.publishAt}, ${d.id}) < (${cur.t}::timestamptz, ${cur.id}::uuid)` : undefined))
     .orderBy(desc(d.publishAt), desc(d.id)).limit(limit + 1)
   const view = await dropListViews(rows, viewer)

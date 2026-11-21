@@ -101,12 +101,16 @@ describe('identity claims (TAL-04..05, ADM-06..07b)', () => {
     expect(c).toBe(1)
   })
 
-  it('admin dashboard counts are admin-only', async () => {
+  it('admin dashboard counts are admin-only and count open reports', async () => {
     const fan = await verifiedSession()
     const admin = await adminSession()
     expect((await api('/api/admin/dashboard', { cookie: fan.cookie })).status).toBe(403)
+    const [{ id: fanId }] = await sql`select id from "user" where email = ${fan.user.email}`
+    const reporter = await verifiedSession()
+    const r = await api('/api/reports', { method: 'POST', cookie: reporter.cookie, body: { targetType: 'user', targetId: fanId, reason: 'impersonation' } })
+    expect(r.status).toBe(201)
     const dash = await api('/api/admin/dashboard', { cookie: admin.cookie })
-    expect(dash.body.counts).toMatchObject({ openReports: 0 })
+    expect(dash.body.counts.openReports).toBeGreaterThanOrEqual(1)
     expect(dash.body.counts.users).toBeGreaterThan(0)
   })
 })

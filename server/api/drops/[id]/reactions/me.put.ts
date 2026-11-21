@@ -4,6 +4,7 @@ import { eq, sql } from 'drizzle-orm'
 export default defineEventHandler(async (event) => {
   const u = await requireUser(event, { onboarded: true })
   const id = readIdParam(event)
+  await rateLimit(event, 'reaction', u.id, 60, 60)
   const likes = await useDb().transaction(async (tx) => {
     const r = await loadDrop(id, u, tx)
     if (!isLive(r.drop)) throw apiError('INVALID_STATE', 'This drop is not published.')

@@ -5,7 +5,7 @@ import { z } from 'zod'
 const body = z.object({ password: z.string().min(1) }).strict()
 
 export default defineEventHandler(async (event) => {
-  const me = await requireUser(event, { verified: false })
+  const me = await requireUser(event)
   const { password } = await readJsonBody(event, body)
   await rateLimit(event, 'delete-me', me.id, 5, 3600)
   const db = useDb()

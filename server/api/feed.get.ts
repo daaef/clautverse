@@ -19,10 +19,11 @@ export default defineEventHandler(async (event) => {
   const ids = communityId ? [communityId] : memberOf
   if (!ids.length) return { items: [], nextCursor: null }
   const d = schema.drop
+  const blocked = await blockedAuthorIds(u.id)
   const rows = await db.select({ drop: d, talent: schema.talent }).from(d)
     .innerJoin(schema.community, eq(schema.community.id, d.communityId))
     .leftJoin(schema.talent, eq(schema.talent.id, schema.community.ownerTalentId))
-    .where(and(inArray(d.communityId, ids), eq(schema.community.status, 'active'), liveFilter(),
+    .where(and(inArray(d.communityId, ids), eq(schema.community.status, 'active'), liveFilter(), notAuthoredByBlocked(d.authorId, blocked),
       from ? gte(d.publishAt, new Date(from)) : undefined, to ? lte(d.publishAt, new Date(to)) : undefined,
       cur ? sql`(${d.publishAt}, ${d.id}) < (${cur.t}::timestamptz, ${cur.id}::uuid)` : undefined))
     .orderBy(desc(d.publishAt), desc(d.id)).limit(limit + 1)

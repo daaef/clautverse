@@ -2,11 +2,14 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  modules: ['@nuxt/content'],
+  css: ['~/assets/css/docs.css'],
   runtimeConfig: {
     databaseUrl: '',
     betterAuthSecret: '',
     betterAuthUrl: 'http://localhost:3000',
-    resendApiKey: '',
+    mailtrapApiToken: '',
+    mailtrapInboxId: '',
     emailFrom: 'Clautverse <no-reply@clautverse.local>',
     cursorSecret: '',
     appVersion: 'dev',

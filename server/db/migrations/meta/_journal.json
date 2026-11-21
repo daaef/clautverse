@@ -50,6 +50,13 @@
       "when": 1793454538771,
       "tag": "0006_fancy_dracula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795291876313,
+      "tag": "0007_wealthy_zuras",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { and, eq, inArray, lte, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, lte, notInArray, or, sql } from 'drizzle-orm'
 
 type Drop = typeof schema.drop.$inferSelect
 type Membership = typeof schema.membership.$inferSelect
@@ -25,6 +25,20 @@ export const dropView = (d: Drop, talent: TalentLite, canSee: boolean, liked = f
   reactionCounts: { like: d.likeCount }, replyCount: d.replyCount, viewerReaction: canSee && liked ? 'like' : null,
 })
 
+/** User ids this viewer has blocked (empty for anonymous viewers). */
+export async function blockedAuthorIds(viewerId: string | null | undefined, tx: DbOrTx = useDb()) {
+  if (!viewerId) return new Set<string>()
+  const rows = await tx.select({ id: schema.block.blockedId }).from(schema.block).where(eq(schema.block.blockerId, viewerId))
+  return new Set(rows.map(r => r.id))
+}
+
+/**
+ * WHERE clause that excludes rows authored by anyone the viewer blocked. Nullable author columns
+ * (erased accounts) must stay visible: `NOT IN` would silently drop them via NULL comparison.
+ */
+export const notAuthoredByBlocked = (authorCol: typeof schema.drop.authorId | typeof schema.reply.authorId, blocked: Set<string>) =>
+  blocked.size ? or(isNull(authorCol), notInArray(authorCol, [...blocked])) : undefined
+
 export async function loadDrop(id: string, viewer: DbUser | null, tx: DbOrTx = useDb(), lock = false) {
   const q = tx.select({ drop: schema.drop, community: schema.community, talent: schema.talent }).from(schema.drop)
     .innerJoin(schema.community, eq(schema.community.id, schema.drop.communityId))
@@ -37,6 +51,8 @@ export async function loadDrop(id: string, viewer: DbUser | null, tx: DbOrTx = u
   const isStaff = admin || (!!viewer && r.talent?.userId === viewer.id)
   const gone = r.drop.status === 'archived' || r.drop.status === 'removed'
   if ((gone && !admin) || (!isLive(r.drop) && !isStaff && !isAuthor)) throw apiError('NOT_FOUND', 'Drop not found.')
+  // A blocked author's drop is invisible to the blocker (silent omission, same as any invisible drop).
+  if (viewer && r.drop.authorId && (await blockedAuthorIds(viewer.id, tx)).has(r.drop.authorId)) throw apiError('NOT_FOUND', 'Drop not found.')
   const membership = viewer
     ? (await tx.select().from(schema.membership).where(and(eq(schema.membership.userId, viewer.id), eq(schema.membership.communityId, r.community.id))).limit(1))[0] ?? null
     : null

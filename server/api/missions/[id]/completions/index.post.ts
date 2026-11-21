@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   const u = await requireUser(event, { onboarded: true })
   const id = readIdParam(event)
   const { proof } = await readJsonBody(event, body)
+  await rateLimit(event, 'mission-completion', u.id, 10, 60)
   const mc = schema.missionCompletion
   const result = await useDb().transaction(async (tx) => {
     const r = await loadMission(id, u, tx)

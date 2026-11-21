@@ -16,7 +16,7 @@ pnpm db:migrate && pnpm db:seed
 pnpm dev                        # http://localhost:3000/api/health
 ```
 
-Without `NUXT_RESEND_API_KEY`, verification and password-reset emails are printed to the server console.
+Without `NUXT_MAILTRAP_API_TOKEN`, verification and password-reset emails are printed to the server console.
 
 ## Checks
 

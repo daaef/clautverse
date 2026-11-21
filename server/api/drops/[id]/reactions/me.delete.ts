@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 export default defineEventHandler(async (event) => {
   const u = await requireUser(event)
   const id = readIdParam(event)
+  await rateLimit(event, 'reaction', u.id, 60, 60)
   await useDb().transaction(async (tx) => {
     const gone = await tx.delete(schema.dropReaction).where(and(eq(schema.dropReaction.dropId, id), eq(schema.dropReaction.userId, u.id))).returning()
     if (gone.length) await tx.update(schema.drop).set({ likeCount: sql`greatest(${schema.drop.likeCount} - 1, 0)` }).where(eq(schema.drop.id, id))

@@ -62,6 +62,18 @@ describe('auth (AUTH-01..08)', () => {
     expect(again.status).toBe(409)
     expect(again.body.error.code).toBe('INVALID_STATE')
   })
+  it('DELETE /api/me requires a verified email', async () => {
+    const u = newUser()
+    await signUp(u)
+    await sql`update "user" set email_verified = true where email = ${u.email}`
+    const login = await api('/api/auth/sign-in/email', { method: 'POST', body: { email: u.email, password: u.password } })
+    expect(login.status).toBe(200)
+    await sql`update "user" set email_verified = false where email = ${u.email}`
+    const cookie = login.headers.getSetCookie().map(c => c.split(';')[0]).join('; ')
+    const res = await api('/api/me', { method: 'DELETE', cookie, body: { password: u.password } })
+    expect(res.status).toBe(403)
+    expect(res.body.error.code).toBe('EMAIL_NOT_VERIFIED')
+  })
   it('DELETE /api/me schedules deletion, logs out, and sign-in restores', async () => {
     const { user, cookie } = await verifiedSession()
     expect((await api('/api/me', { method: 'DELETE', cookie, body: { password: 'wrong-password' } })).status).toBe(403)

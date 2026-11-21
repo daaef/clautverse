@@ -30,7 +30,9 @@ export default defineEventHandler(async (event) => {
     const [row] = await tx.insert(schema.reply).values({ dropId: id, authorId: u.id, body: input.body, parentReplyId: parent?.id ?? null }).returning()
     await tx.update(schema.drop).set({ replyCount: sql`${schema.drop.replyCount} + 1` }).where(eq(schema.drop.id, id))
     await saveIdempotent(tx, u.id, `reply.create:${id}`, key, row!.id)
-    if (parent?.authorId && parent.authorId !== u.id) await notify(tx, parent.authorId, 'reply.replied', { dropId: id, replyId: row!.id, parentReplyId: parent.id })
+    // Don't surface a blocked author's reply to someone who blocked them.
+    if (parent?.authorId && parent.authorId !== u.id && !(await blockedAuthorIds(parent.authorId, tx)).has(u.id))
+      await notify(tx, parent.authorId, 'reply.replied', { dropId: id, replyId: row!.id, parentReplyId: parent.id })
     return row!
   })
   setResponseStatus(event, 201)

@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 export default defineEventHandler(async (event) => {
   const u = await requireUser(event, { onboarded: true })
   const id = readIdParam(event)
+  await rateLimit(event, 'rsvp', u.id, 60, 60)
   const going = true
   return useDb().transaction(async (tx) => {
     const r = await loadParty(id, u, tx, true)

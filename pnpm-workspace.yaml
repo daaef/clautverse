@@ -1,4 +1,4 @@
 allowBuilds:
+  better-sqlite3: true
   esbuild: true
-minimumReleaseAgeExclude:
-  - resend@6.37.0
+minimumReleaseAgeExclude: []

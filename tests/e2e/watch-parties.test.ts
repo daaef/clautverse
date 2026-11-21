@@ -36,7 +36,7 @@ describe('watch parties, RSVPs and notifications (WP-01..08, NOT-01..04, OPS-02)
     const a = await admin()
     const { talent, communityId } = await talentWithCommunity(a)
     const [f1, f2] = [await fan(), await fan()]
-    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: f1.cookie, body: {} })
+    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: f1.cookie, body: { lane: 'rider' } })
     expect((await party(f1, { communityId })).status).toBe(403)
     expect((await party(talent, { communityId, timeZone: 'Mars/Base' })).status).toBe(400)
     expect((await party(talent, { communityId, link: 'http://insecure.example' })).status).toBe(400)
@@ -119,7 +119,7 @@ describe('watch parties, RSVPs and notifications (WP-01..08, NOT-01..04, OPS-02)
     const a = await admin()
     const { communityId } = await talentWithCommunity(a)
     const [gone, waiting] = [await fan(), await fan()]
-    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: gone.cookie, body: {} })
+    await api(`/api/communities/${communityId}/join`, { method: 'POST', cookie: gone.cookie, body: { lane: 'rider' } })
     await api('/api/admin/xp-adjustments', { method: 'POST', cookie: a.cookie, body: { userId: gone.id, amount: 10, reason: 'prize' } })
     await sql`update "user" set status = 'pending_deletion', deletion_requested_at = now() - interval '31 days' where id = ${gone.id}`
     await sql`update "user" set status = 'pending_deletion', deletion_requested_at = now() - interval '10 days' where id = ${waiting.id}`
