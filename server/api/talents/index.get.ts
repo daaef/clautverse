@@ -1,28 +1,22 @@
-import { and, asc, eq, ilike, inArray } from 'drizzle-orm'
+import { and, asc, eq, ilike } from 'drizzle-orm'
 import { z } from 'zod'
 
-// CAT-05 (renamed from PRD /api/stars)
+// CAT-05 (renamed from PRD /api/stars): browse or search Stars, optionally within a category.
 const query = z.object({
-  seasonId: z.uuid().optional(),
-  showId: z.uuid().optional(),
+  categoryId: z.uuid().optional(),
   q: z.string().trim().max(60).optional(),
 })
 
 export default defineEventHandler(async (event) => {
-  const { seasonId, showId, q } = readQuery(event, query)
-  const db = useDb()
-  let seasonIds: string[] | undefined
-  if (seasonId) seasonIds = [seasonId]
-  else if (showId) seasonIds = (await db.select({ id: schema.season.id }).from(schema.season).where(eq(schema.season.showId, showId))).map(r => r.id)
-  if (seasonIds && !seasonIds.length) return list([])
-  const rows = await db.selectDistinct({ id: schema.talent.id, slug: schema.talent.slug, name: schema.talent.name, imageUrl: schema.talent.imageUrl })
-    .from(schema.talent)
-    .leftJoin(schema.seasonTalent, eq(schema.seasonTalent.talentId, schema.talent.id))
+  const { categoryId, q } = readQuery(event, query)
+  const t = schema.talent
+  const rows = await useDb().select({ id: t.id, slug: t.slug, name: t.name, knownFor: t.knownFor, imageUrl: t.imageUrl, categoryId: t.categoryId })
+    .from(t)
     .where(and(
-      seasonIds ? inArray(schema.seasonTalent.seasonId, seasonIds) : undefined,
-      q ? ilike(schema.talent.name, `%${q.replace(/[%_\\]/g, '\\$&')}%`) : undefined,
+      categoryId ? eq(t.categoryId, categoryId) : undefined,
+      q ? ilike(t.name, `%${q.replace(/[%_\\]/g, '\\$&')}%`) : undefined,
     ))
-    .orderBy(asc(schema.talent.name), asc(schema.talent.id))
+    .orderBy(asc(t.name), asc(t.id))
     .limit(200)
   return list(rows)
 })

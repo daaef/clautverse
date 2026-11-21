@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray, notInArray, or, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, notInArray } from 'drizzle-orm'
 
-// DIS-01: for_you (signed in: communities of talents/shows picked in onboarding, not joined),
+// DIS-01: for_you (signed in: fandoms of the Stars picked in onboarding, not joined),
 // popular_communities, new_talents. ≤12 each; "see all" uses COM-01 / CAT-05.
 export default defineEventHandler(async (event) => {
   const viewer = await optionalUser(event)
@@ -15,12 +15,8 @@ export default defineEventHandler(async (event) => {
   if (viewer) {
     const [o] = await db.select().from(schema.onboarding).where(eq(schema.onboarding.userId, viewer.id)).limit(1)
     let items: ReturnType<typeof communityCard>[] = []
-    if (o && (o.talentIds.length || o.showIds.length || o.seasonIds.length)) {
-      const viaSeasons = db.select({ id: schema.seasonTalent.talentId }).from(schema.seasonTalent)
-        .innerJoin(schema.season, eq(schema.season.id, schema.seasonTalent.seasonId))
-        .where(or(o.seasonIds.length ? inArray(schema.season.id, o.seasonIds) : sql`false`, o.showIds.length ? inArray(schema.season.showId, o.showIds) : sql`false`))
-      const rows = await db.select().from(cm).where(and(eq(cm.status, 'active'), notJoined,
-        or(o.talentIds.length ? inArray(cm.ownerTalentId, o.talentIds) : sql`false`, inArray(cm.ownerTalentId, viaSeasons))))
+    if (o?.talentIds.length) {
+      const rows = await db.select().from(cm).where(and(eq(cm.status, 'active'), notJoined, inArray(cm.ownerTalentId, o.talentIds)))
         .orderBy(desc(cm.memberCount), cm.id).limit(12)
       items = rows.map(c => communityCard(c, null))
     }

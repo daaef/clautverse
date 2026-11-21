@@ -23,27 +23,15 @@ export const country = pgTable('country', {
   name: text('name').notNull(),
 })
 
-export const show = pgTable('show', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  categoryId: uuid('category_id').notNull().references(() => category.id),
-  countryId: uuid('country_id').notNull().references(() => country.id),
-  slug: text('slug').notNull().unique(),
-  name: text('name').notNull(),
-  active: boolean('active').notNull().default(true),
-}, t => [index('show_category_country_idx').on(t.categoryId, t.countryId)])
-
-export const season = pgTable('season', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  showId: uuid('show_id').notNull().references(() => show.id),
-  number: integer('number').notNull(),
-  name: text('name').notNull(),
-  year: integer('year'),
-}, t => [unique('season_show_number_uq').on(t.showId, t.number)])
-
 export const talent = pgTable('talent', {
   id: uuid('id').primaryKey().defaultRandom(),
   slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
+  // Which category the Star belongs to (Reality TV at launch) and where they're from.
+  categoryId: uuid('category_id').notNull().references(() => category.id),
+  countryId: uuid('country_id').references(() => country.id),
+  // Short line that tells same-name Stars apart, e.g. "Housemate, Season 2 · 2025".
+  knownFor: text('known_for'),
   bio: text('bio'),
   links: jsonb('links').$type<{ label: string, url: string }[]>().notNull().default([]),
   imageUrl: text('image_url'),
@@ -51,18 +39,10 @@ export const talent = pgTable('talent', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const seasonTalent = pgTable('season_talent', {
-  seasonId: uuid('season_id').notNull().references(() => season.id),
-  talentId: uuid('talent_id').notNull().references(() => talent.id),
-}, t => [primaryKey({ columns: [t.seasonId, t.talentId] })])
-
 // One row per user; holds resumable onboarding picks (ONB-01..03).
 export const onboarding = pgTable('onboarding', {
   userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
   categoryId: uuid('category_id').references(() => category.id),
-  countryId: uuid('country_id').references(() => country.id),
-  showIds: uuid('show_ids').array().notNull().default([]),
-  seasonIds: uuid('season_ids').array().notNull().default([]),
   talentIds: uuid('talent_ids').array().notNull().default([]),
   completedAt: timestamp('completed_at', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

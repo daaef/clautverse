@@ -8,8 +8,8 @@ const BY_FIELD: Record<string, string> = {
   talentId: '/api/talents',
   talentIds: '/api/talents',
   countryId: '/api/countries',
-  showId: '/api/shows',
-  showIds: '/api/shows',
+
+  
 }
 
 const BY_PATH: [prefix: string, list: string][] = [

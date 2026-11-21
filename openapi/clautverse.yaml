@@ -1265,6 +1265,7 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      parameters: []
   /api/communities/{id}:
     get:
       operationId: COM_02
@@ -1466,19 +1467,11 @@ paths:
   /api/countries:
     get:
       operationId: CAT_02
-      summary: CAT-02 GET /api/countries?categoryId=
+      summary: CAT-02 GET /api/countries (all countries, for Star profiles)
       tags:
         - CAT
       x-route-id: CAT-02
       x-status: implemented
-      parameters:
-        - name: categoryId
-          in: query
-          required: false
-          schema:
-            type: string
-            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-            format: uuid
       responses:
         '200':
           description: Success
@@ -2506,42 +2499,19 @@ paths:
               properties:
                 categoryId:
                   type: string
+                  format: uuid
                   example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                  format: uuid
-                countryId:
-                  type: string
-                  example: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
-                  format: uuid
-                showIds:
-                  type: array
-                  items:
-                    type: string
-                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                    format: uuid
-                  example: &a2
-                    - 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                seasonIds:
-                  type: array
-                  items:
-                    type: string
-                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                    format: uuid
-                  example: &a3
-                    - 1b4e28ba-2fa1-41d2-883f-0016d3cca427
                 talentIds:
                   type: array
                   items:
                     type: string
-                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
                     format: uuid
-                  example: &a4
+                  example: &a15
                     - 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  description: favourite Stars, from the chosen category
             example:
               categoryId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-              countryId: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
-              showIds: *a2
-              seasonIds: *a3
-              talentIds: *a4
+              talentIds: *a15
   /api/onboarding/complete:
     post:
       operationId: ONB_03
@@ -2564,45 +2534,24 @@ paths:
               properties:
                 categoryId:
                   type: string
+                  format: uuid
                   example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                  format: uuid
-                countryId:
-                  type: string
-                  example: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
-                  format: uuid
-                showIds:
-                  type: array
-                  items:
-                    type: string
-                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                    format: uuid
-                  example: &a5
-                    - 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                seasonIds:
-                  type: array
-                  items:
-                    type: string
-                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-                    format: uuid
-                  example: &a6
-                    - 1b4e28ba-2fa1-41d2-883f-0016d3cca427
                 talentIds:
                   type: array
                   items:
                     type: string
-                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
                     format: uuid
-                  example: &a7
+                  example: &a2
                     - 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  description: favourite Stars, from the chosen category
+                  minItems: 1
+                  maxItems: 50
               required:
                 - categoryId
-                - showIds
+                - talentIds
             example:
               categoryId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-              countryId: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
-              showIds: *a5
-              seasonIds: *a6
-              talentIds: *a7
+              talentIds: *a2
   /api/plans:
     get:
       operationId: PLN_01
@@ -2692,61 +2641,6 @@ paths:
               targetId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
               reason: spam
               details: Same link posted 20 times.
-  /api/seasons:
-    get:
-      operationId: CAT_04
-      summary: CAT-04 GET /api/seasons?showId=
-      tags:
-        - CAT
-      x-route-id: CAT-04
-      x-status: implemented
-      parameters:
-        - name: showId
-          in: query
-          required: false
-          schema:
-            type: string
-            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-            format: uuid
-      responses:
-        '200':
-          description: Success
-        default:
-          $ref: '#/components/responses/Error'
-  /api/shows:
-    get:
-      operationId: CAT_03
-      summary: CAT-03 GET /api/shows?countryId=&categoryId=&q=
-      tags:
-        - CAT
-      x-route-id: CAT-03
-      x-status: implemented
-      parameters:
-        - name: countryId
-          in: query
-          required: false
-          schema:
-            type: string
-            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-            format: uuid
-        - name: categoryId
-          in: query
-          required: false
-          schema:
-            type: string
-            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-            format: uuid
-        - name: q
-          in: query
-          required: false
-          schema:
-            type: string
-            example: star
-      responses:
-        '200':
-          description: Success
-        default:
-          $ref: '#/components/responses/Error'
   /api/talent-applications:
     post:
       operationId: TAL_01
@@ -2957,6 +2851,15 @@ paths:
                   type: string
                   example: Tola Bright
                   maxLength: 80
+                knownFor:
+                  type: string
+                  maxLength: 80
+                  example: Housemate, Season 2 · 2025
+                  description: tells same-name Stars apart
+                countryId:
+                  type: string
+                  format: uuid
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
                 bio:
                   type: string
                   example: Updated bio.
@@ -2979,16 +2882,18 @@ paths:
                     required:
                       - label
                       - url
-                  example: &a12
+                  example:
                     - label: Instagram
                       url: https://instagram.com/tola.sings
                 imageMediaId:
                   type: string
                   example: media_01
             example:
+              knownFor: Housemate, Season 2 · 2025
               name: Tola Bright
               bio: Updated bio.
-              links: *a12
+              links:
+                source: a12
               imageMediaId: media_01
   /api/talent/subscription:
     get:
@@ -3019,26 +2924,19 @@ paths:
   /api/talents:
     get:
       operationId: CAT_05
-      summary: CAT-05 GET /api/talents?seasonId=&showId=&q=
+      summary: CAT-05 GET /api/talents?categoryId=&q=
       tags:
         - CAT
       x-route-id: CAT-05
       x-status: implemented
       parameters:
-        - name: seasonId
+        - name: categoryId
           in: query
           required: false
           schema:
             type: string
-            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
             format: uuid
-        - name: showId
-          in: query
-          required: false
-          schema:
-            type: string
             example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
-            format: uuid
         - name: q
           in: query
           required: false

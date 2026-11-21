@@ -8,14 +8,11 @@ export async function loadOnboarding(userId: string) {
 export function onboardingView(status: string, row?: typeof schema.onboarding.$inferSelect) {
   const selections = {
     categoryId: row?.categoryId ?? null,
-    countryId: row?.countryId ?? null,
-    showIds: row?.showIds ?? [],
-    seasonIds: row?.seasonIds ?? [],
     talentIds: row?.talentIds ?? [],
   }
   const nextStep = status === 'completed' ? null
     : !selections.categoryId ? 'category'
-    : !selections.showIds.length ? 'show'
+    : !selections.talentIds.length ? 'stars'
     : 'review'
   return { status, selections, nextStep, completedAt: row?.completedAt?.toISOString() ?? null }
 }

@@ -4,9 +4,6 @@ import { z } from 'zod'
 // ONB-02: save partial progress (or edit preferences after completion).
 const body = z.object({
   categoryId: z.uuid().nullable().optional(),
-  countryId: z.uuid().nullable().optional(),
-  showIds: z.array(z.uuid()).max(20).optional(),
-  seasonIds: z.array(z.uuid()).max(50).optional(),
   talentIds: z.array(z.uuid()).max(50).optional(),
 }).strict()
 
@@ -16,13 +13,10 @@ export default defineEventHandler(async (event) => {
   const current = await loadOnboarding(me.id)
   const merged = await validateSelections({
     categoryId: input.categoryId !== undefined ? input.categoryId : current?.categoryId,
-    countryId: input.countryId !== undefined ? input.countryId : current?.countryId,
-    showIds: input.showIds ?? current?.showIds,
-    seasonIds: input.seasonIds ?? current?.seasonIds,
     talentIds: input.talentIds ?? current?.talentIds,
   })
-  if (me.onboardingStatus === 'completed' && (!merged.categoryId || !merged.showIds.length))
-    throw apiError('VALIDATION_FAILED', 'Some selections are invalid.', { fields: { showIds: 'at least one show is required' } })
+  if (me.onboardingStatus === 'completed' && (!merged.categoryId || !merged.talentIds.length))
+    throw apiError('VALIDATION_FAILED', 'Some selections are invalid.', { fields: { talentIds: 'at least one Star is required' } })
   const db = useDb()
   const now = new Date()
   const status = me.onboardingStatus === 'completed' ? 'completed' : 'in_progress'

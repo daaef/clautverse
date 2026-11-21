@@ -6,8 +6,11 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
   const [t] = await db.select().from(schema.talent).where(eq(schema.talent.id, id))
   if (!t) throw apiError('NOT_FOUND', 'Talent not found.')
-  const seasons = await db.select({ id: schema.season.id, name: schema.season.name, number: schema.season.number, showId: schema.season.showId })
-    .from(schema.seasonTalent).innerJoin(schema.season, eq(schema.season.id, schema.seasonTalent.seasonId))
-    .where(eq(schema.seasonTalent.talentId, id))
-  return { id: t.id, slug: t.slug, name: t.name, bio: t.bio, imageUrl: t.imageUrl, claimed: !!t.userId, seasons }
+  const [country] = t.countryId
+    ? await db.select({ id: schema.country.id, code: schema.country.code, name: schema.country.name }).from(schema.country).where(eq(schema.country.id, t.countryId))
+    : []
+  return {
+    id: t.id, slug: t.slug, name: t.name, knownFor: t.knownFor, bio: t.bio, links: t.links, imageUrl: t.imageUrl,
+    categoryId: t.categoryId, country: country ?? null, claimed: !!t.userId,
+  }
 })

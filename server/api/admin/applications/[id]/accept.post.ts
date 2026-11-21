@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
     const tal = existing ?? (await tx.insert(schema.talent).values({
       slug: await uniqueSlug(tx, schema.talent, slugify(app.displayName)),
       name: app.displayName,
+      categoryId: app.categoryId,
       bio: app.bio || null,
       userId: app.userId,
     }).returning())[0]!

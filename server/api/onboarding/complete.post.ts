@@ -1,13 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
-// ONB-03: Reality TV (an active category) + at least one show required; the rest optional (decision 2b).
+// ONB-03: an active category + at least one favourite Star from it (PRD §6.1; plan decision 2).
 const body = z.object({
   categoryId: z.uuid(),
-  countryId: z.uuid().nullable().optional(),
-  showIds: z.array(z.uuid()).min(1, 'pick at least one show').max(20),
-  seasonIds: z.array(z.uuid()).max(50).optional(),
-  talentIds: z.array(z.uuid()).max(50).optional(),
+  talentIds: z.array(z.uuid()).min(1, 'pick at least one Star').max(50),
 }).strict()
 
 export default defineEventHandler(async (event) => {

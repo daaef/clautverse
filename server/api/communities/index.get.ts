@@ -5,22 +5,21 @@ import { z } from 'zod'
 const query = z.object({
   q: z.string().trim().max(60).optional(),
   talentId: z.uuid().optional(),
-  showId: z.uuid().optional(),
+  categoryId: z.uuid().optional(),
   sort: z.enum(['popular', 'newest', 'name']).default('popular'),
   ...pageQuery,
 })
 
 export default defineEventHandler(async (event) => {
-  const { q, talentId, showId, sort, limit, cursor } = readQuery(event, query)
+  const { q, talentId, categoryId, sort, limit, cursor } = readQuery(event, query)
   const viewer = await optionalUser(event)
   const scope = `com-${sort}`
   const cur = readCursor<{ v: string | number, id: string }>(cursor, scope)
   const c = schema.community
   const db = useDb()
   let talentIds: string[] | undefined
-  if (showId) {
-    talentIds = (await db.selectDistinct({ id: schema.seasonTalent.talentId }).from(schema.seasonTalent)
-      .innerJoin(schema.season, eq(schema.season.id, schema.seasonTalent.seasonId)).where(eq(schema.season.showId, showId))).map(r => r.id)
+  if (categoryId) {
+    talentIds = (await db.select({ id: schema.talent.id }).from(schema.talent).where(eq(schema.talent.categoryId, categoryId))).map(r => r.id)
     if (!talentIds.length) return { items: [], nextCursor: null }
   }
   const keyset = !cur ? undefined

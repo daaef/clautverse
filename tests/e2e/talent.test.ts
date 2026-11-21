@@ -77,7 +77,7 @@ describe('talent applications (TAL-01..03, ADM-02..05)', () => {
 
 describe('identity claims (TAL-04..05, ADM-06..07b)', () => {
   it('verify links the talent, auto-rejects rivals, and audits evidence views', async () => {
-    const [tal] = await sql`insert into talent (slug, name) values (${`claimable-${Date.now()}`}, 'Claimable') returning id`
+    const [tal] = await sql`insert into talent (slug, name, category_id) select ${`claimable-${Date.now()}`}, 'Claimable', id from category where slug = 'reality-tv' returning id`
     const a = await verifiedSession()
     const b = await verifiedSession()
     const admin = await adminSession()

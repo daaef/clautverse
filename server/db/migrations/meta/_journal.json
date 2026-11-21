@@ -57,6 +57,13 @@
       "when": 1795291876313,
       "tag": "0007_wealthy_zuras",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795304699738,
+      "tag": "0008_chief_corsair",
+      "breakpoints": true
     }
   ]
 }

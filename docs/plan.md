@@ -15,7 +15,7 @@ Updated 2026-11-21. The old 25-file plan set is in git history at commit `6aec31
 | # | Topic | Decision |
 |---|---|---|
 | 1 | Categories | Keep. Reality TV is the only active category at launch. This is a data setting, not code. |
-| 2 | Shows and seasons | **Remove.** The PRD doesn't mention them. Launch Stars sit under the Reality TV category. |
+| 2 | Shows and seasons | **Remove.** The PRD doesn't mention them. Each Star has a category, an optional country, and a "known for" line (e.g. "Housemate, Season 2 · 2025") to tell same-name Stars apart. |
 | 3 | Country | Keep the table, for the Star application only. Remove it from fan onboarding. |
 | 4 | Identity claims | **Remove.** The PRD says "no separate claim flow." |
 | 5 | Established Star type | Later. Not needed for the pilot. |
@@ -44,7 +44,7 @@ Earlier rulings still stand. Lane codes: `rider`, `fandom_builder`, `builder`, `
 | 2 | Remove the guide app and the guide pages. Keep the API Explorer. | Done |
 | 2b | API Explorer shows sample data for every parameter, header and body field | Done |
 | 3 | Remove identity claims (decision 4) | To do |
-| 4 | Remove shows and seasons. Onboarding becomes categories plus favourite Stars. Stars get a category. (Decisions 2, 3) | To do |
+| 4 | Remove shows and seasons. Onboarding becomes categories plus favourite Stars. Stars get a category. (Decisions 2, 3) | Done |
 | 5 | Seed fictional pilot data (no real people or brands) | To do |
 | 6 | 64 KB request-body cap | To do, security review |
 | 7 | Follow Rising Stars | To do |

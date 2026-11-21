@@ -1,15 +1,8 @@
-import { asc, eq } from 'drizzle-orm'
-import { z } from 'zod'
+import { asc } from 'drizzle-orm'
 
-// CAT-02: countries that have at least one active show (in the category, if given).
-const query = z.object({ categoryId: z.uuid().optional() })
-
-export default defineEventHandler(async (event) => {
-  const { categoryId } = readQuery(event, query)
-  const rows = await useDb().selectDistinct({ id: schema.country.id, code: schema.country.code, name: schema.country.name })
-    .from(schema.country)
-    .innerJoin(schema.show, eq(schema.show.countryId, schema.country.id))
-    .where(await activeShowFilter(categoryId))
-    .orderBy(asc(schema.country.name), asc(schema.country.id))
+// CAT-02: every country, for a Star's profile and application (plan decision 3).
+export default defineEventHandler(async () => {
+  const rows = await useDb().select({ id: schema.country.id, code: schema.country.code, name: schema.country.name })
+    .from(schema.country).orderBy(asc(schema.country.name), asc(schema.country.id))
   return list(rows)
 })

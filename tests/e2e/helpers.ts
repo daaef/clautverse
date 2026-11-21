@@ -50,8 +50,7 @@ export async function catalog() {
   const categories = (await $fetch<any>('/api/categories')).items
   const realityTv = categories.find((c: any) => c.slug === 'reality-tv')
   const music = categories.find((c: any) => c.slug === 'music')
-  const shows = (await $fetch<any>(`/api/shows?categoryId=${realityTv.id}`)).items
-  const bbnaija = shows.find((s: any) => s.slug === 'bbnaija')
-  const seasons = (await $fetch<any>(`/api/seasons?showId=${bbnaija.id}`)).items
-  return { realityTv, music, bbnaija, seasons }
+  const stars = (await $fetch<any>(`/api/talents?categoryId=${realityTv.id}`)).items
+  const ada = stars.find((s: any) => s.slug === 'ada')
+  return { realityTv, music, ada, stars }
 }
