@@ -4,35 +4,45 @@ openapi: 3.1.0
 info:
   title: Clautverse API
   version: 2.0.0
-  description: 'Approved Clautverse API contract (v2). Unversioned /api paths; additive-only changes. x-status: implemented
-    | planned | deferred.'
+  description: 'Approved Clautverse API contract (v2). Unversioned /api paths; additive-only changes. x-status:
+    implemented | planned | deferred.'
 servers:
-- url: /
+  - url: /
 paths:
   /api/admin/applications:
     get:
       operationId: ADM_02
       summary: ADM-02 GET /api/admin/applications?status=&limit=&cursor=
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-02
       x-status: implemented
       parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - accepted
+              - declined
+            example: pending
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 20
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ""
+            description: Leave empty for page 1; then paste nextCursor from the previous response
       responses:
         '200':
           description: Success
@@ -43,15 +53,17 @@ paths:
       operationId: ADM_03
       summary: ADM-03 GET /api/admin/applications/:id
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-03
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -62,73 +74,117 @@ paths:
       operationId: ADM_04
       summary: ADM-04 POST /api/admin/applications/:id/accept · ADM-05 .../decline
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-04
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+            example:
+              internalNote: Checked against the application evidence.
   /api/admin/applications/{id}/decline:
     post:
       operationId: ADM_05
       summary: ADM-04 POST /api/admin/applications/:id/decline · ADM-05 .../decline
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-05
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+                decisionReason:
+                  type: string
+                  example: The links do not show the applicant is the Star.
+                  maxLength: 1000
+            example:
+              internalNote: Checked against the application evidence.
+              decisionReason: The links do not show the applicant is the Star.
   /api/admin/audit:
     get:
       operationId: ADM_14
       summary: ADM-14 GET /api/admin/audit?actorId=&targetType=&targetId=&from=&to=
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-14
       x-status: implemented
       parameters:
-      - name: actorId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: targetType
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: targetId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: actorId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: Xq3vT9kLm2PzR8wN
+        - name: targetType
+          in: query
+          required: false
+          schema:
+            type: string
+            example: user
+        - name: targetId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: Xq3vT9kLm2PzR8wN
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 2026-11-01T00:00:00Z
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 2026-11-30T23:59:59Z
+            format: date-time
       responses:
         '200':
           description: Success
@@ -137,10 +193,10 @@ paths:
   /api/admin/badges:
     get:
       operationId: ADM_16_get_api_admin_badges
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-16
       x-status: implemented
       responses:
@@ -150,10 +206,10 @@ paths:
           $ref: '#/components/responses/Error'
     patch:
       operationId: ADM_16_patch_api_admin_badges
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-16
       x-status: implemented
       responses:
@@ -163,10 +219,10 @@ paths:
           $ref: '#/components/responses/Error'
     post:
       operationId: ADM_16_post_api_admin_badges
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-16
       x-status: implemented
       responses:
@@ -174,21 +230,62 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Night Owl
+                  minLength: 1
+                  maxLength: 60
+                description:
+                  type: string
+                  example: Joined three live watch parties after midnight.
+                  maxLength: 300
+                iconUrl:
+                  type: string
+                  example: https://cdn.example.com/badges/night-owl.png
+                  format: uri
+                  maxLength: 500
+                  description: https only
+                sortOrder:
+                  type: integer
+                  example: 10
+                  minimum: 0
+                  maximum: 10000
+                communityId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+              required:
+                - name
+            example:
+              name: Night Owl
+              description: Joined three live watch parties after midnight.
+              iconUrl: https://cdn.example.com/badges/night-owl.png
+              sortOrder: 10
+              communityId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
   /api/admin/badges/{id}:
     get:
       operationId: ADM_16_get_api_admin_badges_id
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-16
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -196,37 +293,77 @@ paths:
           $ref: '#/components/responses/Error'
     patch:
       operationId: ADM_16_patch_api_admin_badges_id
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-16
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Night Owl
+                  minLength: 1
+                  maxLength: 60
+                description:
+                  type: string
+                  example: Joined three live watch parties after midnight.
+                  maxLength: 300
+                iconUrl:
+                  type: string
+                  example: https://cdn.example.com/badges/night-owl.png
+                  format: uri
+                  maxLength: 500
+                  description: https only
+                sortOrder:
+                  type: integer
+                  example: 10
+                  minimum: 0
+                  maximum: 10000
+                active:
+                  type: boolean
+                  example: true
+            example:
+              name: Night Owl
+              description: Joined three live watch parties after midnight.
+              iconUrl: https://cdn.example.com/badges/night-owl.png
+              sortOrder: 10
+              active: true
     post:
       operationId: ADM_16_post_api_admin_badges_id
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-16
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -235,37 +372,58 @@ paths:
   /api/admin/badges/{id}/awards:
     post:
       operationId: ADM_16b
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-16b
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  example: Xq3vT9kLm2PzR8wN
+              required:
+                - userId
+            example:
+              userId: Xq3vT9kLm2PzR8wN
   /api/admin/claims:
     get:
       operationId: ADM_06
       summary: ADM-06 GET /api/admin/claims?status= · ADM-07 GET /api/admin/claims/:id
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-06
       x-status: implemented
       parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pending
+              - verified
+              - rejected
+            example: pending
       responses:
         '200':
           description: Success
@@ -276,15 +434,17 @@ paths:
       operationId: ADM_07
       summary: ADM-06 GET /api/admin/claims?status= · ADM-07 GET /api/admin/claims/:id
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-07
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -295,53 +455,94 @@ paths:
       operationId: ADM_07b
       summary: ADM-07a POST /api/admin/claims/:id/verify · ADM-07b POST /api/admin/claims/:id/reject
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-07b
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+                decisionReason:
+                  type: string
+                  example: The links do not show the applicant is the Star.
+                  maxLength: 1000
+            example:
+              internalNote: Checked against the application evidence.
+              decisionReason: The links do not show the applicant is the Star.
   /api/admin/claims/{id}/verify:
     post:
       operationId: ADM_07a
       summary: ADM-07a POST /api/admin/claims/:id/verify · ADM-07b POST /api/admin/claims/:id/reject
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-07a
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+            example:
+              internalNote: Checked against the application evidence.
   /api/admin/communities:
     get:
       operationId: ADM_08a
       summary: ADM-08a GET /api/admin/communities?status=
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-08a
       x-status: implemented
       parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - vetoed
+            example: active
       responses:
         '200':
           description: Success
@@ -351,7 +552,7 @@ paths:
       operationId: ADM_08
       summary: ADM-08 POST /api/admin/communities
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-08
       x-status: implemented
       responses:
@@ -359,50 +560,117 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                talentId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+                name:
+                  type: string
+                  example: Tola Fandom
+                  minLength: 2
+                  maxLength: 80
+                slug:
+                  type: string
+                  example: tola-fandom
+                  description: lowercase words joined by dashes
+                description:
+                  type: string
+                  example: The official home of Tola fans.
+                  maxLength: 2000
+                imageMediaId:
+                  type: string
+                  example: media_01
+              required:
+                - name
+            example:
+              talentId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              name: Tola Fandom
+              slug: tola-fandom
+              description: The official home of Tola fans.
+              imageMediaId: media_01
   /api/admin/communities/{id}/veto:
     post:
       operationId: ADM_09
       summary: ADM-09 POST /api/admin/communities/:id/veto · ADM-09a .../restore
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-09
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+            example:
+              internalNote: Checked against the application evidence.
   /api/admin/communities/{id}/restore:
     post:
       operationId: ADM_09a
       summary: ADM-09 POST /api/admin/communities/:id/veto · ADM-09a .../restore
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-09a
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+            example:
+              internalNote: Checked against the application evidence.
   /api/admin/dashboard:
     get:
       operationId: ADM_01
       summary: ADM-01 GET /api/admin/dashboard
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-01
       x-status: implemented
       responses:
@@ -415,7 +683,7 @@ paths:
       operationId: ADM_18
       summary: ADM-18 GET /api/admin/missions
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-18
       x-status: deferred
       responses:
@@ -428,20 +696,32 @@ paths:
       operationId: ADM_12
       summary: ADM-12 GET /api/admin/reports?status=&targetType=
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-12
       x-status: implemented
       parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: targetType
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - open
+              - actioned
+              - dismissed
+            example: open
+        - name: targetType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - drop
+              - reply
+              - user
+              - community
+              - mission
+            example: drop
       responses:
         '200':
           description: Success
@@ -452,44 +732,83 @@ paths:
       operationId: ADM_13
       summary: ADM-13 POST /api/admin/reports/:id/actions
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-13
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - dismiss
+                    - remove_content
+                    - suspend_user
+                    - remove_member
+                    - veto_community
+                  example: remove_content
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+              required:
+                - action
+            example:
+              action: remove_content
+              internalNote: Checked against the application evidence.
   /api/admin/users:
     get:
       operationId: ADM_10
       summary: ADM-10 GET /api/admin/users?q=&status=&role=
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-10
       x-status: implemented
       parameters:
-      - name: q
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: role
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ada
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - suspended
+              - pending_deletion
+            example: active
+        - name: role
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - fan
+              - talent
+              - super_admin
+            example: fan
       responses:
         '200':
           description: Success
@@ -500,46 +819,94 @@ paths:
       operationId: ADM_11
       summary: ADM-11 POST /api/admin/users/:id/suspend · ADM-11a .../reinstate
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-11
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: Xq3vT9kLm2PzR8wN
+            description: Better Auth user id (not a uuid)
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Repeated spam in the fandom feed.
+                  minLength: 1
+                  maxLength: 500
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+              required:
+                - reason
+            example:
+              reason: Repeated spam in the fandom feed.
+              internalNote: Checked against the application evidence.
   /api/admin/users/{id}/reinstate:
     post:
       operationId: ADM_11a
       summary: ADM-11 POST /api/admin/users/:id/suspend · ADM-11a .../reinstate
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-11a
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: Xq3vT9kLm2PzR8wN
+            description: Better Auth user id (not a uuid)
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Repeated spam in the fandom feed.
+                  minLength: 1
+                  maxLength: 500
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+              required:
+                - reason
+            example:
+              reason: Repeated spam in the fandom feed.
+              internalNote: Checked against the application evidence.
   /api/admin/xp-adjustments:
     post:
       operationId: ADM_17
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-17
       x-status: implemented
       responses:
@@ -547,13 +914,42 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  example: Xq3vT9kLm2PzR8wN
+                amount:
+                  type: integer
+                  example: 50
+                  minimum: -100000
+                  maximum: 100000
+                  description: not 0; negative removes XP
+                reason:
+                  type: string
+                  example: Repeated spam in the fandom feed.
+                  minLength: 1
+                  maxLength: 500
+              required:
+                - userId
+                - amount
+                - reason
+            example:
+              userId: Xq3vT9kLm2PzR8wN
+              amount: 50
+              reason: Repeated spam in the fandom feed.
   /api/admin/xp-rules:
     get:
       operationId: ADM_15_get_api_admin_xp_rules
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-15
       x-status: implemented
       responses:
@@ -563,10 +959,10 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: ADM_15_put_api_admin_xp_rules
-      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST /api/admin/badges/:id/awards
-        · ADM-17 POST /api/admin/xp-adjustments
+      summary: ADM-15 GET|PUT /api/admin/xp-rules · ADM-16 GET|POST|PATCH /api/admin/badges[/:id] · ADM-16b POST
+        /api/admin/badges/:id/awards · ADM-17 POST /api/admin/xp-adjustments
       tags:
-      - ADM
+        - ADM
       x-route-id: ADM-15
       x-status: implemented
       responses:
@@ -574,12 +970,35 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                missionXpMin:
+                  type: integer
+                  example: 10
+                  minimum: 1
+                  maximum: 100000
+                missionXpMax:
+                  type: integer
+                  example: 200
+                  minimum: 1
+                  maximum: 100000
+              required:
+                - missionXpMin
+                - missionXpMax
+            example:
+              missionXpMin: 10
+              missionXpMax: 200
   /api/auth/request-password-reset:
     post:
       operationId: AUTH_04_post_api_auth_request_password_reset
       summary: 'AUTH-04 Password reset: request + confirm (Better Auth)'
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-04
       x-status: implemented
       responses:
@@ -587,12 +1006,31 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: ada.fan@example.com
+                  format: email
+                redirectTo:
+                  type: string
+                  example: http://localhost:3000/
+              required:
+                - email
+            example:
+              email: ada.fan@example.com
+              redirectTo: http://localhost:3000/
   /api/auth/reset-password:
     post:
       operationId: AUTH_04_post_api_auth_reset_password
       summary: 'AUTH-04 Password reset: request + confirm (Better Auth)'
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-04
       x-status: implemented
       responses:
@@ -600,12 +1038,31 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newPassword:
+                  type: string
+                  example: n3w-Passw0rd!
+                  minLength: 8
+                token:
+                  type: string
+                  example: token-from-the-reset-email
+              required:
+                - newPassword
+            example:
+              newPassword: n3w-Passw0rd!
+              token: token-from-the-reset-email
   /api/auth/send-verification-email:
     post:
       operationId: AUTH_04b_post_api_auth_send_verification_email
       summary: 'AUTH-04b Email verification: verify link + resend (Better Auth)'
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-04b
       x-status: implemented
       responses:
@@ -613,12 +1070,31 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: ada.fan@example.com
+                  format: email
+                callbackURL:
+                  type: string
+                  example: http://localhost:3000/
+              required:
+                - email
+            example:
+              email: ada.fan@example.com
+              callbackURL: http://localhost:3000/
   /api/auth/sign-in/email:
     post:
       operationId: AUTH_02
       summary: AUTH-02 POST /api/auth/sign-in/email (Better Auth)
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-02
       x-status: implemented
       responses:
@@ -626,12 +1102,32 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: ada.fan@example.com
+                  format: email
+                password:
+                  type: string
+                  example: Passw0rd!123
+              required:
+                - email
+                - password
+            example:
+              email: ada.fan@example.com
+              password: Passw0rd!123
   /api/auth/sign-out:
     post:
       operationId: AUTH_03
       summary: AUTH-03 POST /api/auth/sign-out (Better Auth)
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-03
       x-status: implemented
       responses:
@@ -644,7 +1140,7 @@ paths:
       operationId: AUTH_01
       summary: AUTH-01 POST /api/auth/sign-up/email (Better Auth)
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-01
       x-status: implemented
       responses:
@@ -652,20 +1148,53 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Ada Fan
+                email:
+                  type: string
+                  example: ada.fan@example.com
+                  format: email
+                password:
+                  type: string
+                  example: Passw0rd!123
+                  minLength: 8
+                username:
+                  type: string
+                  example: ada_fan
+                  description: "3-30 characters: a-z, 0-9 or _"
+              required:
+                - name
+                - email
+                - password
+                - username
+            example:
+              name: Ada Fan
+              email: ada.fan@example.com
+              password: Passw0rd!123
+              username: ada_fan
   /api/auth/username-check:
     get:
       operationId: AUTH_05
       summary: AUTH-05 GET /api/auth/username-check?username=
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-05
       x-status: implemented
       parameters:
-      - name: username
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: username
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ada_fan
       responses:
         '200':
           description: Success
@@ -676,7 +1205,7 @@ paths:
       operationId: AUTH_04b_get_api_auth_verify_email
       summary: 'AUTH-04b Email verification: verify link + resend (Better Auth)'
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-04b
       x-status: implemented
       responses:
@@ -689,7 +1218,7 @@ paths:
       operationId: BDG_02
       summary: BDG-02 GET /api/badges
       tags:
-      - BDG
+        - BDG
       x-route-id: BDG-02
       x-status: implemented
       responses:
@@ -702,7 +1231,7 @@ paths:
       operationId: BDG_01
       summary: BDG-01 GET /api/badges/me
       tags:
-      - BDG
+        - BDG
       x-route-id: BDG-01
       x-status: implemented
       responses:
@@ -715,7 +1244,7 @@ paths:
       operationId: CAT_01
       summary: CAT-01 GET /api/categories
       tags:
-      - CAT
+        - CAT
       x-route-id: CAT-01
       x-status: implemented
       responses:
@@ -728,7 +1257,7 @@ paths:
       operationId: COM_01
       summary: COM-01 GET /api/communities
       tags:
-      - COM
+        - COM
       x-route-id: COM-01
       x-status: implemented
       responses:
@@ -741,15 +1270,17 @@ paths:
       operationId: COM_02
       summary: COM-02 GET /api/communities/:id
       tags:
-      - COM
+        - COM
       x-route-id: COM-02
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -759,34 +1290,65 @@ paths:
       operationId: COM_10
       summary: COM-10 PATCH /api/communities/:id
       tags:
-      - COM
+        - COM
       x-route-id: COM-10
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Tola Fandom
+                  maxLength: 80
+                description:
+                  type: string
+                  example: Updated about text.
+                  maxLength: 2000
+                rules:
+                  type: string
+                  example: Be kind. No spoilers before 9pm.
+                  maxLength: 4000
+                imageMediaId:
+                  type: string
+                  example: media_01
+            example:
+              name: Tola Fandom
+              description: Updated about text.
+              rules: Be kind. No spoilers before 9pm.
+              imageMediaId: media_01
   /api/communities/{id}/drops:
     get:
       operationId: FEED_02
       summary: FEED-02 GET /api/communities/:id/drops
       tags:
-      - FEED
+        - FEED
       x-route-id: FEED-02
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -797,34 +1359,63 @@ paths:
       operationId: COM_03
       summary: COM-03 POST /api/communities/:id/join
       tags:
-      - COM
+        - COM
       x-route-id: COM-03
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lane:
+                  type: string
+                  enum:
+                    - rider
+                    - fandom_builder
+                    - builder
+                    - analyst
+                    - creator
+                    - mutual
+                  example: rider
+                alertsEnabled:
+                  type: boolean
+                  example: true
+              required:
+                - lane
+            example:
+              lane: rider
+              alertsEnabled: true
   /api/communities/{id}/leave:
     post:
       operationId: COM_04
       summary: COM-04 POST /api/communities/:id/leave
       tags:
-      - COM
+        - COM
       x-route-id: COM-04
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -835,15 +1426,17 @@ paths:
       operationId: COM_07
       summary: COM-07 GET /api/communities/:id/members
       tags:
-      - COM
+        - COM
       x-route-id: COM-07
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -854,15 +1447,17 @@ paths:
       operationId: COM_08
       summary: COM-08 GET /api/communities/:id/originals
       tags:
-      - COM
+        - COM
       x-route-id: COM-08
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -873,15 +1468,17 @@ paths:
       operationId: CAT_02
       summary: CAT-02 GET /api/countries?categoryId=
       tags:
-      - CAT
+        - CAT
       x-route-id: CAT-02
       x-status: implemented
       parameters:
-      - name: categoryId
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -892,7 +1489,7 @@ paths:
       operationId: DIS_01
       summary: DIS-01 GET /api/discover
       tags:
-      - DIS
+        - DIS
       x-route-id: DIS-01
       x-status: implemented
       responses:
@@ -905,7 +1502,7 @@ paths:
       operationId: DROP_01
       summary: DROP-01 POST /api/drops
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-01
       x-status: implemented
       responses:
@@ -913,20 +1510,91 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Any unique text, max 200 characters. Resending the same key returns the first result instead of creating a
+            duplicate.
+          schema:
+            type: string
+            example: 3f1c2a9e-5b7d-4e8a-9c0f-1a2b3c4d5e6f
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                communityId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+                type:
+                  type: string
+                  enum:
+                    - text
+                    - voice
+                    - image
+                  example: text
+                body:
+                  type: string
+                  example: Rehearsal photos drop tonight!
+                  maxLength: 5000
+                mediaIds:
+                  type: array
+                  items:
+                    type: string
+                    example: media_01
+                  example: &a1
+                    - media_01
+                audience:
+                  type: string
+                  enum:
+                    - public
+                    - members
+                    - originals_only
+                  example: members
+                teaser:
+                  type: string
+                  example: Something special at 8pm
+                  maxLength: 100
+                publishAt:
+                  type: string
+                  example: 2026-12-05T19:00:00+01:00
+                  format: date-time
+                publishNow:
+                  type: boolean
+                  example: false
+              required:
+                - communityId
+                - type
+            example:
+              communityId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              type: text
+              body: Rehearsal photos drop tonight!
+              mediaIds: *a1
+              audience: members
+              teaser: Something special at 8pm
+              publishAt: 2026-12-05T19:00:00+01:00
+              publishNow: false
   /api/drops/{id}:
     delete:
       operationId: DROP_05
       summary: DROP-05 DELETE /api/drops/:id
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-05
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -936,15 +1604,17 @@ paths:
       operationId: DROP_02
       summary: DROP-02 GET /api/drops/:id
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-02
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -954,53 +1624,103 @@ paths:
       operationId: DROP_03
       summary: DROP-03 PATCH /api/drops/:id
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-03
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  example: Edited text.
+                  maxLength: 5000
+                teaser:
+                  type: string
+                  example: New teaser
+                  maxLength: 100
+                audience:
+                  type: string
+                  enum:
+                    - public
+                    - members
+                    - originals_only
+                  example: public
+                publishAt:
+                  type: string
+                  example: 2026-12-05T19:00:00+01:00
+                  format: date-time
+            example:
+              body: Edited text.
+              teaser: New teaser
+              audience: public
+              publishAt: 2026-12-05T19:00:00+01:00
   /api/drops/{id}/publish:
     post:
       operationId: DROP_04
       summary: DROP-04 POST /api/drops/:id/publish
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-04
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publishAt:
+                  type: string
+                  example: 2026-12-05T19:00:00+01:00
+                  format: date-time
+            example:
+              publishAt: 2026-12-05T19:00:00+01:00
   /api/drops/{id}/reactions/me:
     delete:
       operationId: DROP_07
       summary: DROP-07 DELETE /api/drops/:id/reactions/me
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-07
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1010,15 +1730,17 @@ paths:
       operationId: DROP_06
       summary: DROP-06 PUT /api/drops/:id/reactions/me
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-06
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1029,15 +1751,17 @@ paths:
       operationId: DROP_08
       summary: DROP-08 GET /api/drops/:id/replies
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-08
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1047,54 +1771,97 @@ paths:
       operationId: DROP_09
       summary: DROP-09 POST /api/drops/:id/replies
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-09
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Any unique text, max 200 characters. Resending the same key returns the first result instead of creating a
+            duplicate.
+          schema:
+            type: string
+            example: 3f1c2a9e-5b7d-4e8a-9c0f-1a2b3c4d5e6f
+            maxLength: 200
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:
+                  type: string
+                  example: This is amazing!
+                  minLength: 1
+                  maxLength: 1000
+                parentReplyId:
+                  type: string
+                  example: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+                  format: uuid
+              required:
+                - body
+            example:
+              body: This is amazing!
+              parentReplyId: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
   /api/feed:
     get:
       operationId: FEED_01
       summary: FEED-01 GET /api/feed?communityId=&from=&to=&limit=&cursor=
       tags:
-      - FEED
+        - FEED
       x-route-id: FEED-01
       x-status: implemented
       parameters:
-      - name: communityId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: communityId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 2026-11-01T00:00:00Z
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 2026-11-30T23:59:59Z
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 20
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ""
+            description: Leave empty for page 1; then paste nextCursor from the previous response
       responses:
         '200':
           description: Success
@@ -1105,7 +1872,7 @@ paths:
       operationId: OPS_01
       summary: OPS-01 GET /api/health
       tags:
-      - OPS
+        - OPS
       x-route-id: OPS-01
       x-status: implemented
       responses:
@@ -1118,7 +1885,7 @@ paths:
       operationId: TAL_05
       summary: TAL-05 GET /api/identity-claims/me
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-05
       x-status: implemented
       responses:
@@ -1131,7 +1898,7 @@ paths:
       operationId: OPS_02
       summary: OPS-02 POST /api/internal/jobs/notifications · OPS-03 POST /api/internal/jobs/purge
       tags:
-      - OPS
+        - OPS
       x-route-id: OPS-02
       x-status: implemented
       responses:
@@ -1139,12 +1906,20 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer followed by the CRON_SECRET value from .env
+          schema:
+            type: string
+            example: Bearer your-cron-secret
   /api/internal/jobs/purge:
     post:
       operationId: OPS_03
       summary: OPS-02 POST /api/internal/jobs/notifications · OPS-03 POST /api/internal/jobs/purge
       tags:
-      - OPS
+        - OPS
       x-route-id: OPS-03
       x-status: implemented
       responses:
@@ -1152,12 +1927,20 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer followed by the CRON_SECRET value from .env
+          schema:
+            type: string
+            example: Bearer your-cron-secret
   /api/me:
     delete:
       operationId: AUTH_08
       summary: AUTH-08 DELETE /api/me
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-08
       x-status: implemented
       responses:
@@ -1165,11 +1948,25 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  example: Passw0rd!123
+              required:
+                - password
+            example:
+              password: Passw0rd!123
     get:
       operationId: AUTH_06
       summary: AUTH-06 GET /api/me
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-06
       x-status: implemented
       responses:
@@ -1181,7 +1978,7 @@ paths:
       operationId: AUTH_07
       summary: AUTH-07 PATCH /api/me
       tags:
-      - AUTH
+        - AUTH
       x-route-id: AUTH-07
       x-status: implemented
       responses:
@@ -1189,12 +1986,30 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: ada_fan
+                  description: "3-30 characters: a-z, 0-9 or _; changeable every 30 days"
+                displayName:
+                  type: string
+                  example: Ada
+                  maxLength: 50
+            example:
+              username: ada_fan
+              displayName: Ada
   /api/me/memberships:
     get:
       operationId: COM_05
       summary: COM-05 GET /api/me/memberships
       tags:
-      - COM
+        - COM
       x-route-id: COM-05
       x-status: implemented
       responses:
@@ -1207,34 +2022,52 @@ paths:
       operationId: COM_06
       summary: COM-06 PATCH /api/memberships/:id
       tags:
-      - COM
+        - COM
       x-route-id: COM-06
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alertsEnabled:
+                  type: boolean
+                  example: false
+              required:
+                - alertsEnabled
+            example:
+              alertsEnabled: false
   /api/mission-completions/{id}/approve:
     post:
       operationId: MIS_09
       summary: MIS-09 POST /api/mission-completions/:id/approve · MIS-10 .../reject
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-09
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1245,49 +2078,79 @@ paths:
       operationId: MIS_10
       summary: MIS-09 POST /api/mission-completions/:id/approve · MIS-10 .../reject
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-10
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: The link does not show the shared post.
+                  maxLength: 500
+              required:
+                - reason
+            example:
+              reason: The link does not show the shared post.
   /api/missions:
     get:
       operationId: MIS_01
       summary: MIS-01 GET /api/missions?communityId=&status=&limit=&cursor=
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-01
       x-status: implemented
       parameters:
-      - name: communityId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: communityId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - expired
+              - pending
+              - rejected
+            example: active
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 20
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ""
+            description: Leave empty for page 1; then paste nextCursor from the previous response
       responses:
         '200':
           description: Success
@@ -1297,7 +2160,7 @@ paths:
       operationId: MIS_03
       summary: MIS-03 POST /api/missions
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-03
       x-status: implemented
       responses:
@@ -1305,20 +2168,92 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Any unique text, max 200 characters. Resending the same key returns the first result instead of creating a
+            duplicate.
+          schema:
+            type: string
+            example: 3f1c2a9e-5b7d-4e8a-9c0f-1a2b3c4d5e6f
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                communityId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+                title:
+                  type: string
+                  example: Share the finale poster
+                  maxLength: 120
+                description:
+                  type: string
+                  example: Post it on your story and paste the link.
+                  maxLength: 2000
+                xpReward:
+                  type: integer
+                  example: 50
+                  description: must sit inside the admin XP range (PUT /api/admin/xp-rules)
+                deadline:
+                  type: string
+                  example: 2026-12-05T19:00:00+01:00
+                  format: date-time
+                completionPolicy:
+                  type: object
+                  properties:
+                    review:
+                      type: string
+                      enum:
+                        - auto
+                        - owner
+                      example: owner
+                    proof:
+                      type: string
+                      enum:
+                        - none
+                        - link
+                        - text
+                      example: link
+                  required:
+                    - review
+                    - proof
+              required:
+                - communityId
+                - title
+                - xpReward
+                - completionPolicy
+            example:
+              communityId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              title: Share the finale poster
+              description: Post it on your story and paste the link.
+              xpReward: 50
+              deadline: 2026-12-05T19:00:00+01:00
+              completionPolicy:
+                review: owner
+                proof: link
   /api/missions/{id}:
     get:
       operationId: MIS_02
       summary: MIS-02 GET /api/missions/:id
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-02
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1329,15 +2264,17 @@ paths:
       operationId: MIS_04
       summary: MIS-04 POST /api/missions/:id/approve / MIS-05 POST /api/missions/:id/reject
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-04
       x-status: deferred
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1348,15 +2285,17 @@ paths:
       operationId: MIS_08
       summary: MIS-08 GET /api/missions/:id/completions
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-08
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1366,34 +2305,62 @@ paths:
       operationId: MIS_06
       summary: MIS-06 POST /api/missions/:id/completions
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-06
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                proof:
+                  type: object
+                  properties:
+                    link:
+                      type: string
+                      example: https://instagram.com/p/abc123
+                      format: uri
+                      maxLength: 500
+                      description: https only
+                    text:
+                      type: string
+                      example: Shared it on my story.
+                      maxLength: 500
+            example:
+              proof:
+                link: https://instagram.com/p/abc123
+                text: Shared it on my story.
   /api/missions/{id}/completions/me:
     get:
       operationId: MIS_07
       summary: MIS-07 GET /api/missions/:id/completions/me
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-07
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1404,15 +2371,17 @@ paths:
       operationId: MIS_05
       summary: MIS-04 POST /api/missions/:id/approve / MIS-05 POST /api/missions/:id/reject
       tags:
-      - MIS
+        - MIS
       x-route-id: MIS-05
       x-status: deferred
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1423,25 +2392,34 @@ paths:
       operationId: NOT_01
       summary: NOT-01 GET /api/notifications?unreadOnly=&limit=&cursor=
       tags:
-      - NOT
+        - NOT
       x-route-id: NOT-01
       x-status: implemented
       parameters:
-      - name: unreadOnly
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: unreadOnly
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            example: "true"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 20
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ""
+            description: Leave empty for page 1; then paste nextCursor from the previous response
       responses:
         '200':
           description: Success
@@ -1452,15 +2430,17 @@ paths:
       operationId: NOT_03
       summary: NOT-03 POST /api/notifications/:id/read
       tags:
-      - NOT
+        - NOT
       x-route-id: NOT-03
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1471,7 +2451,7 @@ paths:
       operationId: NOT_04
       summary: NOT-04 POST /api/notifications/read-all
       tags:
-      - NOT
+        - NOT
       x-route-id: NOT-04
       x-status: implemented
       responses:
@@ -1484,7 +2464,7 @@ paths:
       operationId: NOT_02
       summary: NOT-02 GET /api/notifications/unread-count
       tags:
-      - NOT
+        - NOT
       x-route-id: NOT-02
       x-status: implemented
       responses:
@@ -1497,7 +2477,7 @@ paths:
       operationId: ONB_01
       summary: ONB-01 GET /api/onboarding
       tags:
-      - ONB
+        - ONB
       x-route-id: ONB-01
       x-status: implemented
       responses:
@@ -1509,7 +2489,7 @@ paths:
       operationId: ONB_02
       summary: ONB-02 PUT /api/onboarding
       tags:
-      - ONB
+        - ONB
       x-route-id: ONB-02
       x-status: implemented
       responses:
@@ -1517,12 +2497,57 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+                countryId:
+                  type: string
+                  example: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+                  format: uuid
+                showIds:
+                  type: array
+                  items:
+                    type: string
+                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    format: uuid
+                  example: &a2
+                    - 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                seasonIds:
+                  type: array
+                  items:
+                    type: string
+                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    format: uuid
+                  example: &a3
+                    - 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+                talentIds:
+                  type: array
+                  items:
+                    type: string
+                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    format: uuid
+                  example: &a4
+                    - 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            example:
+              categoryId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              countryId: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+              showIds: *a2
+              seasonIds: *a3
+              talentIds: *a4
   /api/onboarding/complete:
     post:
       operationId: ONB_03
       summary: ONB-03 POST /api/onboarding/complete
       tags:
-      - ONB
+        - ONB
       x-route-id: ONB-03
       x-status: implemented
       responses:
@@ -1530,12 +2555,60 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+                countryId:
+                  type: string
+                  example: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+                  format: uuid
+                showIds:
+                  type: array
+                  items:
+                    type: string
+                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    format: uuid
+                  example: &a5
+                    - 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                seasonIds:
+                  type: array
+                  items:
+                    type: string
+                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    format: uuid
+                  example: &a6
+                    - 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+                talentIds:
+                  type: array
+                  items:
+                    type: string
+                    example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    format: uuid
+                  example: &a7
+                    - 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              required:
+                - categoryId
+                - showIds
+            example:
+              categoryId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              countryId: 1b4e28ba-2fa1-41d2-883f-0016d3cca427
+              showIds: *a5
+              seasonIds: *a6
+              talentIds: *a7
   /api/plans:
     get:
       operationId: PLN_01
       summary: PLN-01 GET /api/plans
       tags:
-      - PLN
+        - PLN
       x-route-id: PLN-01
       x-status: deferred
       responses:
@@ -1548,15 +2621,17 @@ paths:
       operationId: DROP_10
       summary: DROP-10 DELETE /api/replies/:id
       tags:
-      - DROP
+        - DROP
       x-route-id: DROP-10
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1567,7 +2642,7 @@ paths:
       operationId: RPT_01
       summary: RPT-01 POST /api/reports
       tags:
-      - RPT
+        - RPT
       x-route-id: RPT-01
       x-status: implemented
       responses:
@@ -1575,20 +2650,64 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                targetType:
+                  type: string
+                  enum:
+                    - drop
+                    - reply
+                    - user
+                    - community
+                    - mission
+                  example: drop
+                targetId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                reason:
+                  type: string
+                  enum:
+                    - spam
+                    - harassment
+                    - hate
+                    - sexual
+                    - impersonation
+                    - other
+                  example: spam
+                details:
+                  type: string
+                  example: Same link posted 20 times.
+                  maxLength: 1000
+              required:
+                - targetType
+                - targetId
+                - reason
+            example:
+              targetType: drop
+              targetId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              reason: spam
+              details: Same link posted 20 times.
   /api/seasons:
     get:
       operationId: CAT_04
       summary: CAT-04 GET /api/seasons?showId=
       tags:
-      - CAT
+        - CAT
       x-route-id: CAT-04
       x-status: implemented
       parameters:
-      - name: showId
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: showId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1599,25 +2718,30 @@ paths:
       operationId: CAT_03
       summary: CAT-03 GET /api/shows?countryId=&categoryId=&q=
       tags:
-      - CAT
+        - CAT
       x-route-id: CAT-03
       x-status: implemented
       parameters:
-      - name: countryId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: categoryId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: q
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: countryId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            example: star
       responses:
         '200':
           description: Success
@@ -1628,7 +2752,7 @@ paths:
       operationId: TAL_01
       summary: TAL-01 POST /api/talent-applications
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-01
       x-status: implemented
       responses:
@@ -1636,31 +2760,146 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+                displayName:
+                  type: string
+                  example: Tola Bright
+                  minLength: 2
+                  maxLength: 60
+                bio:
+                  type: string
+                  example: Singer from season 2 of a fictional show.
+                  maxLength: 1000
+                links:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      label:
+                        type: string
+                        example: Instagram
+                        maxLength: 40
+                      url:
+                        type: string
+                        example: https://instagram.com/tola.sings
+                        format: uri
+                        maxLength: 500
+                        description: https only
+                    required:
+                      - label
+                      - url
+                  example: &a8
+                    - label: Instagram
+                      url: https://instagram.com/tola.sings
+                imageMediaId:
+                  type: string
+                  example: media_01
+                evidenceMediaIds:
+                  type: array
+                  items:
+                    type: string
+                    example: media_02
+                  example: &a9
+                    - media_02
+              required:
+                - categoryId
+                - displayName
+            example:
+              categoryId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              displayName: Tola Bright
+              bio: Singer from season 2 of a fictional show.
+              links: *a8
+              imageMediaId: media_01
+              evidenceMediaIds: *a9
   /api/talent-applications/{id}:
     patch:
       operationId: TAL_03
       summary: TAL-03 PATCH /api/talent-applications/:id
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-03
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                  example: Tola Bright
+                  maxLength: 60
+                bio:
+                  type: string
+                  example: Updated bio.
+                  maxLength: 1000
+                links:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      label:
+                        type: string
+                        example: Instagram
+                        maxLength: 40
+                      url:
+                        type: string
+                        example: https://instagram.com/tola.sings
+                        format: uri
+                        maxLength: 500
+                        description: https only
+                    required:
+                      - label
+                      - url
+                  example: &a10
+                    - label: Instagram
+                      url: https://instagram.com/tola.sings
+                imageMediaId:
+                  type: string
+                  example: media_01
+                evidenceMediaIds:
+                  type: array
+                  items:
+                    type: string
+                    example: media_02
+                  example: &a11
+                    - media_02
+            example:
+              displayName: Tola Bright
+              bio: Updated bio.
+              links: *a10
+              imageMediaId: media_01
+              evidenceMediaIds: *a11
   /api/talent-applications/me:
     get:
       operationId: TAL_02
       summary: TAL-02 GET /api/talent-applications/me
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-02
       x-status: implemented
       responses:
@@ -1673,7 +2912,7 @@ paths:
       operationId: TAL_08
       summary: TAL-08 GET /api/talent/analytics
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-08
       x-status: deferred
       responses:
@@ -1686,7 +2925,7 @@ paths:
       operationId: TAL_06
       summary: TAL-06 GET /api/talent/dashboard
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-06
       x-status: implemented
       responses:
@@ -1699,7 +2938,7 @@ paths:
       operationId: TAL_07
       summary: TAL-07 PATCH /api/talent/profile
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-07
       x-status: implemented
       responses:
@@ -1707,12 +2946,56 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Tola Bright
+                  maxLength: 80
+                bio:
+                  type: string
+                  example: Updated bio.
+                  maxLength: 1000
+                links:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      label:
+                        type: string
+                        example: Instagram
+                        maxLength: 40
+                      url:
+                        type: string
+                        example: https://instagram.com/tola.sings
+                        format: uri
+                        maxLength: 500
+                        description: https only
+                    required:
+                      - label
+                      - url
+                  example: &a12
+                    - label: Instagram
+                      url: https://instagram.com/tola.sings
+                imageMediaId:
+                  type: string
+                  example: media_01
+            example:
+              name: Tola Bright
+              bio: Updated bio.
+              links: *a12
+              imageMediaId: media_01
   /api/talent/subscription:
     get:
       operationId: PLN_02
       summary: PLN-02 GET /api/talent/subscription, PLN-03 POST /api/talent/subscription/checkout, PLN-04 billing webhook
       tags:
-      - PLN
+        - PLN
       x-route-id: PLN-02
       x-status: deferred
       responses:
@@ -1725,7 +3008,7 @@ paths:
       operationId: PLN_03
       summary: PLN-02 GET /api/talent/subscription, PLN-03 POST /api/talent/subscription/checkout, PLN-04 billing webhook
       tags:
-      - PLN
+        - PLN
       x-route-id: PLN-03
       x-status: deferred
       responses:
@@ -1738,25 +3021,30 @@ paths:
       operationId: CAT_05
       summary: CAT-05 GET /api/talents?seasonId=&showId=&q=
       tags:
-      - CAT
+        - CAT
       x-route-id: CAT-05
       x-status: implemented
       parameters:
-      - name: seasonId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: showId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: q
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: seasonId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: showId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            example: tola
       responses:
         '200':
           description: Success
@@ -1767,15 +3055,17 @@ paths:
       operationId: CAT_06
       summary: CAT-06 GET /api/talents/:id
       tags:
-      - CAT
+        - CAT
       x-route-id: CAT-06
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1786,26 +3076,60 @@ paths:
       operationId: TAL_04
       summary: TAL-04 POST /api/talents/:id/claims
       tags:
-      - TAL
+        - TAL
       x-route-id: TAL-04
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                evidenceLinks:
+                  type: array
+                  items:
+                    type: string
+                    example: https://instagram.com/tola.sings
+                    format: uri
+                    maxLength: 500
+                    description: https only
+                  example: &a13
+                    - https://instagram.com/tola.sings
+                evidenceMediaIds:
+                  type: array
+                  items:
+                    type: string
+                    example: media_02
+                  example: &a14
+                    - media_02
+                message:
+                  type: string
+                  example: This is my official page.
+                  maxLength: 1000
+            example:
+              evidenceLinks: *a13
+              evidenceMediaIds: *a14
+              message: This is my official page.
   /api/uploads:
     post:
       operationId: MED_01
       summary: MED-01 POST /api/uploads
       tags:
-      - MED
+        - MED
       x-route-id: MED-01
       x-status: planned
       responses:
@@ -1818,30 +3142,41 @@ paths:
       operationId: WP_01
       summary: WP-01 GET /api/watch-parties?status=upcoming|past&communityId=&limit=&cursor=
       tags:
-      - WP
+        - WP
       x-route-id: WP-01
       x-status: implemented
       parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: communityId
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: cursor
-        in: query
-        required: false
-        schema:
-          type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - upcoming
+              - past
+            example: upcoming
+        - name: communityId
+          in: query
+          required: false
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 20
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            example: ""
+            description: Leave empty for page 1; then paste nextCursor from the previous response
       responses:
         '200':
           description: Success
@@ -1851,7 +3186,7 @@ paths:
       operationId: WP_03
       summary: WP-03 POST /api/watch-parties
       tags:
-      - WP
+        - WP
       x-route-id: WP-03
       x-status: implemented
       responses:
@@ -1859,20 +3194,82 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Any unique text, max 200 characters. Resending the same key returns the first result instead of creating a
+            duplicate.
+          schema:
+            type: string
+            example: 3f1c2a9e-5b7d-4e8a-9c0f-1a2b3c4d5e6f
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                communityId:
+                  type: string
+                  example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  format: uuid
+                title:
+                  type: string
+                  example: Finale night watch party
+                  maxLength: 120
+                description:
+                  type: string
+                  example: Bring snacks. We vote on the best outfit.
+                  maxLength: 2000
+                startsAt:
+                  type: string
+                  example: 2026-12-05T19:00:00+01:00
+                  format: date-time
+                endsAt:
+                  type: string
+                  example: 2026-12-05T22:00:00+01:00
+                  format: date-time
+                timeZone:
+                  type: string
+                  example: Africa/Lagos
+                  description: IANA time zone
+                link:
+                  type: string
+                  example: https://meet.example.com/finale-night
+                  format: uri
+                  maxLength: 500
+                  description: https only
+              required:
+                - communityId
+                - title
+                - startsAt
+                - timeZone
+            example:
+              communityId: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+              title: Finale night watch party
+              description: Bring snacks. We vote on the best outfit.
+              startsAt: 2026-12-05T19:00:00+01:00
+              endsAt: 2026-12-05T22:00:00+01:00
+              timeZone: Africa/Lagos
+              link: https://meet.example.com/finale-night
   /api/watch-parties/{id}:
     get:
       operationId: WP_02
       summary: WP-02 GET /api/watch-parties/:id
       tags:
-      - WP
+        - WP
       x-route-id: WP-02
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1882,34 +3279,78 @@ paths:
       operationId: WP_04
       summary: WP-04 PATCH /api/watch-parties/:id
       tags:
-      - WP
+        - WP
       x-route-id: WP-04
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
         default:
           $ref: '#/components/responses/Error'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Finale night watch party
+                  maxLength: 120
+                description:
+                  type: string
+                  example: Bring snacks. We vote on the best outfit.
+                  maxLength: 2000
+                startsAt:
+                  type: string
+                  example: 2026-12-05T19:00:00+01:00
+                  format: date-time
+                endsAt:
+                  type: string
+                  example: 2026-12-05T22:00:00+01:00
+                  format: date-time
+                timeZone:
+                  type: string
+                  example: Africa/Lagos
+                  description: IANA time zone
+                link:
+                  type: string
+                  example: https://meet.example.com/finale-night
+                  format: uri
+                  maxLength: 500
+                  description: https only
+            example:
+              title: Finale night watch party
+              description: Bring snacks. We vote on the best outfit.
+              startsAt: 2026-12-05T19:00:00+01:00
+              endsAt: 2026-12-05T22:00:00+01:00
+              timeZone: Africa/Lagos
+              link: https://meet.example.com/finale-night
   /api/watch-parties/{id}/cancel:
     post:
       operationId: WP_05
       summary: WP-05 POST /api/watch-parties/:id/cancel
       tags:
-      - WP
+        - WP
       x-route-id: WP-05
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1920,15 +3361,17 @@ paths:
       operationId: WP_08
       summary: WP-07 PUT /api/watch-parties/:id/rsvp · WP-08 DELETE /api/watch-parties/:id/rsvp
       tags:
-      - WP
+        - WP
       x-route-id: WP-08
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1938,15 +3381,17 @@ paths:
       operationId: WP_07
       summary: WP-07 PUT /api/watch-parties/:id/rsvp · WP-08 DELETE /api/watch-parties/:id/rsvp
       tags:
-      - WP
+        - WP
       x-route-id: WP-07
       x-status: implemented
       parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
       responses:
         '200':
           description: Success
@@ -1957,7 +3402,7 @@ paths:
       operationId: XP_01
       summary: XP-01 GET /api/xp/me
       tags:
-      - XP
+        - XP
       x-route-id: XP-01
       x-status: implemented
       responses:
@@ -1970,7 +3415,7 @@ paths:
       operationId: XP_02
       summary: XP-02 GET /api/xp/me/transactions
       tags:
-      - XP
+        - XP
       x-route-id: XP-02
       x-status: implemented
       responses:
@@ -1978,6 +3423,56 @@ paths:
           description: Success
         default:
           $ref: '#/components/responses/Error'
+  /api/admin/communities/{id}/members/{userId}/reinstate:
+    post:
+      operationId: ADM_16
+      x-route-id: ADM-16
+      summary: ADM-16 POST /api/admin/communities/:id/members/:userId/reinstate
+      tags:
+        - ADM
+      x-status: implemented
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: Xq3vT9kLm2PzR8wN
+            description: Better Auth user id (not a uuid)
+      responses:
+        "200":
+          description: Success
+        default:
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: Repeated spam in the fandom feed.
+                  minLength: 1
+                  maxLength: 500
+                internalNote:
+                  type: string
+                  example: Checked against the application evidence.
+                  maxLength: 2000
+                  description: Admins only; never shown to the user
+              required:
+                - reason
+            example:
+              reason: Repeated spam in the fandom feed.
+              internalNote: Checked against the application evidence.
 components:
   securitySchemes:
     session:
@@ -1988,52 +3483,52 @@ components:
     Error:
       type: object
       required:
-      - error
+        - error
       properties:
         error:
           type: object
           required:
-          - code
-          - message
-          - requestId
+            - code
+            - message
+            - requestId
           properties:
             code:
               type: string
               enum:
-              - VALIDATION_FAILED
-              - UNAUTHENTICATED
-              - FORBIDDEN
-              - ACCOUNT_SUSPENDED
-              - EMAIL_NOT_VERIFIED
-              - NOT_FOUND
-              - CONFLICT
-              - INVALID_STATE
-              - ONBOARDING_REQUIRED
-              - FEATURE_DISABLED
-              - PAYLOAD_TOO_LARGE
-              - RATE_LIMITED
-              - INTERNAL
+                - VALIDATION_FAILED
+                - UNAUTHENTICATED
+                - FORBIDDEN
+                - ACCOUNT_SUSPENDED
+                - EMAIL_NOT_VERIFIED
+                - NOT_FOUND
+                - CONFLICT
+                - INVALID_STATE
+                - ONBOARDING_REQUIRED
+                - FEATURE_DISABLED
+                - PAYLOAD_TOO_LARGE
+                - RATE_LIMITED
+                - INTERNAL
             message:
               type: string
             requestId:
               type:
-              - string
-              - 'null'
+                - string
+                - 'null'
             details:
               type: object
     Page:
       type: object
       required:
-      - items
-      - nextCursor
+        - items
+        - nextCursor
       properties:
         items:
           type: array
           items: {}
         nextCursor:
           type:
-          - string
-          - 'null'
+            - string
+            - 'null'
   responses:
     Error:
       description: Error envelope

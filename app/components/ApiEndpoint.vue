@@ -14,12 +14,15 @@ const op = computed(() =>
 
 const pathParams = computed(() => op.value?.parameters.filter(p => p.in === 'path') ?? [])
 const queryParams = computed(() => op.value?.parameters.filter(p => p.in === 'query') ?? [])
-const hasBody = computed(() => ['post', 'put', 'patch'].includes(props.method.toLowerCase()))
+const headerParams = computed(() => op.value?.parameters.filter(p => p.in === 'header') ?? [])
+const hasBody = computed(() => !!op.value?.body)
+const fields = computed(() => bodyFields(op.value?.body?.schema))
+const sample = (v: unknown) => (v === undefined || v === '' ? '' : String(v))
 
 const pathValues = reactive<Record<string, string>>({})
 const queryValues = reactive<Record<string, string>>({})
+const headerValues = reactive<Record<string, string>>({})
 const bodyText = ref('')
-const idemKey = ref('')
 const open = ref(false)
 
 interface Result { status: number, ms: number, body: string, error?: string }
@@ -27,7 +30,16 @@ const result = ref<Result | null>(null)
 const sending = ref(false)
 
 function generateIdemKey() {
-  idemKey.value = globalThis.crypto.randomUUID()
+  headerValues['Idempotency-Key'] = globalThis.crypto.randomUUID()
+}
+
+// Fills every input with the contract's sample values. Sample ids are fake:
+// swap them for real ids from a GET response before sending.
+function fillSamples() {
+  for (const p of pathParams.value) pathValues[p.name] = sample(p.schema?.example)
+  for (const p of queryParams.value) queryValues[p.name] = sample(p.schema?.example)
+  for (const p of headerParams.value) headerValues[p.name] = sample(p.schema?.example)
+  if (op.value?.body?.example) bodyText.value = JSON.stringify(op.value.body.example, null, 2)
 }
 
 function resolvedPath() {
@@ -41,7 +53,7 @@ async function send() {
   sending.value = true
   result.value = null
   const headers: Record<string, string> = {}
-  if (idemKey.value) headers['Idempotency-Key'] = idemKey.value
+  for (const [k, v] of Object.entries(headerValues)) if (v) headers[k] = v
   let body: string | undefined
   if (hasBody.value && bodyText.value.trim()) {
     headers['Content-Type'] = 'application/json'
@@ -97,26 +109,51 @@ const statusClass = computed(() => {
         <p class="docs-params-title">Parameters</p>
         <label v-for="p in pathParams" :key="`p-${p.name}`" class="docs-param-row">
           <span class="docs-param-name">{{ p.name }} <em>path{{ p.required ? ' · required' : '' }}</em></span>
-          <input v-model="pathValues[p.name]" class="docs-param-input" :placeholder="p.description || p.name">
+          <input v-model="pathValues[p.name]" class="docs-param-input" :placeholder="sample(p.schema?.example) || p.name">
+          <small class="docs-param-hint">{{ describeSchema(p.schema) }}<template v-if="p.schema?.description"> — {{ p.schema.description }}</template></small>
         </label>
         <label v-for="p in queryParams" :key="`q-${p.name}`" class="docs-param-row">
           <span class="docs-param-name">{{ p.name }} <em>query{{ p.required ? ' · required' : '' }}</em></span>
-          <input v-model="queryValues[p.name]" class="docs-param-input" :placeholder="p.description || p.name">
+          <input v-model="queryValues[p.name]" class="docs-param-input" :placeholder="sample(p.schema?.example) || p.name">
+          <small class="docs-param-hint">{{ describeSchema(p.schema) }}<template v-if="p.schema?.description"> — {{ p.schema.description }}</template></small>
         </label>
       </div>
 
-      <div v-if="hasBody">
-        <p class="docs-params-title">Body <span class="docs-hint">(JSON — not described by the contract; write it yourself)</span></p>
-        <textarea v-model="bodyText" class="docs-body-editor" rows="5" spellcheck="false" placeholder="{}" />
+      <div class="docs-params">
+        <p class="docs-params-title">Headers</p>
+        <label v-for="h in headerParams" :key="`h-${h.name}`" class="docs-param-row">
+          <span class="docs-param-name">{{ h.name }} <em>header{{ h.required ? ' · required' : ' · optional' }}</em></span>
+          <span style="display: flex; gap: 0.5rem">
+            <input v-model="headerValues[h.name]" class="docs-param-input" style="flex: 1" :placeholder="sample(h.schema?.example)">
+            <button v-if="h.name === 'Idempotency-Key'" type="button" class="docs-mini-btn" @click="generateIdemKey">Generate</button>
+          </span>
+          <small class="docs-param-hint">{{ h.description }}</small>
+        </label>
+        <p class="docs-param-hint">
+          <code>Content-Type: application/json</code><template v-if="hasBody"> is added for you.</template><template v-else> is not needed (no body).</template>
+          Your session cookie is sent automatically once you sign in above.
+        </p>
       </div>
 
-      <div class="docs-idem-row">
-        <span class="docs-param-name">Idempotency-Key <em>header · optional</em></span>
-        <div style="display: flex; gap: 0.5rem; flex: 1">
-          <input v-model="idemKey" class="docs-param-input" style="flex: 1" placeholder="—">
-          <button type="button" class="docs-mini-btn" @click="generateIdemKey">Generate</button>
-        </div>
+      <div v-if="hasBody">
+        <p class="docs-params-title">Body <span class="docs-hint">(JSON{{ op?.body?.required ? '' : ' · optional' }})</span></p>
+        <table v-if="fields.length" class="docs-fields">
+          <thead><tr><th>Field</th><th>Rule</th><th>Sample</th></tr></thead>
+          <tbody>
+            <tr v-for="f in fields" :key="f.name">
+              <td><code>{{ f.name }}</code><em v-if="f.required"> required</em></td>
+              <td>{{ f.rule }}<template v-if="f.note"><br><small>{{ f.note }}</small></template></td>
+              <td><code>{{ f.example }}</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <textarea v-model="bodyText" class="docs-body-editor" rows="8" spellcheck="false" :placeholder="op?.body?.example ? JSON.stringify(op.body.example, null, 2) : '{}'" />
       </div>
+
+      <p class="docs-param-hint">
+        <button type="button" class="docs-mini-btn" @click="fillSamples">Fill with sample data</button>
+        Sample ids are made up — replace them with real ids from a list endpoint before sending.
+      </p>
 
       <div class="docs-send-row">
         <code class="docs-resolved">{{ method.toUpperCase() }} {{ resolvedPath() }}</code>

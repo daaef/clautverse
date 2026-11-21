@@ -363,3 +363,13 @@ html.docs-light .docs {
   .docs-burger { display: inline-flex; }
   .docs-content { padding: 1.5rem 1rem 3rem; }
 }
+
+/* Sample data: rule hint under each input, and the body field table. */
+.docs-param-row { flex-wrap: wrap; }
+.docs-param-row .docs-param-hint { flex-basis: 100%; margin-left: 10.75rem; }
+.docs-param-hint { display: block; margin: 0.15rem 0 0.5rem; font-size: 0.75rem; color: var(--d-text-soft); }
+.docs-param-hint .docs-mini-btn { margin-right: 0.5rem; }
+.docs-prose table.docs-fields { margin: 0.5rem 0 0.75rem; font-size: 0.8rem; }
+.docs-fields td, .docs-fields th { padding: 0.35rem 0.5rem; vertical-align: top; }
+.docs-fields td:last-child code { word-break: break-all; }
+.docs-fields em { font-style: normal; font-size: 0.7rem; color: var(--d-accent); }
