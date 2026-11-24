@@ -1,0 +1,82 @@
+<!--@meta
+part: Part 4 · Features
+title: Missions, XP and badges
+summary: Tasks that earn points, a points ledger that can never be silently edited, and collectable badges.
+-->
+<p class="lead">Missions give fans something to do. A Star posts a task, fans complete it, and points (XP) are awarded. The interesting engineering is in how points are stored: as a ledger, never as a number that gets overwritten.</p>
+
+<h2>The rules in plain words</h2>
+<ul>
+  <li>A mission belongs to one community and is created by its Star (or an admin). It has a title, an XP reward, an optional deadline, and a <strong>completion policy</strong>: <code>review</code> is <code>auto</code> (instant) or <code>owner</code> (the Star approves), and <code>proof</code> is <code>none</code>, <code>link</code> or <code>text</code>.</li>
+  <li>The XP reward must be inside a range set by admins (default 5 to 100; stored in the <code>app_setting</code> table).</li>
+  <li>Each fan can complete a mission <strong>once</strong>, and only if they joined the community.</li>
+  <li>Auto missions pay out immediately. Owner-reviewed missions wait as <code>submitted</code> until approved or rejected with a reason.</li>
+</ul>
+<plain>
+<p>Think of XP like a bank statement rather than a balance on a sticker. Each earning or correction is a new line. The balance is the sum of the lines. Nobody can quietly change last week's line, so there is always a trail.</p>
+</plain>
+
+<h2>The missions helper file</h2>
+<p>Create <code>server/utils/missions.ts</code>:</p>
+<!--@file server/utils/missions.ts-->
+<ul>
+  <li><strong><code>grantXp</code> is the only way XP changes.</strong> It inserts a ledger row. The table has a unique rule on <code>(userId, sourceType, sourceId)</code>, so granting for the same completion twice hits <code>onConflictDoNothing</code> and returns the original row instead of paying twice.</li>
+  <li><code>getXpRules</code> reads the admin-configured range and falls back to <code>DEFAULT_XP_RULES</code>.</li>
+  <li><code>isExpired</code> / <code>missionStatus</code>: expiry is <em>computed</em> from the deadline, not stored, so nothing has to run at midnight to flip it.</li>
+  <li><code>loadMission</code>: pending and rejected missions are visible only to staff and the creator.</li>
+  <li><code>loadCompletionForReview</code>: locks the completion row and insists the caller is staff of that mission's community.</li>
+  <li><code>badgePatch</code> and <code>badgeBody</code>: Zod shapes for admin badge endpoints (chapter 17). <code>z.url({ protocol: /^https$/ })</code> accepts only <code>https</code> links.</li>
+</ul>
+
+<h2>Missions</h2>
+<p><code>server/api/missions/index.get.ts</code> lists missions. Active ones are ordered by deadline (soonest first, no deadline last); the other statuses by newest:</p>
+<!--@file server/api/missions/index.get.ts-->
+<p><code>server/api/missions/index.post.ts</code> creates one:</p>
+<!--@file server/api/missions/index.post.ts-->
+<ul>
+  <li>Rejects a reward outside the admin range, a deadline in the past, and an owner-reviewed mission without any proof (there would be nothing to review).</li>
+  <li>Supports the <code>Idempotency-Key</code> header from chapter 12.</li>
+</ul>
+<p><code>server/api/missions/[id]/index.get.ts</code>:</p>
+<!--@file server/api/missions/[id]/index.get.ts-->
+
+<h2>Completing a mission</h2>
+<p><code>server/api/missions/[id]/completions/index.post.ts</code> is where a fan submits:</p>
+<!--@file server/api/missions/[id]/completions/index.post.ts-->
+<tech>
+<p>Everything happens in <strong>one transaction</strong>: check the mission is open, check the fan is an active member, return the existing completion if there is one, check the proof, insert the completion, and, for auto-review, <code>grantXp</code> then link the ledger row back with <code>xpTransactionId</code>. If any step throws, the whole thing rolls back, so you can never get a completion without its XP or XP without its completion.</p>
+</tech>
+<p>Staff see the queue of submissions and fans see their own:</p>
+<!--@file server/api/missions/[id]/completions/index.get.ts-->
+<!--@file server/api/missions/[id]/completions/me.get.ts-->
+<p>The Star (or admin) approves or rejects. Approve grants XP once and notifies the fan; reject needs a reason and grants nothing:</p>
+<!--@file server/api/mission-completions/[id]/approve.post.ts-->
+<!--@file server/api/mission-completions/[id]/reject.post.ts-->
+<ul>
+  <li>Repeating an approve returns the same result (safe to retry). Rejecting an already-approved completion is refused (<code>INVALID_STATE</code>): corrections are made with an admin XP adjustment instead (chapter 17), never by editing history.</li>
+</ul>
+
+<h2>Reading my XP</h2>
+<p><code>server/api/xp/me.get.ts</code> adds up the ledger:</p>
+<!--@file server/api/xp/me.get.ts-->
+<p><code>server/api/xp/me/transactions.get.ts</code> lists every ledger line:</p>
+<!--@file server/api/xp/me/transactions.get.ts-->
+<tech><p><code>sum(amount)</code> with <code>coalesce(..., 0)</code> returns 0 for someone with no rows. <code>filter (where amount &gt; 0)</code> gives lifetime earnings separately from the balance, which can go down after a negative admin correction.</p></tech>
+
+<h2>Badges</h2>
+<p>Admins create and award badges (chapter 17). Fans can read the public catalog and their own collection:</p>
+<!--@file server/api/badges/index.get.ts-->
+<!--@file server/api/badges/me.get.ts-->
+
+<check>
+<p>As the admin user from chapter 12, create an auto-approved mission, complete it, and look at your XP (use your real community id):</p>
+<!--@code bash | terminal-->
+curl -b jar.txt -X POST http://localhost:3000/api/missions \
+  -H 'Content-Type: application/json' \
+  -d '{"communityId":"COMMUNITY_ID","title":"Say hi","xpReward":10,"completionPolicy":{"review":"auto","proof":"none"}}'
+curl -b jar.txt -X POST http://localhost:3000/api/missions/MISSION_ID/completions \
+  -H 'Content-Type: application/json' -d '{}'
+curl -b jar.txt http://localhost:3000/api/xp/me
+<!--@/code-->
+<p>Expected: the completion has status <code>approved</code>, and <code>/api/xp/me</code> shows <code>"balance":10</code>. Send the completion call again: you get the same completion back and the balance stays 10. Try <code>"xpReward":5000</code> to see the range check fail. Commit: <code>git add -A && git commit -m "Missions, XP ledger and badges"</code>.</p>
+</check>

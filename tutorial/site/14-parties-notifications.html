@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watch parties, notifications and background jobs · Build Clautverse</title>
+<meta name="description" content="Scheduled events with RSVPs, an in-app notification inbox, and two protected jobs that run on a timer.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="14-parties-notifications">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications" aria-current="page">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 4 · Features</p><h1>Watch parties, notifications and background jobs</h1><p class="meta">About 4 min read</p><p class="lead">This chapter adds events fans can attend together, the bell that tells them things happened, and two jobs a scheduler calls to keep time-based things correct (reminders and account clean-up).</p>
+
+<h2 id="watch-parties">Watch parties<a class="anchor" href="#watch-parties" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>A watch party is an event listing: a title, a start time, a link to wherever people will actually watch (another website), and an "I'm going" button. Clautverse does not host the video; it only organises the gathering and counts who is coming.</p>
+</aside>
+<p>Create <code>server/utils/watchParties.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/watchParties.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, inArray, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-k">type</span> Party = <span class="t-k">typeof</span> schema.watchParty.$inferSelect
+<span class="t-k">type</span> UserLite = Parameters&lt;<span class="t-k">typeof</span> publicUser&gt;[<span class="t-n">0</span>]
+
+<span class="t-k">export</span> <span class="t-k">const</span> isIanaTimeZone = (tz: string) =&gt; {
+  <span class="t-k">try</span> {
+    <span class="t-k">new</span> Intl.DateTimeFormat(<span class="t-s">'en'</span>, { timeZone: tz })
+    <span class="t-k">return</span> tz.includes(<span class="t-s">'/'</span>) || tz === <span class="t-s">'UTC'</span>
+  }
+  <span class="t-k">catch</span> { <span class="t-k">return</span> <span class="t-k">false</span> }
+}
+
+<span class="t-k">const</span> fields = {
+  title: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">120</span>),
+  description: z.string().trim().max(<span class="t-n">2000</span>).nullable(),
+  startsAt: z.iso.datetime({ offset: <span class="t-k">true</span> }),
+  endsAt: z.iso.datetime({ offset: <span class="t-k">true</span> }).nullable(),
+  timeZone: z.string().max(<span class="t-n">64</span>).refine(isIanaTimeZone, <span class="t-s">'Use an IANA time zone such as Africa/Lagos.'</span>),
+  link: z.url({ protocol: /^https$/ }).max(<span class="t-n">500</span>).nullable(),
+}
+<span class="t-k">export</span> <span class="t-k">const</span> partyCreateBody = z.object({ communityId: z.uuid(), ...fields, description: fields.description.optional(), endsAt: fields.endsAt.optional(), link: fields.link.optional() }).strict()
+<span class="t-k">export</span> <span class="t-k">const</span> partyPatchBody = z.object(fields).partial().strict()
+
+<span class="t-k">export</span> <span class="t-k">function</span> assertPartyTimes(startsAt: Date, endsAt: Date | <span class="t-k">null</span> | <span class="t-k">undefined</span>, startChanged: boolean) {
+  <span class="t-k">if</span> (startChanged &amp;&amp; startsAt &lt;= <span class="t-k">new</span> Date()) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Start time must be in the future.'</span>, { fields: { startsAt: <span class="t-s">'past'</span> } })
+  <span class="t-k">if</span> (endsAt &amp;&amp; endsAt &lt;= startsAt) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'End time must be after the start time.'</span>, { fields: { endsAt: <span class="t-s">'before_start'</span> } })
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> partyView = (p: Party, host: UserLite | <span class="t-k">null</span>, viewerRsvp = <span class="t-k">false</span>) =&gt; ({
+  id: p.id, communityId: p.communityId, host: host ? publicUser(host) : <span class="t-k">null</span>, title: p.title, description: p.description,
+  startsAt: p.startsAt.toISOString(), endsAt: p.endsAt?.toISOString() ?? <span class="t-k">null</span>, timeZone: p.timeZone, link: p.link,
+  status: p.status, rsvpCount: p.rsvpCount, viewerRsvp, createdAt: p.createdAt.toISOString(),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> isClosedParty = (p: Party) =&gt; p.status === <span class="t-s">'ended'</span> || p.status === <span class="t-s">'cancelled'</span>
+
+<span class="t-c">/** Staff = admin, community owner or host. Vetoed community → 404 for everyone else. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> loadParty(id: string, viewer: DbUser | <span class="t-k">null</span>, tx: DbOrTx = useDb(), lock = <span class="t-k">false</span>) {
+  <span class="t-k">const</span> q = tx.select({ party: schema.watchParty, community: schema.community, talent: schema.talent, host: schema.user }).<span class="t-k">from</span>(schema.watchParty)
+    .innerJoin(schema.community, eq(schema.community.id, schema.watchParty.communityId))
+    .leftJoin(schema.talent, eq(schema.talent.id, schema.community.ownerTalentId))
+    .leftJoin(schema.user, eq(schema.user.id, schema.watchParty.hostId))
+    .where(eq(schema.watchParty.id, id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">const</span> [r] = lock ? <span class="t-k">await</span> q.<span class="t-k">for</span>(<span class="t-s">'update'</span>, { <span class="t-k">of</span>: schema.watchParty }) : <span class="t-k">await</span> q
+  <span class="t-k">const</span> admin = isAdmin(viewer)
+  <span class="t-k">if</span> (!r || (r.community.status === <span class="t-s">'vetoed'</span> &amp;&amp; !admin)) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Watch party not found.'</span>)
+  <span class="t-k">const</span> isStaff = admin || (!!viewer &amp;&amp; (r.talent?.userId === viewer.id || r.party.hostId === viewer.id))
+  <span class="t-k">return</span> { ...r, isStaff }
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> viewerRsvps(userId: string | <span class="t-k">undefined</span>, ids: string[]) {
+  <span class="t-k">if</span> (!userId || !ids.length) <span class="t-k">return</span> <span class="t-k">new</span> Set&lt;string&gt;()
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ id: schema.watchPartyRsvp.partyId }).<span class="t-k">from</span>(schema.watchPartyRsvp)
+    .where(and(eq(schema.watchPartyRsvp.userId, userId), inArray(schema.watchPartyRsvp.partyId, ids)))
+  <span class="t-k">return</span> <span class="t-k">new</span> Set(rows.map(r =&gt; r.id))
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> notifyRsvps(tx: DbOrTx, partyId: string, <span class="t-k">type</span>: string) {
+  <span class="t-k">await</span> tx.execute(sql<span class="t-s">`insert into notification (user_id, type, data)
+    select r.user_id, ${type}, jsonb_build_object('partyId', ${partyId}::text) from watch_party_rsvp r where r.party_id = ${partyId}`</span>)
+}</code></pre></figure>
+<ul>
+  <li><code>isIanaTimeZone</code> accepts names like <code>Africa/Lagos</code> by asking JavaScript's built-in <code>Intl</code> to try to use the name. Times are stored in UTC; the zone is kept only so apps can show the local time properly.</li>
+  <li><code>partyCreateBody</code> and <code>partyPatchBody</code>: the Zod shapes. The patch shape is the create fields made <code>.partial()</code> (all optional), so the two cannot drift apart.</li>
+  <li><code>assertPartyTimes</code>: a new start time must be in the future and an end must come after the start.</li>
+  <li><code>loadParty</code>: loads a party with its community and host; "staff" means admin, community owner or host.</li>
+  <li><code>notifyRsvps</code>: one SQL statement that notifies everyone who RSVP'd.</li>
+</ul>
+<p>The endpoints. List upcoming or past parties:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/watch-parties/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, desc, eq, inArray, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// WP-01: upcoming (scheduled|live) soonest first; past (ended|cancelled) newest first.</span>
+<span class="t-k">const</span> query = z.object({ status: z.enum([<span class="t-s">'upcoming'</span>, <span class="t-s">'past'</span>]).<span class="t-k">default</span>(<span class="t-s">'upcoming'</span>), communityId: z.uuid().optional(), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> { status, communityId, limit, cursor } = readQuery(event, query)
+  <span class="t-k">if</span> (communityId) <span class="t-k">await</span> loadVisibleCommunity(communityId, viewer)
+  <span class="t-k">const</span> scope = <span class="t-s">`parties-${status}-${communityId ?? 'all'}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> w = schema.watchParty
+  <span class="t-k">const</span> up = status === <span class="t-s">'upcoming'</span>
+  <span class="t-k">const</span> after = cur ? (up ? sql<span class="t-s">`(${w.startsAt}, ${w.id}) &gt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : sql<span class="t-s">`(${w.startsAt}, ${w.id}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span>) : <span class="t-k">undefined</span>
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ party: w, host: schema.user }).<span class="t-k">from</span>(w)
+    .innerJoin(schema.community, eq(schema.community.id, w.communityId))
+    .leftJoin(schema.user, eq(schema.user.id, w.hostId))
+    .where(and(eq(schema.community.status, <span class="t-s">'active'</span>), communityId ? eq(w.communityId, communityId) : <span class="t-k">undefined</span>,
+      inArray(w.status, up ? [<span class="t-s">'scheduled'</span>, <span class="t-s">'live'</span>] : [<span class="t-s">'ended'</span>, <span class="t-s">'cancelled'</span>]), after))
+    .orderBy(...(up ? [asc(w.startsAt), asc(w.id)] : [desc(w.startsAt), desc(w.id)])).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">const</span> going = <span class="t-k">await</span> viewerRsvps(viewer?.id, rows.map(r =&gt; r.party.id))
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ t: r.party.startsAt.toISOString(), id: r.party.id }), r =&gt; partyView(r.party, r.host, going.has(r.party.id)))
+})</code></pre></figure>
+<p>Create one (the Star or an admin). Members with alerts on get a notification, and the idempotency key from chapter 12 is supported:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/watch-parties/index.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// WP-03: owner/admin; notifies members with alerts on.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> key = idempotencyHeader(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, partyCreateBody)
+  <span class="t-k">const</span> replay = <span class="t-k">await</span> findIdempotent(u.id, <span class="t-s">'party.create'</span>, key)
+  <span class="t-k">if</span> (replay) {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadParty(replay, u)
+    setResponseStatus(event, <span class="t-n">201</span>)
+    <span class="t-k">return</span> partyView(r.party, r.host)
+  }
+  <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(input.communityId, u)
+  <span class="t-k">if</span> (!isAdmin(u) &amp;&amp; !(<span class="t-k">await</span> isCommunityOwner(comm, u.id))) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the community\'s talent can create watch parties.'</span>)
+  <span class="t-k">const</span> startsAt = <span class="t-k">new</span> Date(input.startsAt)
+  <span class="t-k">const</span> endsAt = input.endsAt ? <span class="t-k">new</span> Date(input.endsAt) : <span class="t-k">null</span>
+  assertPartyTimes(startsAt, endsAt, <span class="t-k">true</span>)
+  <span class="t-k">const</span> p = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.insert(schema.watchParty).values({
+      communityId: comm.id, hostId: u.id, title: input.title, description: input.description ?? <span class="t-k">null</span>,
+      startsAt, endsAt, timeZone: input.timeZone, link: input.link ?? <span class="t-k">null</span>,
+    }).returning()
+    <span class="t-k">await</span> tx.execute(sql<span class="t-s">`insert into notification (user_id, type, data)
+      select m.user_id, 'watch_party.created', jsonb_build_object('partyId', ${row!.id}::text, 'communityId', ${comm.id}::text)
+      from membership m where m.community_id = ${comm.id} and m.status = 'active' and m.alerts_enabled and m.user_id &lt;&gt; ${u.id}`</span>)
+    <span class="t-k">await</span> saveIdempotent(tx, u.id, <span class="t-s">'party.create'</span>, key, row!.id)
+    <span class="t-k">return</span> row!
+  })
+  setResponseStatus(event, <span class="t-n">201</span>)
+  <span class="t-k">return</span> partyView(p, u)
+})</code></pre></figure>
+<p>Read, edit and cancel:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/watch-parties/[id]/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// WP-02: public share-page payload.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadParty(readIdParam(event), viewer)
+  <span class="t-k">const</span> going = <span class="t-k">await</span> viewerRsvps(viewer?.id, [r.party.id])
+  <span class="t-k">return</span> partyView(r.party, r.host, going.has(r.party.id))
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/watch-parties/[id]/index.patch.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// WP-04: host/owner/admin; not after ended|cancelled.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, partyPatchBody)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadParty(id, u, tx, <span class="t-k">true</span>)
+    <span class="t-k">if</span> (!r.isStaff) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the host can edit this watch party.'</span>)
+    <span class="t-k">if</span> (isClosedParty(r.party)) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This watch party is over.'</span>, { currentStatus: r.party.status })
+    <span class="t-k">const</span> startsAt = input.startsAt ? <span class="t-k">new</span> Date(input.startsAt) : r.party.startsAt
+    <span class="t-k">const</span> endsAt = input.endsAt === <span class="t-k">undefined</span> ? r.party.endsAt : input.endsAt ? <span class="t-k">new</span> Date(input.endsAt) : <span class="t-k">null</span>
+    assertPartyTimes(startsAt, endsAt, !!input.startsAt)
+    <span class="t-k">const</span> [p] = <span class="t-k">await</span> tx.update(schema.watchParty).set({ ...input, startsAt, endsAt, ...(input.startsAt ? { reminderSentAt: <span class="t-k">null</span> } : {}) })
+      .where(eq(schema.watchParty.id, id)).returning()
+    <span class="t-k">if</span> (isAdmin(u) &amp;&amp; r.talent?.userId !== u.id &amp;&amp; r.party.hostId !== u.id) <span class="t-k">await</span> audit(tx, u.id, <span class="t-s">'watch_party.updated'</span>, <span class="t-s">'watch_party'</span>, id)
+    <span class="t-k">return</span> { p: p!, host: r.host }
+  })
+  <span class="t-k">return</span> partyView(row.p, row.host)
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/watch-parties/[id]/cancel.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// WP-05: repeat → 200; RSVP'd fans notified once.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadParty(id, u, tx, <span class="t-k">true</span>)
+    <span class="t-k">if</span> (!r.isStaff) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the host can cancel this watch party.'</span>)
+    <span class="t-k">if</span> (r.party.status === <span class="t-s">'cancelled'</span>) <span class="t-k">return</span> { p: r.party, host: r.host }
+    <span class="t-k">if</span> (r.party.status === <span class="t-s">'ended'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This watch party has ended.'</span>, { currentStatus: r.party.status })
+    <span class="t-k">const</span> [p] = <span class="t-k">await</span> tx.update(schema.watchParty).set({ status: <span class="t-s">'cancelled'</span> }).where(eq(schema.watchParty.id, id)).returning()
+    <span class="t-k">await</span> notifyRsvps(tx, id, <span class="t-s">'watch_party.cancelled'</span>)
+    <span class="t-k">if</span> (isAdmin(u) &amp;&amp; r.talent?.userId !== u.id &amp;&amp; r.party.hostId !== u.id) <span class="t-k">await</span> audit(tx, u.id, <span class="t-s">'watch_party.cancelled'</span>, <span class="t-s">'watch_party'</span>, id)
+    <span class="t-k">return</span> { p: p!, host: r.host }
+  })
+  <span class="t-k">return</span> partyView(row.p, row.host)
+})</code></pre></figure>
+<p>"I'm going" on and off. The two files are nearly identical on purpose (<code>const going = true</code> versus <code>false</code>):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/watch-parties/[id]/rsvp.put.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// WP-07: idempotent "I'm going" on; the party row lock keeps rsvpCount exact.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event, { onboarded: <span class="t-k">true</span> })
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'rsvp'</span>, u.id, <span class="t-n">60</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> going = <span class="t-k">true</span>
+  <span class="t-k">return</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadParty(id, u, tx, <span class="t-k">true</span>)
+    <span class="t-k">if</span> (isClosedParty(r.party)) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This watch party is over.'</span>, { currentStatus: r.party.status })
+    <span class="t-k">const</span> rs = schema.watchPartyRsvp
+    <span class="t-k">const</span> changed = going
+      ? <span class="t-k">await</span> tx.insert(rs).values({ partyId: id, userId: u.id }).onConflictDoNothing().returning()
+      : <span class="t-k">await</span> tx.delete(rs).where(and(eq(rs.partyId, id), eq(rs.userId, u.id))).returning()
+    <span class="t-k">let</span> rsvpCount = r.party.rsvpCount
+    <span class="t-k">if</span> (changed.length) {
+      <span class="t-k">const</span> [p] = <span class="t-k">await</span> tx.update(schema.watchParty).set({ rsvpCount: sql<span class="t-s">`${schema.watchParty.rsvpCount} + ${going ? 1 : -1}`</span> })
+        .where(eq(schema.watchParty.id, id)).returning({ rsvpCount: schema.watchParty.rsvpCount })
+      rsvpCount = p!.rsvpCount
+    }
+    <span class="t-k">return</span> { going, rsvpCount }
+  })
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/watch-parties/[id]/rsvp.delete.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// WP-08: idempotent "I'm going" off; the party row lock keeps rsvpCount exact.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event, { onboarded: <span class="t-k">true</span> })
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'rsvp'</span>, u.id, <span class="t-n">60</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> going = <span class="t-k">false</span>
+  <span class="t-k">return</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadParty(id, u, tx, <span class="t-k">true</span>)
+    <span class="t-k">if</span> (isClosedParty(r.party)) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This watch party is over.'</span>, { currentStatus: r.party.status })
+    <span class="t-k">const</span> rs = schema.watchPartyRsvp
+    <span class="t-k">const</span> changed = going
+      ? <span class="t-k">await</span> tx.insert(rs).values({ partyId: id, userId: u.id }).onConflictDoNothing().returning()
+      : <span class="t-k">await</span> tx.delete(rs).where(and(eq(rs.partyId, id), eq(rs.userId, u.id))).returning()
+    <span class="t-k">let</span> rsvpCount = r.party.rsvpCount
+    <span class="t-k">if</span> (changed.length) {
+      <span class="t-k">const</span> [p] = <span class="t-k">await</span> tx.update(schema.watchParty).set({ rsvpCount: sql<span class="t-s">`${schema.watchParty.rsvpCount} + ${going ? 1 : -1}`</span> })
+        .where(eq(schema.watchParty.id, id)).returning({ rsvpCount: schema.watchParty.rsvpCount })
+      rsvpCount = p!.rsvpCount
+    }
+    <span class="t-k">return</span> { going, rsvpCount }
+  })
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The party row is locked (<code>loadParty(..., true)</code>) so two simultaneous RSVPs cannot both read <code>rsvpCount = 5</code> and both write 6. The count only changes when a row was really inserted or deleted (<code>changed.length</code>), making repeated calls harmless (<strong>idempotent</strong>). Wherever you see PUT or DELETE on a "me" address in this project, expect this style.</p>
+</aside>
+<aside class="callout tip"><p class="callout-label">Spot the duplication</p>
+<p>The two RSVP files repeat about 20 lines. A shared helper would be tidier, but the project keeps them separate. When you are learning, notice it and decide for yourself; "three similar lines are better than a premature abstraction" is a common rule of thumb.</p></aside>
+
+<h2 id="notifications">Notifications<a class="anchor" href="#notifications" aria-label="Link to this section">#</a></h2>
+<p>Notifications are rows in the <code>notification</code> table: a <code>type</code> such as <code>drop.published</code> and a small JSON <code>data</code> bag. Create <code>server/utils/notifications.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/notifications.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">type</span> Notification = <span class="t-k">typeof</span> schema.notification.$inferSelect
+
+<span class="t-k">const</span> SUMMARY: Record&lt;string, string&gt; = {
+  <span class="t-s">'drop.published'</span>: <span class="t-s">'New drop in a community you joined'</span>,
+  <span class="t-s">'reply.replied'</span>: <span class="t-s">'Someone replied to your reply'</span>,
+  <span class="t-s">'talent_application.accepted'</span>: <span class="t-s">'Your talent application was accepted'</span>,
+  <span class="t-s">'talent_application.declined'</span>: <span class="t-s">'Your talent application was declined'</span>,
+  <span class="t-s">'identity_claim.verified'</span>: <span class="t-s">'Your identity claim was verified'</span>,
+  <span class="t-s">'identity_claim.rejected'</span>: <span class="t-s">'Your identity claim was rejected'</span>,
+  <span class="t-s">'watch_party.created'</span>: <span class="t-s">'New watch party in your community'</span>,
+  <span class="t-s">'watch_party.reminder'</span>: <span class="t-s">'A watch party you\'re going to starts soon'</span>,
+  <span class="t-s">'watch_party.cancelled'</span>: <span class="t-s">'A watch party you\'re going to was cancelled'</span>,
+  <span class="t-s">'mission.completion_approved'</span>: <span class="t-s">'Your mission proof was approved'</span>,
+  <span class="t-s">'mission.completion_rejected'</span>: <span class="t-s">'Your mission proof was rejected'</span>,
+  <span class="t-s">'badge.awarded'</span>: <span class="t-s">'You earned a badge'</span>,
+}
+
+<span class="t-c">// First matching id in `data` becomes the tap target.</span>
+<span class="t-k">const</span> TARGETS: [string, string][] = [[<span class="t-s">'dropId'</span>, <span class="t-s">'drop'</span>], [<span class="t-s">'replyId'</span>, <span class="t-s">'reply'</span>], [<span class="t-s">'partyId'</span>, <span class="t-s">'watch_party'</span>], [<span class="t-s">'missionId'</span>, <span class="t-s">'mission'</span>],
+  [<span class="t-s">'applicationId'</span>, <span class="t-s">'talent_application'</span>], [<span class="t-s">'claimId'</span>, <span class="t-s">'identity_claim'</span>], [<span class="t-s">'badgeId'</span>, <span class="t-s">'badge'</span>], [<span class="t-s">'communityId'</span>, <span class="t-s">'community'</span>]]
+
+<span class="t-k">export</span> <span class="t-k">function</span> notificationView(n: Notification) {
+  <span class="t-k">const</span> t = TARGETS.find(([k]) =&gt; <span class="t-k">typeof</span> n.data[k] === <span class="t-s">'string'</span>)
+  <span class="t-k">return</span> {
+    id: n.id, <span class="t-k">type</span>: n.<span class="t-k">type</span>, readAt: n.readAt?.toISOString() ?? <span class="t-k">null</span>,
+    target: t ? { <span class="t-k">type</span>: t[<span class="t-n">1</span>], id: n.data[t[<span class="t-n">0</span>]] <span class="t-k">as</span> string } : <span class="t-k">null</span>,
+    summary: SUMMARY[n.<span class="t-k">type</span>] ?? <span class="t-s">'Update'</span>, data: n.data, createdAt: n.createdAt.toISOString(),
+  }
+}</code></pre></figure>
+<ul>
+  <li><code>SUMMARY</code> turns a machine type into a sentence for the bell. An unknown type falls back to "Update".</li>
+  <li><code>TARGETS</code> finds the first ID in <code>data</code> (<code>dropId</code>, <code>partyId</code>, …) to build a <code>target</code> telling the app where to jump when tapped.</li>
+</ul>
+<p>Four small endpoints:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/notifications/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, isNull, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// NOT-01: own notifications only, newest first.</span>
+<span class="t-k">const</span> query = z.object({ unreadOnly: z.enum([<span class="t-s">'true'</span>, <span class="t-s">'false'</span>]).optional(), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { unreadOnly, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> scope = <span class="t-s">`notifications-${unreadOnly ?? 'false'}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> n = schema.notification
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(n).where(and(eq(n.userId, u.id), unreadOnly === <span class="t-s">'true'</span> ? isNull(n.readAt) : <span class="t-k">undefined</span>,
+    cur ? sql<span class="t-s">`(${n.createdAt}, ${n.id}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(desc(n.createdAt), desc(n.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ t: r.createdAt.toISOString(), id: r.id }), notificationView)
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/notifications/unread-count.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, isNull, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// NOT-02: polled by the bell.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> n = schema.notification
+  <span class="t-k">const</span> [r] = <span class="t-k">await</span> useDb().select({ count: sql&lt;number&gt;<span class="t-s">`count(*)::int`</span> }).<span class="t-k">from</span>(n).where(and(eq(n.userId, u.id), isNull(n.readAt)))
+  <span class="t-k">return</span> { count: r!.count }
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/notifications/[id]/read.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// NOT-03: idempotent; someone else's → 404.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> n = schema.notification
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> useDb().update(n).set({ readAt: sql<span class="t-s">`coalesce(${n.readAt}, now())`</span> })
+    .where(and(eq(n.id, readIdParam(event)), eq(n.userId, u.id))).returning()
+  <span class="t-k">if</span> (!row) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Notification not found.'</span>)
+  <span class="t-k">return</span> notificationView(row)
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/notifications/read-all.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, isNull } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// NOT-04: only the caller's unread notifications.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> n = schema.notification
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().update(n).set({ readAt: <span class="t-k">new</span> Date() }).where(and(eq(n.userId, u.id), isNull(n.readAt))).returning({ id: n.id })
+  <span class="t-k">return</span> { updated: rows.length }
+})</code></pre></figure>
+<ul>
+  <li>Every query includes <code>userId = me</code>, so nobody can read or mark anyone else's notifications. Marking someone else's returns <code>NOT_FOUND</code>.</li>
+  <li><code>coalesce(read_at, now())</code> in <code>read.post.ts</code> keeps the <em>first</em> read time if you mark it again.</li>
+</ul>
+
+<h2 id="background-jobs">Background jobs<a class="anchor" href="#background-jobs" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Some things must happen "on their own": reminding people an hour before a party, switching a party from "scheduled" to "live", and finally erasing accounts whose 30-day deletion grace period ended. A <strong>scheduler</strong> (a cron service, or a timer on your host) calls two special addresses on a timetable.</p>
+</aside>
+<p>Those addresses must not be public, so they require a secret. Create <code>server/utils/cron.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/cron.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { timingSafeEqual } <span class="t-k">from</span> <span class="t-s">'node:crypto'</span>
+<span class="t-k">import</span> <span class="t-k">type</span> { H3Event } <span class="t-k">from</span> <span class="t-s">'h3'</span>
+
+<span class="t-c">/** Internal job routes answer 404 unless called with `Authorization: Bearer &lt;cronSecret&gt;`. */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> requireCron(event: H3Event) {
+  <span class="t-k">const</span> secret = useRuntimeConfig(event).cronSecret
+  <span class="t-k">const</span> got = getHeader(event, <span class="t-s">'authorization'</span>) ?? <span class="t-s">''</span>
+  <span class="t-k">const</span> want = <span class="t-s">`Bearer ${secret}`</span>
+  <span class="t-k">if</span> (!secret || got.length !== want.length || !timingSafeEqual(Buffer.<span class="t-k">from</span>(got), Buffer.<span class="t-k">from</span>(want))) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Not found.'</span>)
+}</code></pre></figure>
+<ul>
+  <li>The caller sends <code>Authorization: Bearer &lt;cronSecret&gt;</code>.</li>
+  <li>Any mismatch, including no secret configured at all, answers <strong>404</strong>, not 403: an outsider cannot even tell the job exists.</li>
+  <li>The comparison uses <code>timingSafeEqual</code> (the same technique as the cursor) after checking lengths match.</li>
+</ul>
+<p>The notification job (meant to run every 5 to 15 minutes):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/internal/jobs/notifications.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// OPS-02 (every ~5–15 min): watch-party status ticks + 1-hour reminders to RSVP'd fans. Idempotent.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  requireCron(event)
+  <span class="t-k">return</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> reminded = <span class="t-k">await</span> tx.execute(sql<span class="t-s">`
+      with due as (
+        update watch_party set reminder_sent_at = now()
+        where status = 'scheduled' and reminder_sent_at is null and starts_at &lt;= now() + interval '1 hour' and starts_at &gt; now()
+        returning id)
+      insert into notification (user_id, type, data)
+      select r.user_id, 'watch_party.reminder', jsonb_build_object('partyId', r.party_id::text)
+      from watch_party_rsvp r join due on due.id = r.party_id
+      returning id`</span>)
+    <span class="t-k">const</span> live = <span class="t-k">await</span> tx.execute(sql<span class="t-s">`update watch_party set status = 'live'
+      where status = 'scheduled' and starts_at &lt;= now() and coalesce(ends_at, starts_at + interval '3 hours') &gt; now() returning id`</span>)
+    <span class="t-k">const</span> ended = <span class="t-k">await</span> tx.execute(sql<span class="t-s">`update watch_party set status = 'ended'
+      where status in ('scheduled', 'live') and coalesce(ends_at, starts_at + interval '3 hours') &lt;= now() returning id`</span>)
+    <span class="t-k">return</span> { reminders: reminded.length, live: live.length, ended: ended.length }
+  })
+})</code></pre></figure>
+<p>The daily clean-up job:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/internal/jobs/purge.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, lte, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// OPS-03 (daily): erase accounts 30 days after deletion was requested (decision 17).</span>
+<span class="t-c">// Deleting the user row removes personal data; FKs anonymise what must stay</span>
+<span class="t-c">// (XP ledger, drops, replies, reports → user id set null). Original positions stay retired.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  requireCron(event)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> due = <span class="t-k">await</span> db.select({ id: schema.user.id }).<span class="t-k">from</span>(schema.user)
+    .where(and(eq(schema.user.status, <span class="t-s">'pending_deletion'</span>), lte(schema.user.deletionRequestedAt, sql<span class="t-s">`now() - make_interval(days =&gt; ${DELETION_GRACE_DAYS})`</span>))).limit(<span class="t-n">100</span>)
+  <span class="t-k">for</span> (<span class="t-k">const</span> { id } <span class="t-k">of</span> due) {
+    <span class="t-k">await</span> db.transaction(<span class="t-k">async</span> (tx) =&gt; {
+      <span class="t-k">await</span> tx.execute(sql<span class="t-s">`update community c set member_count = member_count - 1
+        from membership m where m.community_id = c.id and m.user_id = ${id} and m.status = 'active'`</span>)
+      <span class="t-k">await</span> tx.delete(schema.user).where(and(eq(schema.user.id, id), eq(schema.user.status, <span class="t-s">'pending_deletion'</span>)))
+    })
+  }
+  <span class="t-k">return</span> { purged: due.length }
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>Both jobs are written to be <strong>idempotent</strong>: running one twice does no harm. The reminder query marks <code>reminder_sent_at</code> in the same statement that inserts notifications (a "CTE", the <code>with due as (…)</code> part), so a party is never reminded twice. The purge job deletes at most 100 accounts per run; foreign keys set author columns to null, so posts and the XP ledger survive without a person attached.</p>
+</aside>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>As your admin user, create a party in a future time, RSVP, then cancel it to trigger a notification (use a date that is still in the future when you read this):</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/watch-parties \
+  -H <span class="t-s">'Content-Type: application/json'</span> \
+  -d <span class="t-s">'{"communityId":"COMMUNITY_ID","title":"Finale night","startsAt":"2030-01-01T18:00:00+01:00","timeZone":"Africa/Lagos","link":"https://example.com/watch"}'</span>
+curl -b jar.txt -X PUT http://localhost:<span class="t-n">3000</span>/api/watch-parties/PARTY_ID/rsvp
+curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/watch-parties/PARTY_ID/cancel
+curl -b jar.txt http://localhost:<span class="t-n">3000</span>/api/notifications/unread-count</code></pre></figure>
+<p>The RSVP answer shows <code>"going":true,"rsvpCount":1</code>; the final count call should show <code>{"count":1}</code> (the cancellation notice). Now try the job without and with the secret:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -i -X POST http://localhost:<span class="t-n">3000</span>/api/internal/jobs/notifications
+set -a; . ./.env; set +a
+curl -X POST http://localhost:<span class="t-n">3000</span>/api/internal/jobs/notifications -H <span class="t-s">"Authorization: Bearer $NUXT_CRON_SECRET"</span></code></pre></figure>
+<p>The first call is a <code>404</code>. The second returns counts such as <code>{"reminders":0,"live":0,"ended":0}</code>. (This needs <code>NUXT_CRON_SECRET</code> to be filled in your <code>.env</code> and the dev server restarted.) Commit: <code>git add -A && git commit -m "Watch parties, notifications and jobs"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="13-missions.html"><small>Previous</small>Missions, XP and badges</a><a class="next" href="15-stars.html"><small>Next</small>Becoming a Star</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#watch-parties">Watch parties</a></li><li><a href="#notifications">Notifications</a></li><li><a href="#background-jobs">Background jobs</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

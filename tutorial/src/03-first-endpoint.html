@@ -1,0 +1,72 @@
+<!--@meta
+part: Part 1 · Set up
+title: Your first endpoint
+summary: Learn how a file in server/api becomes a web address, and what "auto-import" means.
+-->
+<p class="lead">Time to make the server answer something. You will write a tiny throwaway endpoint, call it, and learn the three rules that explain all ~100 real endpoints in this project.</p>
+
+<h2>A throwaway endpoint</h2>
+<p>Create the folder <code>server/api</code> and inside it a file called <code>hello.get.ts</code>:</p>
+<!--@code ts | server/api/hello.get.ts-->
+export default defineEventHandler(() => {
+  return { message: 'Hello from Clautverse' }
+})
+<!--@/code-->
+<p>With <code>pnpm dev</code> running, open a second terminal and ask for it:</p>
+<!--@code bash | second terminal-->
+curl http://localhost:3000/api/hello
+<!--@/code-->
+<check>
+<p>You should get <code>{"message":"Hello from Clautverse"}</code> back. You can also paste <code>http://localhost:3000/api/hello</code> into your browser's address bar. You just built an API endpoint.</p>
+</check>
+<plain>
+<p><code>curl</code> is a command-line "mini browser". It sends a request and prints the answer. We use it so you can see exactly what the server says, without any page design in the way.</p>
+</plain>
+
+<h2>Rule 1: the file name is the address</h2>
+<p>Nuxt's server engine is called <strong>Nitro</strong>. It looks at every file under <code>server/api</code> and turns its path into a web address, with no routing code to write. The <code>.get</code> part of the file name says which HTTP method it answers.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>File (in <code>server/api</code>)</th><th>Answers</th></tr></thead>
+<tbody>
+<tr><td><code>health.get.ts</code></td><td><code>GET /api/health</code></td></tr>
+<tr><td><code>communities/index.get.ts</code></td><td><code>GET /api/communities</code> (<code>index</code> means "the folder itself")</td></tr>
+<tr><td><code>communities/[id]/join.post.ts</code></td><td><code>POST /api/communities/<em>anything</em>/join</code>. <code>[id]</code> is a <strong>parameter</strong>: whatever is in that spot becomes <code>id</code>.</td></tr>
+<tr><td><code>drops/[id]/reactions/me.put.ts</code></td><td><code>PUT /api/drops/<em>anything</em>/reactions/me</code></td></tr>
+<tr><td><code>[...].ts</code></td><td>Any <code>/api/...</code> address nothing else matched (a "catch-all"). We use it in chapter 6 for tidy "not found" answers.</td></tr>
+<tr><td><code>auth/[...all].ts</code></td><td>Everything under <code>/api/auth/</code>; handed to the login library (chapter 8)</td></tr>
+</tbody></table></div>
+<tech>
+<p>This is <strong>file-based routing</strong>. Several files can share a folder with different methods: <code>index.get.ts</code> and <code>index.post.ts</code> in the same folder are two endpoints on one path. A parameter is read inside the handler with <code>getRouterParam(event, 'id')</code> (the project wraps this in a helper in chapter 7).</p>
+</tech>
+<p>Try a parameter. Create <code>server/api/echo/[word].get.ts</code>:</p>
+<!--@code ts | server/api/echo/[word].get.ts-->
+export default defineEventHandler((event) => {
+  return { youSaid: getRouterParam(event, 'word') }
+})
+<!--@/code-->
+<!--@code bash | second terminal-->
+curl http://localhost:3000/api/echo/banana
+<!--@/code-->
+<check><p>The answer is <code>{"youSaid":"banana"}</code>.</p></check>
+
+<h2>Rule 2: return an object and it becomes JSON</h2>
+<p>A handler is a function. Whatever it returns is sent back; objects and arrays are turned into JSON automatically. To change the status number you call <code>setResponseStatus(event, 201)</code>, and to refuse a request you <code>throw</code> an error. You will see all three in the real files.</p>
+<plain>
+<p>A handler is like a shop assistant: the request arrives (<code>event</code> is the customer's order slip), the assistant does the work, and hands back an answer.</p>
+</plain>
+
+<h2>Rule 3: some functions you never have to import</h2>
+<p>Notice that <code>defineEventHandler</code> and <code>getRouterParam</code> were used without any <code>import</code> line. Nitro <strong>auto-imports</strong> its built-in helpers. It does the same for every function we export from files in <code>server/utils</code>. That is why the real endpoints you will read later call <code>requireUser</code>, <code>useDb</code> or <code>readJsonBody</code> without importing them.</p>
+<tech>
+<p>Auto-imports are a build-time feature: Nitro scans <code>server/utils</code> and generates the imports for you. The trade-off is that you cannot "click through" from an import line, so this guide always says which file a helper lives in. It also means two utils must not export the same name.</p>
+</tech>
+
+<h2>Clean up</h2>
+<p>These two files were only for learning. Delete them so they do not clutter the project:</p>
+<!--@code bash | terminal-->
+rm server/api/hello.get.ts
+rm -r server/api/echo
+<!--@/code-->
+<check>
+<p><code>curl http://localhost:3000/api/hello</code> no longer returns the greeting (the server now answers "not found"). That is expected, and there is nothing to commit from this chapter.</p>
+</check>

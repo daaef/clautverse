@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tests · Build Clautverse</title>
+<meta name="description" content="">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="ref-tests">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html" aria-current="page">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <h1>Reference: Tests</h1><p class="lead">Every file in this group, exactly as it is in the repository (commit <code>227fbaa</code>). Each file says which chapter explains it.</p>
+<details class="ref" id="f-tests-e2e-api-test-ts"><summary><code>tests/e2e/api.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/api.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { describe, expect, it, afterAll } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, newUser, signUp, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+describe(<span class="t-s">'conventions'</span>, () =&gt; {
+  it(<span class="t-s">'health reports db ok and returns a request id'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/health'</span>)
+    expect(res.status).toBe(<span class="t-n">200</span>)
+    expect(res.body).toMatchObject({ status: <span class="t-s">'ok'</span>, db: <span class="t-s">'ok'</span> })
+    expect(res.headers.get(<span class="t-s">'x-request-id'</span>)).toMatch(/^req_/)
+  })
+  it(<span class="t-s">'unknown routes use the error envelope'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/nope'</span>)
+    expect(res.status).toBe(<span class="t-n">404</span>)
+    expect(res.body.error).toMatchObject({ code: <span class="t-s">'NOT_FOUND'</span> })
+    expect(res.body.error.requestId).toBe(res.headers.get(<span class="t-s">'x-request-id'</span>))
+  })
+})
+
+describe(<span class="t-s">'auth (AUTH-01..08)'</span>, () =&gt; {
+  it(<span class="t-s">'rejects under-18 sign-ups'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> signUp(newUser({ dateOfBirth: <span class="t-s">'2015-01-01'</span> }))
+    expect(res.status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> res.json()).code).toBe(<span class="t-s">'UNDER_MINIMUM_AGE'</span>)
+  })
+  it(<span class="t-s">'rejects invalid usernames'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> signUp(newUser({ username: <span class="t-s">'A!'</span> }))
+    expect(res.status).toBe(<span class="t-n">400</span>)
+  })
+  it(<span class="t-s">'blocks sign-in until the email is verified'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> u = newUser()
+    expect((<span class="t-k">await</span> signUp(u)).status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: u.email, password: u.password } })
+    expect(res.status).toBe(<span class="t-n">403</span>)
+  })
+  it(<span class="t-s">'GET /api/me needs a session'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>)
+    expect(res.status).toBe(<span class="t-n">401</span>)
+    expect(res.body.error.code).toBe(<span class="t-s">'UNAUTHENTICATED'</span>)
+  })
+  it(<span class="t-s">'returns me without dateOfBirth'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { user, cookie } = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { cookie })
+    expect(res.status).toBe(<span class="t-n">200</span>)
+    expect(res.body).toMatchObject({ username: user.username, emailVerified: <span class="t-k">true</span>, roles: [<span class="t-s">'fan'</span>], onboardingStatus: <span class="t-s">'not_started'</span> })
+    expect(res.body).not.toHaveProperty(<span class="t-s">'dateOfBirth'</span>)
+  })
+  it(<span class="t-s">'username-check reports taken and reserved names'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { user } = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/auth/username-check?username=${user.username}`</span>)).body).toMatchObject({ available: <span class="t-k">false</span>, reason: <span class="t-s">'taken'</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/auth/username-check?username=admin'</span>)).body).toMatchObject({ available: <span class="t-k">false</span>, reason: <span class="t-s">'reserved'</span> })
+  })
+  it(<span class="t-s">'PATCH /api/me changes username once per 30 days'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { cookie } = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> name = <span class="t-s">`renamed_${Date.now().toString(36)}`</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'PATCH'</span>, cookie, body: { username: name } })).body.username).toBe(name)
+    <span class="t-k">const</span> again = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'PATCH'</span>, cookie, body: { username: <span class="t-s">`${name}2`</span> } })
+    expect(again.status).toBe(<span class="t-n">409</span>)
+    expect(again.body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+  })
+  it(<span class="t-s">'DELETE /api/me requires a verified email'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> u = newUser()
+    <span class="t-k">await</span> signUp(u)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = true where email = ${u.email}`</span>
+    <span class="t-k">const</span> login = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: u.email, password: u.password } })
+    expect(login.status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = false where email = ${u.email}`</span>
+    <span class="t-k">const</span> cookie = login.headers.getSetCookie().map(c =&gt; c.split(<span class="t-s">';'</span>)[<span class="t-n">0</span>]).join(<span class="t-s">'; '</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'DELETE'</span>, cookie, body: { password: u.password } })
+    expect(res.status).toBe(<span class="t-n">403</span>)
+    expect(res.body.error.code).toBe(<span class="t-s">'EMAIL_NOT_VERIFIED'</span>)
+  })
+  it(<span class="t-s">'DELETE /api/me schedules deletion, logs out, and sign-in restores'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { user, cookie } = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'DELETE'</span>, cookie, body: { password: <span class="t-s">'wrong-password'</span> } })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'DELETE'</span>, cookie, body: { password: user.password } })
+    expect(res.status).toBe(<span class="t-n">202</span>)
+    expect(res.body.status).toBe(<span class="t-s">'pending_deletion'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { cookie })).status).toBe(<span class="t-n">401</span>)
+    <span class="t-k">const</span> login = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: user.email, password: user.password } })
+    expect(login.status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select status from "user" where email = ${user.email}`</span>
+    expect(row!.status).toBe(<span class="t-s">'active'</span>)
+  })
+})
+
+describe(<span class="t-s">'catalog + onboarding (CAT, ONB)'</span>, () =&gt; {
+  it(<span class="t-s">'lists inactive categories as not selectable'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { music } = <span class="t-k">await</span> catalog()
+    expect(music.active).toBe(<span class="t-k">false</span>)
+  })
+  it(<span class="t-s">'lists Stars by category, with their "known for" line'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv, music, ada } = <span class="t-k">await</span> catalog()
+    expect(ada).toMatchObject({ categoryId: realityTv.id, knownFor: expect.any(String) })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/talents?categoryId=${music.id}`</span>)).body.items).toEqual([])
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/shows'</span>)).status).toBe(<span class="t-n">404</span>)
+  })
+  it(<span class="t-s">'unverified users get EMAIL_NOT_VERIFIED'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> u = newUser()
+    <span class="t-k">await</span> signUp(u)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = true where email = ${u.email}`</span>
+    <span class="t-k">const</span> login = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: u.email, password: u.password } })
+    expect(login.status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = false where email = ${u.email}`</span>
+    <span class="t-k">const</span> cookie = login.headers.getSetCookie().map(c =&gt; c.split(<span class="t-s">';'</span>)[<span class="t-n">0</span>]).join(<span class="t-s">'; '</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { cookie })
+    expect(res.status).toBe(<span class="t-n">403</span>)
+    expect(res.body.error.code).toBe(<span class="t-s">'EMAIL_NOT_VERIFIED'</span>)
+  })
+  it(<span class="t-s">'saves progress, resumes, then completes'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv, ada } = <span class="t-k">await</span> catalog()
+    <span class="t-k">const</span> { cookie } = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { cookie })).body).toMatchObject({ status: <span class="t-s">'not_started'</span>, nextStep: <span class="t-s">'category'</span> })
+    <span class="t-k">const</span> saved = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { method: <span class="t-s">'PUT'</span>, cookie, body: { categoryId: realityTv.id } })
+    expect(saved.body).toMatchObject({ status: <span class="t-s">'in_progress'</span>, nextStep: <span class="t-s">'stars'</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { cookie })).body.selections.categoryId).toBe(realityTv.id)
+    <span class="t-k">const</span> done = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [ada.id] } })
+    expect(done.status).toBe(<span class="t-n">200</span>)
+    expect(done.body).toMatchObject({ status: <span class="t-s">'completed'</span>, nextStep: <span class="t-k">null</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { cookie })).body.onboardingStatus).toBe(<span class="t-s">'completed'</span>)
+    <span class="t-k">const</span> repeat = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [ada.id] } })
+    expect(repeat.status).toBe(<span class="t-n">200</span>)
+  })
+  it(<span class="t-s">'requires at least one Star from an active category'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv, music, ada } = <span class="t-k">await</span> catalog()
+    <span class="t-k">const</span> { cookie } = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> noStar = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [] } })
+    expect(noStar.status).toBe(<span class="t-n">400</span>)
+    expect(noStar.body.error.details.fields.talentIds).toBeDefined()
+    <span class="t-k">const</span> inactive = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: music.id, talentIds: [ada.id] } })
+    expect(inactive.body.error.details.fields.categoryId).toBe(<span class="t-s">'inactive'</span>)
+    expect(inactive.body.error.details.fields[<span class="t-s">'talentIds[0]'</span>]).toBe(<span class="t-s">'not_in_category'</span>)
+    <span class="t-k">const</span> oldShape = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [ada.id], showIds: [ada.id] } })
+    expect(oldShape.status).toBe(<span class="t-n">400</span>)
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-communities-test-ts"><summary><code>tests/e2e/communities.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/communities.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-k">async</span> <span class="t-k">function</span> fan() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> verifiedSession()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set onboarding_status = 'completed' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">async</span> <span class="t-k">function</span> admin() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> fan()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set roles = 'fan,super_admin' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">async</span> <span class="t-k">function</span> fans(n: number) {
+  <span class="t-k">const</span> out = []
+  <span class="t-k">for</span> (<span class="t-k">let</span> i = <span class="t-n">0</span>; i &lt; n; i += <span class="t-n">10</span>) out.push(...<span class="t-k">await</span> Promise.all(Array.<span class="t-k">from</span>({ length: Math.min(<span class="t-n">10</span>, n - i) }, fan)))
+  <span class="t-k">return</span> out
+}
+<span class="t-k">async</span> <span class="t-k">function</span> newCommunity(a: { cookie: string }, extra: Record&lt;string, unknown&gt; = {}) {
+  <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/admin/communities'</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { name: <span class="t-s">`Comm ${Date.now()}${Math.random()}`</span>, ...extra } })
+  expect(res.status).toBe(<span class="t-n">201</span>)
+  <span class="t-k">return</span> res.body
+}
+
+describe(<span class="t-s">'communities and memberships (COM-01..08, ADM-08..09a)'</span>, () =&gt; {
+  it.each([
+    [<span class="t-s">'missing'</span>, {}],
+    [<span class="t-s">'invalid'</span>, { lane: <span class="t-s">'not_a_real_lane'</span> }],
+    [<span class="t-s">'empty'</span>, { lane: <span class="t-s">''</span> }],
+    [<span class="t-s">'array'</span>, { lane: [<span class="t-s">'rider'</span>, <span class="t-s">'mutual'</span>] }],
+    [<span class="t-s">'null'</span>, { lane: <span class="t-k">null</span> }],
+    [<span class="t-s">'oversized'</span>, { lane: <span class="t-s">'x'</span>.repeat(<span class="t-n">10_000</span>) }],
+  ])(<span class="t-s">'rejects a %s lane without creating a membership'</span>, <span class="t-k">async</span> (_label, body) =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body })
+    expect(res.status).toBe(<span class="t-n">400</span>)
+    expect(res.body.error).toMatchObject({ code: <span class="t-s">'VALIDATION_FAILED'</span>, message: <span class="t-s">'Some fields are invalid.'</span> })
+    expect(res.body.error.details.fields.lane).toEqual(expect.any(String))
+    expect(res.body.error.details.fields.lane.length).toBeGreaterThan(<span class="t-n">0</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int n from membership where community_id = ${comm.id}`</span>
+    expect(n).toBe(<span class="t-n">0</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>)).body.memberCount).toBe(<span class="t-n">0</span>)
+  })
+
+  it.each([<span class="t-s">'rider'</span>, <span class="t-s">'fandom_builder'</span>, <span class="t-s">'builder'</span>, <span class="t-s">'analyst'</span>, <span class="t-s">'creator'</span>, <span class="t-s">'mutual'</span>])(<span class="t-s">'accepts the %s lane and exposes it in the members list'</span>, <span class="t-k">async</span> (lane) =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane } })
+    expect(res.status).toBe(<span class="t-n">201</span>)
+    expect(res.body).toMatchObject({ status: <span class="t-s">'active'</span>, lane })
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select lane from membership where id = ${res.body.id}`</span>
+    expect(row.lane).toBe(lane)
+    <span class="t-k">const</span> list = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/members`</span>, { cookie: f.cookie })
+    expect(list.body.items).toHaveLength(<span class="t-n">1</span>)
+    expect(list.body.items[<span class="t-n">0</span>].lane).toBe(lane)
+  })
+
+  it(<span class="t-s">'requires a fresh lane after leaving and does not reactivate on a missing lane'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> first = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })).body.status).toBe(<span class="t-s">'left'</span>)
+    <span class="t-k">const</span> missing = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: {} })
+    expect(missing.status).toBe(<span class="t-n">400</span>)
+    expect(missing.body.error.code).toBe(<span class="t-s">'VALIDATION_FAILED'</span>)
+    expect(missing.body.error.details.fields.lane).toEqual(expect.any(String))
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select status from membership where id = ${first.body.id}`</span>
+    expect(row.status).toBe(<span class="t-s">'left'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>)).body.memberCount).toBe(<span class="t-n">0</span>)
+  })
+
+  it(<span class="t-s">'reactivates a left membership with a freshly submitted lane'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> first = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })).body.status).toBe(<span class="t-s">'left'</span>)
+    <span class="t-k">const</span> back = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'creator'</span> } })
+    expect(back.status).toBe(<span class="t-n">200</span>)
+    <span class="t-c">// DEC-04: leave retires the position; rejoining reactivates the row without reassigning one.</span>
+    expect(back.body).toMatchObject({ id: first.body.id, status: <span class="t-s">'active'</span>, lane: <span class="t-s">'creator'</span>, leftAt: <span class="t-k">null</span>, originalPosition: <span class="t-k">null</span> })
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select lane, status from membership where id = ${first.body.id}`</span>
+    expect(row).toMatchObject({ lane: <span class="t-s">'creator'</span>, status: <span class="t-s">'active'</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>)).body.memberCount).toBe(<span class="t-n">1</span>)
+  })
+
+  it(<span class="t-s">'keeps the original lane on an active-member duplicate join with a different lane'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> first = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    <span class="t-k">const</span> again = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'mutual'</span> } })
+    expect(again.status).toBe(<span class="t-n">200</span>)
+    expect(again.body).toEqual(first.body)
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select lane from membership where id = ${first.body.id}`</span>
+    expect(row.lane).toBe(<span class="t-s">'rider'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>)).body.memberCount).toBe(<span class="t-n">1</span>)
+  })
+
+  it(<span class="t-s">'continues to block a removed member with a valid lane'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> first = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    <span class="t-c">// A first removal with the 30-day window still running.</span>
+    <span class="t-k">await</span> sql<span class="t-s">`update membership set status = 'removed', removal_count = 1, blocked_until = now() + interval '30 days' where id = ${first.body.id}`</span>
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'mutual'</span> } })
+    expect(res.status).toBe(<span class="t-n">403</span>)
+    expect(res.body.error).toMatchObject({ code: <span class="t-s">'FORBIDDEN'</span>, details: { reason: <span class="t-s">'removed'</span> } })
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select lane, status from membership where id = ${first.body.id}`</span>
+    expect(row).toMatchObject({ lane: <span class="t-s">'rider'</span>, status: <span class="t-s">'removed'</span> })
+  })
+
+  it(<span class="t-s">'concurrent same-user joins return one winning lane without double-counting'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> results = <span class="t-k">await</span> Promise.all([<span class="t-s">'rider'</span>, <span class="t-s">'mutual'</span>].map(lane =&gt; api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane } })))
+    expect(results.map(r =&gt; r.status).sort()).toEqual([<span class="t-n">200</span>, <span class="t-n">201</span>])
+    expect(results[<span class="t-n">0</span>]!.body.id).toBe(results[<span class="t-n">1</span>]!.body.id)
+    expect(results[<span class="t-n">0</span>]!.body.lane).toBe(results[<span class="t-n">1</span>]!.body.lane)
+    expect([<span class="t-s">'rider'</span>, <span class="t-s">'mutual'</span>]).toContain(results[<span class="t-n">0</span>]!.body.lane)
+    <span class="t-k">const</span> rows = <span class="t-k">await</span> sql<span class="t-s">`select lane from membership where community_id = ${comm.id}`</span>
+    expect(rows).toHaveLength(<span class="t-n">1</span>)
+    expect(rows[<span class="t-n">0</span>]!.lane).toBe(results[<span class="t-n">0</span>]!.body.lane)
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select member_count, originals_assigned from community where id = ${comm.id}`</span>
+    expect(row).toMatchObject({ member_count: <span class="t-n">1</span>, originals_assigned: <span class="t-n">1</span> })
+  })
+
+  it(<span class="t-s">'join is idempotent, requires onboarding, and leave retires the Originals number'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> notOnboarded = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: notOnboarded.cookie, body: { lane: <span class="t-s">'rider'</span> } })).body.error.code).toBe(<span class="t-s">'ONBOARDING_REQUIRED'</span>)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> first = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    expect(first.body.originalPosition).toBe(<span class="t-n">1</span>)
+    <span class="t-k">const</span> again = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect(again.status).toBe(<span class="t-n">200</span>)
+    expect(again.body.id).toBe(first.body.id)
+    <span class="t-k">const</span> left = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    expect(left.body).toMatchObject({ status: <span class="t-s">'left'</span>, originalPosition: <span class="t-k">null</span>, lane: <span class="t-k">null</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>)).body.memberCount).toBe(<span class="t-n">0</span>)
+    <span class="t-k">const</span> g = <span class="t-k">await</span> fan()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: g.cookie, body: { lane: <span class="t-s">'rider'</span> } })).body.originalPosition).toBe(<span class="t-n">2</span>)
+    <span class="t-k">const</span> back = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    <span class="t-c">// DEC-04: the retired position is never re-issued; rejoin leaves it null and the counter stays consumed.</span>
+    expect(back.body).toMatchObject({ id: first.body.id, status: <span class="t-s">'active'</span>, originalPosition: <span class="t-k">null</span> })
+    <span class="t-k">const</span> wall = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/originals`</span>)
+    expect(wall.body.items.map((i: any) =&gt; i.position)).toEqual([<span class="t-n">2</span>])
+    expect(JSON.stringify(wall.body)).not.toContain(<span class="t-s">'@example.com'</span>)
+  })
+
+  it(<span class="t-s">'leave clears lane and position, keeps the slot consumed, and never counts as a removal'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> joined = (<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'analyst'</span> } })).body
+    <span class="t-c">// Leaving a community you are not a member of 404s.</span>
+    <span class="t-k">const</span> outsider = <span class="t-k">await</span> fan()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: outsider.cookie })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> left = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    expect(left.body).toMatchObject({ status: <span class="t-s">'left'</span>, lane: <span class="t-k">null</span>, originalPosition: <span class="t-k">null</span> })
+    <span class="t-c">// Double-leave is idempotent: identical state, the same leftAt is returned both times.</span>
+    <span class="t-k">const</span> again = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    expect(again.status).toBe(<span class="t-n">200</span>)
+    expect(again.body.leftAt).toBe(left.body.leftAt)
+    <span class="t-c">// Voluntary leave never touches the DEC-03 removal counters.</span>
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select lane, original_position, removal_count, blocked_until from membership where id = ${joined.id}`</span>
+    expect(row).toMatchObject({ lane: <span class="t-k">null</span>, original_position: <span class="t-k">null</span>, removal_count: <span class="t-n">0</span>, blocked_until: <span class="t-k">null</span> })
+    <span class="t-k">const</span> [c] = <span class="t-k">await</span> sql<span class="t-s">`select originals_assigned from community where id = ${comm.id}`</span>
+    expect(c.originals_assigned).toBe(<span class="t-n">1</span>)
+    <span class="t-c">// Rejoin is immediate and unconstrained; it does not reassign a position.</span>
+    <span class="t-k">const</span> back = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'mutual'</span> } })
+    expect(back.body).toMatchObject({ status: <span class="t-s">'active'</span>, originalPosition: <span class="t-k">null</span>, lane: <span class="t-s">'mutual'</span> })
+    <span class="t-k">const</span> [c2] = <span class="t-k">await</span> sql<span class="t-s">`select originals_assigned from community where id = ${comm.id}`</span>
+    expect(c2.originals_assigned).toBe(<span class="t-n">1</span>)
+  })
+
+  it(<span class="t-s">'concurrent joins never hand out more than 100 Originals positions'</span>, { timeout: <span class="t-n">120_000</span> }, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">await</span> sql<span class="t-s">`update community set originals_assigned = 85 where id = ${comm.id}`</span>
+    <span class="t-k">const</span> crowd = <span class="t-k">await</span> fans(<span class="t-n">30</span>)
+    <span class="t-k">const</span> results = <span class="t-k">await</span> Promise.all(crowd.map(f =&gt; api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })))
+    expect(results.every(r =&gt; r.status === <span class="t-n">201</span>)).toBe(<span class="t-k">true</span>)
+    <span class="t-k">const</span> positions = results.map(r =&gt; r.body.originalPosition).filter((p: number | <span class="t-k">null</span>) =&gt; p !== <span class="t-k">null</span>).sort((x: number, y: number) =&gt; x - y)
+    expect(positions).toEqual(Array.<span class="t-k">from</span>({ length: <span class="t-n">15</span> }, (_, i) =&gt; <span class="t-n">86</span> + i))
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select originals_assigned, member_count from community where id = ${comm.id}`</span>
+    expect(row).toMatchObject({ originals_assigned: <span class="t-n">100</span>, member_count: <span class="t-n">30</span> })
+  })
+
+  it(<span class="t-s">'member list is members-only and memberships are owner-only'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">const</span> member = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> outsider = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> joined = (<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: member.cookie, body: { lane: <span class="t-s">'rider'</span>, alertsEnabled: <span class="t-k">false</span> } })).body
+    expect(joined.alertsEnabled).toBe(<span class="t-k">false</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/members`</span>, { cookie: outsider.cookie })).body.error.details.reason).toBe(<span class="t-s">'not_member'</span>)
+    <span class="t-k">const</span> list = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/members`</span>, { cookie: member.cookie })
+    expect(list.body.items).toHaveLength(<span class="t-n">1</span>)
+    expect(JSON.stringify(list.body)).not.toMatch(/@example\.com|dateOfBirth/)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/memberships/${joined.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: outsider.cookie, body: { alertsEnabled: <span class="t-k">true</span> } })).status).toBe(<span class="t-n">404</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/memberships/${joined.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: member.cookie, body: { alertsEnabled: <span class="t-k">true</span> } })).body.alertsEnabled).toBe(<span class="t-k">true</span>)
+    <span class="t-k">const</span> mine = <span class="t-k">await</span> api(<span class="t-s">'/api/me/memberships'</span>, { cookie: member.cookie })
+    expect(mine.body.items[<span class="t-n">0</span>].community.id).toBe(comm.id)
+  })
+
+  it(<span class="t-s">'veto hides the community from fans but not admins; restore brings it back'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> newCommunity(a)
+    <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${comm.id}/veto`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: {} })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${comm.id}/veto`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { internalNote: <span class="t-s">'spam'</span> } })).body.status).toBe(<span class="t-s">'vetoed'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">404</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>, { cookie: a.cookie })).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/communities?sort=newest&amp;limit=100'</span>)).body.items.some((c: any) =&gt; c.id === comm.id)).toBe(<span class="t-k">false</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/communities?status=vetoed&amp;limit=100'</span>, { cookie: a.cookie })).body.items.some((c: any) =&gt; c.id === comm.id)).toBe(<span class="t-k">true</span>)
+    <span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${comm.id}/restore`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })
+    <span class="t-k">const</span> restored = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}`</span>, { cookie: f.cookie })
+    expect(restored.body.viewerMembership).toMatchObject({ status: <span class="t-s">'active'</span>, originalPosition: <span class="t-n">1</span> })
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int n from admin_audit where target_id = ${comm.id}`</span>
+    expect(n).toBe(<span class="t-n">3</span>)
+  })
+
+  it(<span class="t-s">'lists by popularity with sort-scoped cursors and rejects slug clashes'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> c1 = <span class="t-k">await</span> newCommunity(a)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/communities'</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { name: <span class="t-s">'Dup'</span>, slug: c1.slug } })).status).toBe(<span class="t-n">409</span>)
+    <span class="t-k">const</span> page = <span class="t-k">await</span> api(<span class="t-s">'/api/communities?sort=popular&amp;limit=2'</span>)
+    expect(page.body.items).toHaveLength(<span class="t-n">2</span>)
+    expect(page.body.items[<span class="t-n">0</span>].memberCount).toBeGreaterThanOrEqual(page.body.items[<span class="t-n">1</span>].memberCount)
+    <span class="t-k">const</span> next = <span class="t-k">await</span> api(<span class="t-s">`/api/communities?sort=popular&amp;limit=2&amp;cursor=${encodeURIComponent(page.body.nextCursor)}`</span>)
+    expect(next.body.items[<span class="t-n">0</span>].id).not.toBe(page.body.items[<span class="t-n">1</span>].id)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities?sort=newest&amp;cursor=${encodeURIComponent(page.body.nextCursor)}`</span>)).status).toBe(<span class="t-n">400</span>)
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-discover-talent-test-ts"><summary><code>tests/e2e/discover-talent.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/discover-talent.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-k">type</span> S = Awaited&lt;ReturnType&lt;<span class="t-k">typeof</span> verifiedSession&gt;&gt; &amp; { id: string }
+<span class="t-k">async</span> <span class="t-k">function</span> fan(): Promise&lt;S&gt; {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> verifiedSession()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set onboarding_status = 'completed' where email = ${s.user.email}`</span>
+  <span class="t-k">const</span> [{ id }] = <span class="t-k">await</span> sql<span class="t-s">`select id from "user" where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> { ...s, id: id <span class="t-k">as</span> string }
+}
+<span class="t-k">async</span> <span class="t-k">function</span> admin() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> fan()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set roles = 'fan,super_admin' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">async</span> <span class="t-k">function</span> talentWithCommunity(a: S) {
+  <span class="t-k">const</span> t = <span class="t-k">await</span> fan()
+  <span class="t-k">const</span> { realityTv } = <span class="t-k">await</span> catalog()
+  <span class="t-k">const</span> app = <span class="t-k">await</span> api(<span class="t-s">'/api/talent-applications'</span>, { method: <span class="t-s">'POST'</span>, cookie: t.cookie, body: { categoryId: realityTv.id, displayName: <span class="t-s">`Star ${Math.random()}`</span>, bio: <span class="t-s">'Hi'</span>, links: [] } })
+  <span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.body.id}/accept`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })
+  <span class="t-k">const</span> [c] = <span class="t-k">await</span> sql<span class="t-s">`select c.id, c.owner_talent_id from community c join talent tl on tl.id = c.owner_talent_id where tl.user_id = ${t.id}`</span>
+  <span class="t-k">return</span> { talent: t, communityId: c!.id <span class="t-k">as</span> string, talentId: c!.owner_talent_id <span class="t-k">as</span> string }
+}
+<span class="t-k">const</span> keys = (b: any) =&gt; b.sections.map((s: any) =&gt; s.key)
+<span class="t-k">const</span> section = (b: any, k: string) =&gt; b.sections.find((s: any) =&gt; s.key === k).items.map((i: any) =&gt; i.id)
+
+describe(<span class="t-s">'Discover, community edit, talent dashboard and profile (DIS-01, COM-10, TAL-06, TAL-07)'</span>, () =&gt; {
+  it(<span class="t-s">'Discover personalises from onboarding picks and hides joined communities'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { communityId, talentId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> anon = (<span class="t-k">await</span> api(<span class="t-s">'/api/discover'</span>)).body
+    expect(keys(anon)).toEqual([<span class="t-s">'popular_communities'</span>, <span class="t-s">'new_talents'</span>])
+    expect(section(anon, <span class="t-s">'new_talents'</span>)).toContain(talentId)
+    <span class="t-k">await</span> sql<span class="t-s">`insert into onboarding (user_id, talent_ids) values (${f.id}, ${[talentId]}::uuid[])
+      on conflict (user_id) do update set talent_ids = excluded.talent_ids`</span>
+    <span class="t-k">const</span> before = (<span class="t-k">await</span> api(<span class="t-s">'/api/discover'</span>, { cookie: f.cookie })).body
+    expect(keys(before)).toEqual([<span class="t-s">'for_you'</span>, <span class="t-s">'popular_communities'</span>, <span class="t-s">'new_talents'</span>])
+    expect(section(before, <span class="t-s">'for_you'</span>)).toEqual([communityId])
+    <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    <span class="t-k">const</span> after = (<span class="t-k">await</span> api(<span class="t-s">'/api/discover'</span>, { cookie: f.cookie })).body
+    expect(section(after, <span class="t-s">'for_you'</span>)).toEqual([])
+    expect(section(after, <span class="t-s">'popular_communities'</span>)).not.toContain(communityId)
+    <span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${communityId}/veto`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })
+    expect(section((<span class="t-k">await</span> api(<span class="t-s">'/api/discover'</span>)).body, <span class="t-s">'new_talents'</span>)).not.toContain(talentId)
+  })
+
+  it(<span class="t-s">'talent dashboard shows own stats; profile and community edits are scoped'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId, talentId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/talent/dashboard'</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    <span class="t-k">const</span> m = (<span class="t-k">await</span> api(<span class="t-s">'/api/missions'</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: { communityId, title: <span class="t-s">'Share'</span>, xpReward: <span class="t-n">10</span>, completionPolicy: { review: <span class="t-s">'owner'</span>, proof: <span class="t-s">'text'</span> } } })).body
+    <span class="t-k">await</span> api(<span class="t-s">`/api/missions/${m.id}/completions`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { proof: { text: <span class="t-s">'done'</span> } } })
+    <span class="t-k">const</span> p = (<span class="t-k">await</span> api(<span class="t-s">'/api/watch-parties'</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: { communityId, title: <span class="t-s">'Live'</span>, startsAt: <span class="t-k">new</span> Date(Date.now() + <span class="t-n">86400_000</span>).toISOString(), timeZone: <span class="t-s">'Africa/Lagos'</span> } })).body
+    <span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p.id}/rsvp`</span>, { method: <span class="t-s">'PUT'</span>, cookie: f.cookie })
+    <span class="t-k">const</span> d = (<span class="t-k">await</span> api(<span class="t-s">'/api/talent/dashboard'</span>, { cookie: talent.cookie })).body
+    expect(d.talent.id).toBe(talentId)
+    expect(d.community.id).toBe(communityId)
+    expect(d.stats).toEqual({ memberCount: <span class="t-n">1</span>, originalsCount: <span class="t-n">1</span>, newMembers7d: <span class="t-n">1</span>, pendingMissionApprovals: <span class="t-n">1</span>, upcomingWatchParties: <span class="t-n">1</span>, upcomingRsvps: <span class="t-n">1</span> })
+
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/talent/profile'</span>, { method: <span class="t-s">'PATCH'</span>, cookie: f.cookie, body: { bio: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/talent/profile'</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { isClaimed: <span class="t-k">false</span> } })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/talent/profile'</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { imageMediaId: <span class="t-s">'m1'</span> } })).body.error.code).toBe(<span class="t-s">'FEATURE_DISABLED'</span>)
+    <span class="t-k">const</span> prof = (<span class="t-k">await</span> api(<span class="t-s">'/api/talent/profile'</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { bio: <span class="t-s">'Lagos-born'</span>, links: [{ label: <span class="t-s">'IG'</span>, url: <span class="t-s">'https://instagram.com/star'</span> }] } })).body
+    expect(prof).toMatchObject({ id: talentId, bio: <span class="t-s">'Lagos-born'</span>, links: [{ label: <span class="t-s">'IG'</span>, url: <span class="t-s">'https://instagram.com/star'</span> }], isClaimed: <span class="t-k">true</span> })
+
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: f.cookie, body: { description: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { status: <span class="t-s">'vetoed'</span> } })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { description: <span class="t-s">'Welcome!'</span> } })).body.description).toBe(<span class="t-s">'Welcome!'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: a.cookie, body: { rules: <span class="t-s">'Be kind'</span> } })).body.rules).toBe(<span class="t-s">'Be kind'</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from admin_audit where action = 'community.updated' and target_id = ${communityId}`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-drops-test-ts"><summary><code>tests/e2e/drops.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/drops.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-k">type</span> S = Awaited&lt;ReturnType&lt;<span class="t-k">typeof</span> verifiedSession&gt;&gt;
+<span class="t-k">async</span> <span class="t-k">function</span> fan() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> verifiedSession()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set onboarding_status = 'completed' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">async</span> <span class="t-k">function</span> admin() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> fan()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set roles = 'fan,super_admin' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-c">/** A talent with an auto-created community, via the real application → accept flow. */</span>
+<span class="t-k">async</span> <span class="t-k">function</span> talentWithCommunity(a: S) {
+  <span class="t-k">const</span> t = <span class="t-k">await</span> fan()
+  <span class="t-k">const</span> { realityTv } = <span class="t-k">await</span> catalog()
+  <span class="t-k">const</span> app = <span class="t-k">await</span> api(<span class="t-s">'/api/talent-applications'</span>, { method: <span class="t-s">'POST'</span>, cookie: t.cookie, body: { categoryId: realityTv.id, displayName: <span class="t-s">`Star ${Math.random()}`</span>, bio: <span class="t-s">'Hi'</span>, links: [] } })
+  expect(app.status).toBe(<span class="t-n">201</span>)
+  expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.body.id}/accept`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })).status).toBe(<span class="t-n">200</span>)
+  <span class="t-k">const</span> [c] = <span class="t-k">await</span> sql<span class="t-s">`select c.id from community c join talent tl on tl.id = c.owner_talent_id join "user" u on u.id = tl.user_id where u.email = ${t.user.email}`</span>
+  <span class="t-k">return</span> { talent: t, communityId: c!.id <span class="t-k">as</span> string }
+}
+<span class="t-k">const</span> join = (s: S, id: string) =&gt; api(<span class="t-s">`/api/communities/${id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+<span class="t-k">const</span> post = (s: S, body: Record&lt;string, unknown&gt;, headers?: Record&lt;string, string&gt;) =&gt; api(<span class="t-s">'/api/drops'</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body, headers })
+
+describe(<span class="t-s">'drops, feed, likes and replies (FEED-01..02, DROP-01..10)'</span>, () =&gt; {
+  it(<span class="t-s">'only the community talent posts; text-only for now; idempotency key replays'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    expect((<span class="t-k">await</span> post(f, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'x'</span>, publishNow: <span class="t-k">true</span> })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'voice'</span>, publishNow: <span class="t-k">true</span> })).body.error.code).toBe(<span class="t-s">'FEATURE_DISABLED'</span>)
+    expect((<span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, publishNow: <span class="t-k">true</span> })).body.error.code).toBe(<span class="t-s">'VALIDATION_FAILED'</span>)
+    expect((<span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'x'</span>, publishAt: <span class="t-s">'2020-01-01T00:00:00Z'</span> })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> key = { <span class="t-s">'idempotency-key'</span>: <span class="t-s">`k-${Math.random()}`</span> }
+    <span class="t-k">const</span> first = <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'Hello fans'</span>, publishNow: <span class="t-k">true</span> }, key)
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    expect(first.body).toMatchObject({ status: <span class="t-s">'published'</span>, audience: <span class="t-s">'members'</span>, locked: <span class="t-k">false</span>, body: <span class="t-s">'Hello fans'</span> })
+    <span class="t-k">const</span> replay = <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'Hello fans'</span>, publishNow: <span class="t-k">true</span> }, key)
+    expect(replay.status).toBe(<span class="t-n">201</span>)
+    expect(replay.body.id).toBe(first.body.id)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from drop where community_id = ${communityId}`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    <span class="t-k">const</span> [{ alerts }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as alerts from notification n join "user" u on u.id = n.user_id where u.email = ${f.user.email} and n.type = 'drop.published'`</span>
+    expect(alerts).toBe(<span class="t-n">1</span>)
+  })
+
+  it(<span class="t-s">'locked cards never leak body; Originals-only drops lock for later members'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> original = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(original, communityId)
+    <span class="t-k">await</span> sql<span class="t-s">`update community set originals_assigned = 100 where id = ${communityId}`</span>
+    <span class="t-k">const</span> late = <span class="t-k">await</span> fan()
+    expect((<span class="t-k">await</span> join(late, communityId)).body.originalPosition).toBeNull()
+    <span class="t-k">const</span> members = <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'secret'</span>, teaser: <span class="t-s">'eviction night 👀'</span>, publishNow: <span class="t-k">true</span> })
+    <span class="t-k">const</span> pub = <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'for everyone'</span>, audience: <span class="t-s">'public'</span>, publishNow: <span class="t-k">true</span> })
+    <span class="t-k">const</span> og = <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'og only'</span>, audience: <span class="t-s">'originals_only'</span>, teaser: <span class="t-s">'OGs'</span>, publishNow: <span class="t-k">true</span> })
+    <span class="t-k">const</span> anon = <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}/drops`</span>)
+    <span class="t-k">const</span> byId = (items: any[]) =&gt; Object.fromEntries(items.map(i =&gt; [i.id, i]))
+    <span class="t-k">const</span> out = byId(anon.body.items)
+    expect(out[members.body.id]).toMatchObject({ locked: <span class="t-k">true</span>, body: <span class="t-k">null</span>, media: <span class="t-k">null</span>, teaser: <span class="t-s">'eviction night 👀'</span>, <span class="t-k">type</span>: <span class="t-s">'text'</span> })
+    expect(out[members.body.id].talent.name).toBeTruthy()
+    expect(out[pub.body.id]).toMatchObject({ locked: <span class="t-k">false</span>, body: <span class="t-s">'for everyone'</span> })
+    expect(JSON.stringify(anon.body)).not.toContain(<span class="t-s">'secret'</span>)
+    expect(JSON.stringify(anon.body)).not.toContain(<span class="t-s">'og only'</span>)
+    <span class="t-k">const</span> lateFeed = byId((<span class="t-k">await</span> api(<span class="t-s">'/api/feed'</span>, { cookie: late.cookie })).body.items)
+    expect(lateFeed[members.body.id].body).toBe(<span class="t-s">'secret'</span>)
+    expect(lateFeed[og.body.id]).toMatchObject({ locked: <span class="t-k">true</span>, body: <span class="t-k">null</span>, teaser: <span class="t-s">'OGs'</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${og.body.id}`</span>, { cookie: original.cookie })).body.body).toBe(<span class="t-s">'og only'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${og.body.id}/replies`</span>, { cookie: late.cookie })).status).toBe(<span class="t-n">403</span>)
+  })
+
+  it(<span class="t-s">'drafts and future-scheduled drops stay hidden until due; published drops lock audience'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">const</span> draft = <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'draft'</span> })
+    expect(draft.body.status).toBe(<span class="t-s">'draft'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> later = <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'later'</span>, publishAt: <span class="t-k">new</span> Date(Date.now() + <span class="t-n">3600_000</span>).toISOString() })
+    expect(later.body.status).toBe(<span class="t-s">'scheduled'</span>)
+    <span class="t-k">const</span> ids = <span class="t-k">async</span> () =&gt; (<span class="t-k">await</span> api(<span class="t-s">'/api/feed'</span>, { cookie: f.cookie })).body.items.map((i: any) =&gt; i.id)
+    expect(<span class="t-k">await</span> ids()).toEqual([])
+    <span class="t-k">await</span> sql<span class="t-s">`update drop set publish_at = now() - interval '1 second' where id = ${later.body.id}`</span>
+    expect(<span class="t-k">await</span> ids()).toEqual([later.body.id])
+    <span class="t-k">const</span> pub = <span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}/publish`</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: {} })
+    expect(pub.body.status).toBe(<span class="t-s">'published'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}/publish`</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: {} })).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { audience: <span class="t-s">'public'</span> } })).body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: f.cookie, body: { body: <span class="t-s">'hijack'</span> } })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> edited = <span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { body: <span class="t-s">'fixed typo'</span> } })
+    expect(edited.body.body).toBe(<span class="t-s">'fixed typo'</span>)
+    expect(edited.body.editedAt).not.toBeNull()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { method: <span class="t-s">'DELETE'</span>, cookie: a.cookie })).status).toBe(<span class="t-n">204</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { method: <span class="t-s">'DELETE'</span>, cookie: a.cookie })).status).toBe(<span class="t-n">204</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from admin_audit where action = 'drop.removed' and target_id = ${draft.body.id}`</span>
+    expect(row!.n).toBe(<span class="t-n">1</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${draft.body.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { body: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">404</span>)
+  })
+
+  it(<span class="t-s">'feed pages have no duplicates while new drops arrive; non-member communityId is 403'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">for</span> (<span class="t-k">let</span> i = <span class="t-n">0</span>; i &lt; <span class="t-n">5</span>; i++) <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">`d${i}`</span>, publishNow: <span class="t-k">true</span> })
+    <span class="t-k">const</span> seen: string[] = []
+    <span class="t-k">let</span> cursor: string | <span class="t-k">null</span> = <span class="t-k">null</span>
+    do {
+      <span class="t-k">const</span> page: any = <span class="t-k">await</span> api(<span class="t-s">`/api/feed?limit=2${cursor ? `</span>&amp;cursor=${encodeURIComponent(cursor)}<span class="t-s">` : ''}`</span>, { cookie: f.cookie })
+      seen.push(...page.body.items.map((i: any) =&gt; i.id))
+      cursor = page.body.nextCursor
+      <span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'new arrival'</span>, publishNow: <span class="t-k">true</span> })
+    } while (cursor)
+    expect(seen).toHaveLength(<span class="t-n">5</span>)
+    expect(<span class="t-k">new</span> Set(seen).size).toBe(<span class="t-n">5</span>)
+    <span class="t-k">const</span> other = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> denied = <span class="t-k">await</span> api(<span class="t-s">`/api/feed?communityId=${other.communityId}`</span>, { cookie: f.cookie })
+    expect(denied.status).toBe(<span class="t-n">403</span>)
+    expect(denied.body.error.details.reason).toBe(<span class="t-s">'not_member'</span>)
+    <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/feed'</span>, { cookie: f.cookie })).body.items).toEqual([])
+  })
+
+  it(<span class="t-s">'likes are one per fan; replies are members-only, one level deep, and moderatable'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> m1 = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> m2 = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> outsider = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(m1, communityId)
+    <span class="t-k">await</span> join(m2, communityId)
+    <span class="t-k">const</span> d = (<span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'public post'</span>, audience: <span class="t-s">'public'</span>, publishNow: <span class="t-k">true</span> })).body
+    <span class="t-k">const</span> locked = (<span class="t-k">await</span> post(talent, { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body: <span class="t-s">'members post'</span>, publishNow: <span class="t-k">true</span> })).body
+    <span class="t-k">const</span> like = (s: S, id: string, method = <span class="t-s">'PUT'</span>) =&gt; api(<span class="t-s">`/api/drops/${id}/reactions/me`</span>, { method, cookie: s.cookie })
+    expect((<span class="t-k">await</span> like(m1, d.id)).body.reactionCounts.like).toBe(<span class="t-n">1</span>)
+    expect((<span class="t-k">await</span> like(m1, d.id)).body.reactionCounts.like).toBe(<span class="t-n">1</span>)
+    expect((<span class="t-k">await</span> like(m2, d.id)).body.reactionCounts.like).toBe(<span class="t-n">2</span>)
+    expect((<span class="t-k">await</span> like(m2, d.id, <span class="t-s">'DELETE'</span>)).status).toBe(<span class="t-n">204</span>)
+    expect((<span class="t-k">await</span> like(m2, d.id, <span class="t-s">'DELETE'</span>)).status).toBe(<span class="t-n">204</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}`</span>, { cookie: m1.cookie })).body).toMatchObject({ reactionCounts: { like: <span class="t-n">1</span> }, viewerReaction: <span class="t-s">'like'</span> })
+    expect((<span class="t-k">await</span> like(outsider, locked.id)).body.error.details.reason).toBe(<span class="t-s">'locked'</span>)
+
+    <span class="t-k">const</span> reply = (s: S, body: Record&lt;string, unknown&gt;) =&gt; api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body })
+    expect((<span class="t-k">await</span> reply(outsider, { body: <span class="t-s">'hi'</span> })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> reply(m1, { body: <span class="t-s">'   '</span> })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> top = <span class="t-k">await</span> reply(m1, { body: <span class="t-s">'first!'</span> })
+    expect(top.status).toBe(<span class="t-n">201</span>)
+    <span class="t-k">const</span> child = <span class="t-k">await</span> reply(m2, { body: <span class="t-s">'second'</span>, parentReplyId: top.body.id })
+    expect(child.status).toBe(<span class="t-n">201</span>)
+    expect((<span class="t-k">await</span> reply(m1, { body: <span class="t-s">'third'</span>, parentReplyId: child.body.id })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from notification nt join "user" u on u.id = nt.user_id where u.email = ${m1.user.email} and nt.type = 'reply.replied'`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/replies/${top.body.id}`</span>, { method: <span class="t-s">'DELETE'</span>, cookie: m2.cookie })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/replies/${top.body.id}`</span>, { method: <span class="t-s">'DELETE'</span>, cookie: talent.cookie })).status).toBe(<span class="t-n">204</span>)
+    <span class="t-k">const</span> list = (<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>)).body.items
+    expect(list.map((r: any) =&gt; [r.status, r.body])).toEqual([[<span class="t-s">'removed'</span>, <span class="t-k">null</span>], [<span class="t-s">'active'</span>, <span class="t-s">'second'</span>]])
+    expect(JSON.stringify(list)).not.toContain(<span class="t-s">'@example.com'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}`</span>)).body.replyCount).toBe(<span class="t-n">1</span>)
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-global-setup-ts"><summary><code>tests/e2e/global-setup.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/global-setup.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { execSync } <span class="t-k">from</span> <span class="t-s">'node:child_process'</span>
+<span class="t-k">import</span> postgres <span class="t-k">from</span> <span class="t-s">'postgres'</span>
+
+<span class="t-c">// Creates a fresh test database, migrates and seeds it.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> <span class="t-k">async</span> <span class="t-k">function</span> () {
+  <span class="t-k">const</span> base = process.env.TEST_DATABASE_ADMIN_URL ?? <span class="t-s">'postgres://postgres:postgres@localhost:5432/postgres'</span>
+  <span class="t-k">const</span> admin = postgres(base, { max: <span class="t-n">1</span> })
+  <span class="t-k">await</span> admin.unsafe(<span class="t-s">'drop database if exists clautverse_test with (force)'</span>)
+  <span class="t-k">await</span> admin.unsafe(<span class="t-s">'create database clautverse_test'</span>)
+  <span class="t-k">await</span> admin.end()
+  <span class="t-k">const</span> url = base.replace(/\/[^/]*$/, <span class="t-s">'/clautverse_test'</span>)
+  process.env.NUXT_DATABASE_URL = url
+  <span class="t-k">const</span> env = { ...process.env, NUXT_DATABASE_URL: url }
+  execSync(<span class="t-s">'pnpm exec drizzle-kit migrate'</span>, { env, stdio: <span class="t-s">'inherit'</span> })
+  execSync(<span class="t-s">'node scripts/seed.mjs'</span>, { env, stdio: <span class="t-s">'inherit'</span> })
+}</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-helpers-ts"><summary><code>tests/e2e/helpers.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/helpers.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> postgres <span class="t-k">from</span> <span class="t-s">'postgres'</span>
+<span class="t-k">import</span> { $fetch, fetch, url } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+
+<span class="t-k">export</span> <span class="t-k">const</span> TEST_DB = (process.env.TEST_DATABASE_ADMIN_URL ?? <span class="t-s">'postgres://postgres:postgres@localhost:5432/postgres'</span>).replace(/\/[^/]*$/, <span class="t-s">'/clautverse_test'</span>)
+<span class="t-k">export</span> <span class="t-k">const</span> sql = postgres(TEST_DB, { max: <span class="t-n">2</span> })
+
+<span class="t-k">export</span> <span class="t-k">const</span> testEnv = {
+  NUXT_DATABASE_URL: TEST_DB,
+  NUXT_BETTER_AUTH_SECRET: <span class="t-s">'test-secret-test-secret-test-secret-1234'</span>,
+  NUXT_BETTER_AUTH_URL: <span class="t-s">'http://localhost'</span>,
+  NUXT_CURSOR_SECRET: <span class="t-s">'cursor-secret'</span>,
+  NUXT_CRON_SECRET: <span class="t-s">'test-cron-secret'</span>,
+  NUXT_AUTH_RATE_LIMIT_ENABLED: <span class="t-s">'false'</span>,
+}
+
+<span class="t-k">let</span> n = <span class="t-n">0</span>
+<span class="t-k">export</span> <span class="t-k">function</span> newUser(overrides: Record&lt;string, unknown&gt; = {}) {
+  n++
+  <span class="t-k">const</span> id = <span class="t-s">`${Date.now().toString(36)}${n}`</span>
+  <span class="t-k">return</span> { email: <span class="t-s">`fan${id}@example.com`</span>, password: <span class="t-s">'correct-horse-9'</span>, name: <span class="t-s">'Fan'</span>, username: <span class="t-s">`fan_${id}`</span>, dateOfBirth: <span class="t-s">'1995-05-05'</span>, ...overrides }
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> signUp(body: Record&lt;string, unknown&gt;) {
+  <span class="t-k">return</span> fetch(<span class="t-s">'/api/auth/sign-up/email'</span>, { method: <span class="t-s">'POST'</span>, headers: { <span class="t-s">'content-type'</span>: <span class="t-s">'application/json'</span>, origin: url(<span class="t-s">'/'</span>).replace(/\/$/, <span class="t-s">''</span>) }, body: JSON.stringify(body) })
+}
+
+<span class="t-c">/** Signs up, marks the email verified directly in the DB, signs in, and returns a cookie header. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> verifiedSession(overrides: Record&lt;string, unknown&gt; = {}) {
+  <span class="t-k">const</span> u = newUser(overrides)
+  <span class="t-k">const</span> res = <span class="t-k">await</span> signUp(u)
+  <span class="t-k">if</span> (res.status !== <span class="t-n">200</span>) <span class="t-k">throw</span> <span class="t-k">new</span> Error(<span class="t-s">`sign-up failed ${res.status} ${await res.text()}`</span>)
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = true where email = ${u.email}`</span>
+  <span class="t-k">const</span> login = <span class="t-k">await</span> fetch(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, headers: { <span class="t-s">'content-type'</span>: <span class="t-s">'application/json'</span>, origin: url(<span class="t-s">'/'</span>).replace(/\/$/, <span class="t-s">''</span>) }, body: JSON.stringify({ email: u.email, password: u.password }) })
+  <span class="t-k">if</span> (login.status !== <span class="t-n">200</span>) <span class="t-k">throw</span> <span class="t-k">new</span> Error(<span class="t-s">`sign-in failed ${login.status} ${await login.text()}`</span>)
+  <span class="t-k">const</span> cookie = login.headers.getSetCookie().map(c =&gt; c.split(<span class="t-s">';'</span>)[<span class="t-n">0</span>]).join(<span class="t-s">'; '</span>)
+  <span class="t-k">return</span> { user: u, cookie }
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> api(path: string, init: { method?: string, body?: unknown, cookie?: string, headers?: Record&lt;string, string&gt; } = {}) {
+  <span class="t-k">const</span> res = <span class="t-k">await</span> fetch(path, {
+    method: init.method ?? <span class="t-s">'GET'</span>,
+    headers: { <span class="t-s">'content-type'</span>: <span class="t-s">'application/json'</span>, ...(init.cookie ? { cookie: init.cookie } : {}), ...init.headers },
+    body: init.body === <span class="t-k">undefined</span> ? <span class="t-k">undefined</span> : JSON.stringify(init.body),
+  })
+  <span class="t-k">const</span> text = <span class="t-k">await</span> res.text()
+  <span class="t-k">return</span> { status: res.status, headers: res.headers, body: text ? JSON.parse(text) : <span class="t-k">null</span> }
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> catalog() {
+  <span class="t-k">const</span> categories = (<span class="t-k">await</span> $fetch&lt;any&gt;(<span class="t-s">'/api/categories'</span>)).items
+  <span class="t-k">const</span> realityTv = categories.find((c: any) =&gt; c.slug === <span class="t-s">'reality-tv'</span>)
+  <span class="t-k">const</span> music = categories.find((c: any) =&gt; c.slug === <span class="t-s">'music'</span>)
+  <span class="t-k">const</span> stars = (<span class="t-k">await</span> $fetch&lt;any&gt;(<span class="t-s">`/api/talents?categoryId=${realityTv.id}`</span>)).items
+  <span class="t-k">const</span> ada = stars.find((s: any) =&gt; s.slug === <span class="t-s">'ada'</span>)
+  <span class="t-k">return</span> { realityTv, music, ada, stars }
+}</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-missions-test-ts"><summary><code>tests/e2e/missions.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/missions.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-k">type</span> S = Awaited&lt;ReturnType&lt;<span class="t-k">typeof</span> verifiedSession&gt;&gt; &amp; { id: string }
+<span class="t-k">async</span> <span class="t-k">function</span> fan(): Promise&lt;S&gt; {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> verifiedSession()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set onboarding_status = 'completed' where email = ${s.user.email}`</span>
+  <span class="t-k">const</span> [{ id }] = <span class="t-k">await</span> sql<span class="t-s">`select id from "user" where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> { ...s, id: id <span class="t-k">as</span> string }
+}
+<span class="t-k">async</span> <span class="t-k">function</span> admin() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> fan()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set roles = 'fan,super_admin' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">async</span> <span class="t-k">function</span> talentWithCommunity(a: S) {
+  <span class="t-k">const</span> t = <span class="t-k">await</span> fan()
+  <span class="t-k">const</span> { realityTv } = <span class="t-k">await</span> catalog()
+  <span class="t-k">const</span> app = <span class="t-k">await</span> api(<span class="t-s">'/api/talent-applications'</span>, { method: <span class="t-s">'POST'</span>, cookie: t.cookie, body: { categoryId: realityTv.id, displayName: <span class="t-s">`Star ${Math.random()}`</span>, bio: <span class="t-s">'Hi'</span>, links: [] } })
+  <span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.body.id}/accept`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })
+  <span class="t-k">const</span> [c] = <span class="t-k">await</span> sql<span class="t-s">`select c.id from community c join talent tl on tl.id = c.owner_talent_id where tl.user_id = ${t.id}`</span>
+  <span class="t-k">return</span> { talent: t, communityId: c!.id <span class="t-k">as</span> string }
+}
+<span class="t-k">const</span> join = (s: S, id: string) =&gt; api(<span class="t-s">`/api/communities/${id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+<span class="t-k">const</span> createMission = (s: S, body: Record&lt;string, unknown&gt;) =&gt; api(<span class="t-s">'/api/missions'</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body: { title: <span class="t-s">'Vote tonight'</span>, xpReward: <span class="t-n">50</span>, completionPolicy: { review: <span class="t-s">'auto'</span>, proof: <span class="t-s">'none'</span> }, ...body } })
+<span class="t-k">const</span> complete = (s: S, id: string, body: Record&lt;string, unknown&gt; = {}) =&gt; api(<span class="t-s">`/api/missions/${id}/completions`</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body })
+<span class="t-k">const</span> balance = <span class="t-k">async</span> (s: S) =&gt; (<span class="t-k">await</span> api(<span class="t-s">'/api/xp/me'</span>, { cookie: s.cookie })).body
+
+describe(<span class="t-s">'missions, completions, XP and badges (MIS-01..10, XP-01..02, BDG-01..02, ADM-15..17)'</span>, () =&gt; {
+  it(<span class="t-s">'only the talent creates missions within the admin XP range'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    expect((<span class="t-k">await</span> createMission(f, { communityId })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> createMission(talent, { communityId, xpReward: <span class="t-n">1000</span> })).body.error.details.fields.xpReward).toBe(<span class="t-s">'out_of_range'</span>)
+    expect((<span class="t-k">await</span> createMission(talent, { communityId, completionPolicy: { review: <span class="t-s">'owner'</span>, proof: <span class="t-s">'none'</span> } })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> createMission(talent, { communityId, deadline: <span class="t-s">'2020-01-01T00:00:00Z'</span> })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/xp-rules'</span>, { method: <span class="t-s">'PUT'</span>, cookie: talent.cookie, body: { missionXpMin: <span class="t-n">1</span>, missionXpMax: <span class="t-n">2000</span> } })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/xp-rules'</span>, { method: <span class="t-s">'PUT'</span>, cookie: a.cookie, body: { missionXpMin: <span class="t-n">9</span>, missionXpMax: <span class="t-n">1</span> } })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">try</span> {
+      expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/xp-rules'</span>, { method: <span class="t-s">'PUT'</span>, cookie: a.cookie, body: { missionXpMin: <span class="t-n">5</span>, missionXpMax: <span class="t-n">2000</span> } })).status).toBe(<span class="t-n">200</span>)
+      expect((<span class="t-k">await</span> createMission(talent, { communityId, xpReward: <span class="t-n">1000</span> })).status).toBe(<span class="t-n">201</span>)
+    }
+    <span class="t-k">finally</span> {
+      <span class="t-k">await</span> api(<span class="t-s">'/api/admin/xp-rules'</span>, { method: <span class="t-s">'PUT'</span>, cookie: a.cookie, body: { missionXpMin: <span class="t-n">5</span>, missionXpMax: <span class="t-n">100</span> } })
+    }
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/xp-rules'</span>, { cookie: a.cookie })).body).toEqual({ missionXpMin: <span class="t-n">5</span>, missionXpMax: <span class="t-n">100</span> })
+  })
+
+  it(<span class="t-s">'10 parallel auto-approved submissions → one completion and one ledger row'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> outsider = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">const</span> m = (<span class="t-k">await</span> createMission(talent, { communityId, xpReward: <span class="t-n">40</span> })).body
+    expect((<span class="t-k">await</span> complete(outsider, m.id)).body.error.details.reason).toBe(<span class="t-s">'not_member'</span>)
+    <span class="t-k">const</span> results = <span class="t-k">await</span> Promise.all(Array.<span class="t-k">from</span>({ length: <span class="t-n">10</span> }, () =&gt; complete(f, m.id)))
+    expect(results.filter(r =&gt; r.status === <span class="t-n">201</span>)).toHaveLength(<span class="t-n">1</span>)
+    expect(<span class="t-k">new</span> Set(results.map(r =&gt; r.body.id)).size).toBe(<span class="t-n">1</span>)
+    expect(results[<span class="t-n">0</span>]!.body.status).toBe(<span class="t-s">'approved'</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from xp_transaction where user_id = ${f.id}`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    expect(<span class="t-k">await</span> balance(f)).toEqual({ balance: <span class="t-n">40</span>, lifetimeEarned: <span class="t-n">40</span> })
+    <span class="t-k">const</span> listed = (<span class="t-k">await</span> api(<span class="t-s">`/api/missions?communityId=${communityId}`</span>, { cookie: f.cookie })).body.items
+    expect(listed[<span class="t-n">0</span>]).toMatchObject({ id: m.id, viewerCompletion: { status: <span class="t-s">'approved'</span> } })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/missions/${m.id}/completions/me`</span>, { cookie: f.cookie })).body.items).toHaveLength(<span class="t-n">1</span>)
+  })
+
+  it(<span class="t-s">'expired missions give no XP and move to the expired list'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">const</span> m = (<span class="t-k">await</span> createMission(talent, { communityId, deadline: <span class="t-k">new</span> Date(Date.now() + <span class="t-n">3600_000</span>).toISOString() })).body
+    <span class="t-k">await</span> sql<span class="t-s">`update mission set deadline = now() - interval '1 second' where id = ${m.id}`</span>
+    <span class="t-k">const</span> late = <span class="t-k">await</span> complete(f, m.id)
+    expect(late.status).toBe(<span class="t-n">409</span>)
+    expect(late.body.error.details.currentStatus).toBe(<span class="t-s">'expired'</span>)
+    expect((<span class="t-k">await</span> balance(f)).balance).toBe(<span class="t-n">0</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/missions?communityId=${communityId}`</span>)).body.items).toEqual([])
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/missions?communityId=${communityId}&amp;status=expired`</span>)).body.items.map((i: any) =&gt; i.id)).toEqual([m.id])
+  })
+
+  it(<span class="t-s">'reviewed missions: proof required, owner approves once or rejects with a reason'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> [f1, f2, stranger] = [<span class="t-k">await</span> fan(), <span class="t-k">await</span> fan(), <span class="t-k">await</span> fan()]
+    <span class="t-k">await</span> join(f1, communityId)
+    <span class="t-k">await</span> join(f2, communityId)
+    <span class="t-k">const</span> m = (<span class="t-k">await</span> createMission(talent, { communityId, xpReward: <span class="t-n">60</span>, completionPolicy: { review: <span class="t-s">'owner'</span>, proof: <span class="t-s">'link'</span> } })).body
+    expect((<span class="t-k">await</span> complete(f1, m.id)).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> complete(f1, m.id, { proof: { link: <span class="t-s">'http://insecure.example'</span> } })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> c1 = (<span class="t-k">await</span> complete(f1, m.id, { proof: { link: <span class="t-s">'https://x.com/vote/1'</span> } })).body
+    <span class="t-k">const</span> c2 = (<span class="t-k">await</span> complete(f2, m.id, { proof: { link: <span class="t-s">'https://x.com/vote/2'</span> } })).body
+    expect(c1).toMatchObject({ status: <span class="t-s">'submitted'</span>, proof: { link: <span class="t-s">'https://x.com/vote/1'</span> } })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/missions/${m.id}/completions`</span>, { cookie: stranger.cookie })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/missions/${m.id}/completions?status=submitted`</span>, { cookie: talent.cookie })).body.items.map((i: any) =&gt; i.id)).toEqual([c1.id, c2.id])
+    <span class="t-k">const</span> approve = (id: string) =&gt; api(<span class="t-s">`/api/mission-completions/${id}/approve`</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: {} })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/mission-completions/${c1.id}/approve`</span>, { method: <span class="t-s">'POST'</span>, cookie: stranger.cookie, body: {} })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> approve(c1.id)).body.status).toBe(<span class="t-s">'approved'</span>)
+    expect((<span class="t-k">await</span> approve(c1.id)).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> balance(f1)).balance).toBe(<span class="t-n">60</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/mission-completions/${c1.id}/reject`</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: { reason: <span class="t-s">'x'</span> } })).body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/mission-completions/${c2.id}/reject`</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: {} })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/mission-completions/${c2.id}/reject`</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: { reason: <span class="t-s">'screenshot is not a vote'</span> } })).body.status).toBe(<span class="t-s">'rejected'</span>)
+    expect((<span class="t-k">await</span> approve(c2.id)).body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    expect((<span class="t-k">await</span> balance(f2)).balance).toBe(<span class="t-n">0</span>)
+    <span class="t-k">const</span> types = (<span class="t-k">await</span> sql<span class="t-s">`select type from notification where user_id in (${f1.id}, ${f2.id}) and type like 'mission.%' order by type`</span>).map(r =&gt; r.<span class="t-k">type</span>)
+    expect(types).toEqual([<span class="t-s">'mission.completion_approved'</span>, <span class="t-s">'mission.completion_rejected'</span>])
+  })
+
+  it(<span class="t-s">'XP corrections are audited ledger rows; badges are awarded once'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> adj = (body: Record&lt;string, unknown&gt;) =&gt; api(<span class="t-s">'/api/admin/xp-adjustments'</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body })
+    expect((<span class="t-k">await</span> adj({ userId: f.id, amount: <span class="t-n">0</span>, reason: <span class="t-s">'x'</span> })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> adj({ userId: f.id, amount: <span class="t-n">30</span> })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> adj({ userId: f.id, amount: <span class="t-n">30</span>, reason: <span class="t-s">'event prize'</span> })).status).toBe(<span class="t-n">201</span>)
+    expect((<span class="t-k">await</span> adj({ userId: f.id, amount: -<span class="t-n">10</span>, reason: <span class="t-s">'fraudulent proof'</span> })).status).toBe(<span class="t-n">201</span>)
+    expect(<span class="t-k">await</span> balance(f)).toEqual({ balance: <span class="t-n">20</span>, lifetimeEarned: <span class="t-n">30</span> })
+    <span class="t-k">const</span> tx = (<span class="t-k">await</span> api(<span class="t-s">'/api/xp/me/transactions?limit=1'</span>, { cookie: f.cookie })).body
+    expect(tx.items[<span class="t-n">0</span>]).toMatchObject({ amount: -<span class="t-n">10</span>, sourceType: <span class="t-s">'admin_adjustment'</span>, reason: <span class="t-s">'fraudulent proof'</span> })
+    <span class="t-k">const</span> next = (<span class="t-k">await</span> api(<span class="t-s">`/api/xp/me/transactions?limit=1&amp;cursor=${encodeURIComponent(tx.nextCursor)}`</span>, { cookie: f.cookie })).body
+    expect(next.items[<span class="t-n">0</span>].amount).toBe(<span class="t-n">30</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from admin_audit where action = 'xp.adjusted' and target_id = ${f.id}`</span>
+    expect(n).toBe(<span class="t-n">2</span>)
+
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/badges'</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { name: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> b = (<span class="t-k">await</span> api(<span class="t-s">'/api/admin/badges'</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { name: <span class="t-s">`Early Bird ${Math.random()}`</span>, sortOrder: <span class="t-n">1</span> } })).body
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/badges?limit=100'</span>)).body.items.map((i: any) =&gt; i.id)).toContain(b.id)
+    <span class="t-k">const</span> award = () =&gt; api(<span class="t-s">`/api/admin/badges/${b.id}/awards`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { userId: f.id } })
+    expect((<span class="t-k">await</span> award()).status).toBe(<span class="t-n">201</span>)
+    expect((<span class="t-k">await</span> award()).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/badges/me'</span>, { cookie: f.cookie })).body.items.map((i: any) =&gt; i.badge.id)).toEqual([b.id])
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/badges/${b.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: a.cookie, body: { active: <span class="t-k">false</span> } })).body.active).toBe(<span class="t-k">false</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/badges?limit=100'</span>)).body.items.map((i: any) =&gt; i.id)).not.toContain(b.id)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/badges/${b.id}`</span>, { cookie: a.cookie })).body.active).toBe(<span class="t-k">false</span>)
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-moderation-test-ts"><summary><code>tests/e2e/moderation.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/moderation.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-k">type</span> S = Awaited&lt;ReturnType&lt;<span class="t-k">typeof</span> verifiedSession&gt;&gt;
+<span class="t-k">async</span> <span class="t-k">function</span> fan() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> verifiedSession()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set onboarding_status = 'completed' where email = ${s.user.email}`</span>
+  <span class="t-k">const</span> [{ id }] = <span class="t-k">await</span> sql<span class="t-s">`select id from "user" where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> { ...s, id: id <span class="t-k">as</span> string }
+}
+<span class="t-k">async</span> <span class="t-k">function</span> admin() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> fan()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set roles = 'fan,super_admin' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">async</span> <span class="t-k">function</span> talentWithCommunity(a: S) {
+  <span class="t-k">const</span> t = <span class="t-k">await</span> fan()
+  <span class="t-k">const</span> { realityTv } = <span class="t-k">await</span> catalog()
+  <span class="t-k">const</span> app = <span class="t-k">await</span> api(<span class="t-s">'/api/talent-applications'</span>, { method: <span class="t-s">'POST'</span>, cookie: t.cookie, body: { categoryId: realityTv.id, displayName: <span class="t-s">`Star ${Math.random()}`</span>, bio: <span class="t-s">'Hi'</span>, links: [] } })
+  <span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.body.id}/accept`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })
+  <span class="t-k">const</span> [c] = <span class="t-k">await</span> sql<span class="t-s">`select c.id from community c join talent tl on tl.id = c.owner_talent_id where tl.user_id = ${t.id}`</span>
+  <span class="t-k">return</span> { talent: t, communityId: c!.id <span class="t-k">as</span> string }
+}
+<span class="t-k">const</span> join = (s: S, id: string) =&gt; api(<span class="t-s">`/api/communities/${id}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+<span class="t-k">const</span> drop = <span class="t-k">async</span> (s: S, communityId: string, body = <span class="t-s">'hello'</span>) =&gt;
+  (<span class="t-k">await</span> api(<span class="t-s">'/api/drops'</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body: { communityId, <span class="t-k">type</span>: <span class="t-s">'text'</span>, body, publishNow: <span class="t-k">true</span> } })).body
+<span class="t-k">const</span> report = (s: S, body: Record&lt;string, unknown&gt;) =&gt; api(<span class="t-s">'/api/reports'</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body })
+<span class="t-k">const</span> createMission = (s: S, body: Record&lt;string, unknown&gt;) =&gt; api(<span class="t-s">'/api/missions'</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body: { title: <span class="t-s">'Vote tonight'</span>, xpReward: <span class="t-n">50</span>, completionPolicy: { review: <span class="t-s">'auto'</span>, proof: <span class="t-s">'none'</span> }, ...body } })
+<span class="t-k">const</span> act = (a: S, id: string, action: string) =&gt; api(<span class="t-s">`/api/admin/reports/${id}/actions`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { action } })
+
+describe(<span class="t-s">'reports and moderation (RPT-01, ADM-10..13)'</span>, () =&gt; {
+  it(<span class="t-s">'reports are deduplicated, anonymous and queued FIFO; remove_content hides the drop'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">const</span> d = <span class="t-k">await</span> drop(talent, communityId, <span class="t-s">'spammy'</span>)
+    expect((<span class="t-k">await</span> report(f, { targetType: <span class="t-s">'drop'</span>, targetId: <span class="t-s">'00000000-0000-4000-8000-000000000000'</span>, reason: <span class="t-s">'spam'</span> })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> first = <span class="t-k">await</span> report(f, { targetType: <span class="t-s">'drop'</span>, targetId: d.id, reason: <span class="t-s">'spam'</span>, details: <span class="t-s">'buy followers'</span> })
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    expect(first.body).toEqual({ id: first.body.id, status: <span class="t-s">'open'</span>, createdAt: expect.any(String) })
+    <span class="t-k">const</span> again = <span class="t-k">await</span> report(f, { targetType: <span class="t-s">'drop'</span>, targetId: d.id, reason: <span class="t-s">'spam'</span> })
+    expect(again.status).toBe(<span class="t-n">200</span>)
+    expect(again.body.id).toBe(first.body.id)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from notification where user_id = ${talent.id} and type like 'report%'`</span>
+    expect(n).toBe(<span class="t-n">0</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/reports'</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> queue = (<span class="t-k">await</span> api(<span class="t-s">'/api/admin/reports?targetType=drop&amp;limit=100'</span>, { cookie: a.cookie })).body.items
+    expect(queue.find((r: any) =&gt; r.id === first.body.id)).toMatchObject({ reporterId: f.id, details: <span class="t-s">'buy followers'</span> })
+    expect((<span class="t-k">await</span> act(a, first.body.id, <span class="t-s">'remove_content'</span>)).body).toMatchObject({ status: <span class="t-s">'actioned'</span>, action: <span class="t-s">'remove_content'</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/feed'</span>, { cookie: f.cookie })).body.items).toEqual([])
+    expect((<span class="t-k">await</span> act(a, first.body.id, <span class="t-s">'dismiss'</span>)).body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    <span class="t-k">const</span> second = <span class="t-k">await</span> report(f, { targetType: <span class="t-s">'community'</span>, targetId: communityId, reason: <span class="t-s">'other'</span> })
+    expect((<span class="t-k">await</span> act(a, second.body.id, <span class="t-s">'dismiss'</span>)).body.status).toBe(<span class="t-s">'dismissed'</span>)
+    <span class="t-k">const</span> [{ audits }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as audits from admin_audit where target_id in (${first.body.id}, ${second.body.id}, ${d.id})`</span>
+    expect(audits).toBe(<span class="t-n">3</span>)
+  })
+
+  it(<span class="t-s">'missions are reportable like drops; a missing mission 404s'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">const</span> m = (<span class="t-k">await</span> createMission(talent, { communityId })).body
+    <span class="t-k">const</span> r = <span class="t-k">await</span> report(f, { targetType: <span class="t-s">'mission'</span>, targetId: m.id, reason: <span class="t-s">'spam'</span> })
+    expect(r.status).toBe(<span class="t-n">201</span>)
+    expect(r.body).toEqual({ id: r.body.id, status: <span class="t-s">'open'</span>, createdAt: expect.any(String) })
+    <span class="t-c">// remove_content does not apply to a mission report: the not_applicable error shape, report stays open.</span>
+    <span class="t-k">const</span> badAction = <span class="t-k">await</span> act(a, r.body.id, <span class="t-s">'remove_content'</span>)
+    expect(badAction.status).toBe(<span class="t-n">400</span>)
+    expect(badAction.body.error).toMatchObject({ code: <span class="t-s">'VALIDATION_FAILED'</span>, details: { fields: { action: <span class="t-s">'not_applicable'</span> } } })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/reports?targetType=mission&amp;limit=100'</span>, { cookie: a.cookie })).body.items.find((x: any) =&gt; x.id === r.body.id).status).toBe(<span class="t-s">'open'</span>)
+    expect((<span class="t-k">await</span> report(f, { targetType: <span class="t-s">'mission'</span>, targetId: <span class="t-s">'00000000-0000-4000-8000-000000000000'</span>, reason: <span class="t-s">'spam'</span> })).status).toBe(<span class="t-n">404</span>)
+  })
+
+  it(<span class="t-s">'first removal blocks rejoin for 30 days, second removal is permanent, counts are per-community'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> troll = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(troll, communityId)
+    <span class="t-k">const</span> d = <span class="t-k">await</span> drop(talent, communityId)
+    <span class="t-k">const</span> reply = (<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { method: <span class="t-s">'POST'</span>, cookie: troll.cookie, body: { body: <span class="t-s">'rude'</span> } })).body
+    <span class="t-k">const</span> r = (<span class="t-k">await</span> report(talent, { targetType: <span class="t-s">'reply'</span>, targetId: reply.id, reason: <span class="t-s">'harassment'</span> })).body
+    expect((<span class="t-k">await</span> act(a, r.id, <span class="t-s">'remove_member'</span>)).body.status).toBe(<span class="t-s">'actioned'</span>)
+    <span class="t-c">// DEC-03: removal #1 records count 1 and a blockedUntil ≈ now + 30 days.</span>
+    <span class="t-k">const</span> [m1] = <span class="t-k">await</span> sql<span class="t-s">`select status, removal_count, blocked_until from membership where user_id = ${troll.id} and community_id = ${communityId}`</span>
+    expect(m1).toMatchObject({ status: <span class="t-s">'removed'</span>, removal_count: <span class="t-n">1</span> })
+    <span class="t-k">const</span> blockedUntil = <span class="t-k">new</span> Date(m1.blocked_until <span class="t-k">as</span> string).getTime()
+    expect(blockedUntil).toBeGreaterThan(Date.now() + <span class="t-n">29</span> * <span class="t-n">86_400_000</span>)
+    expect(blockedUntil).toBeLessThan(Date.now() + <span class="t-n">31</span> * <span class="t-n">86_400_000</span>)
+    <span class="t-c">// DEC-10: the removed fan gets a membership.removed notification with the community and count.</span>
+    <span class="t-k">const</span> [note] = <span class="t-k">await</span> sql<span class="t-s">`select data from notification where user_id = ${troll.id} and type = 'membership.removed'`</span>
+    expect(note.data).toMatchObject({ communityId, removalCount: <span class="t-n">1</span> })
+    <span class="t-c">// Rejoin while the window is still running stays blocked.</span>
+    <span class="t-k">const</span> denied = <span class="t-k">await</span> join(troll, communityId)
+    expect(denied.body.error).toMatchObject({ code: <span class="t-s">'FORBIDDEN'</span>, details: { reason: <span class="t-s">'removed'</span>, blockedUntil: expect.any(String) } })
+    <span class="t-c">// Once the window has fully elapsed (inclusive boundary), rejoin is allowed again.</span>
+    <span class="t-k">await</span> sql<span class="t-s">`update membership set blocked_until = now() - interval '1 second' where user_id = ${troll.id} and community_id = ${communityId}`</span>
+    expect((<span class="t-k">await</span> join(troll, communityId)).body.status).toBe(<span class="t-s">'active'</span>)
+    <span class="t-c">// Removal #2 for the same (fan, community) pair is a permanent ban.</span>
+    <span class="t-k">const</span> reply2 = (<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { method: <span class="t-s">'POST'</span>, cookie: troll.cookie, body: { body: <span class="t-s">'again'</span> } })).body
+    <span class="t-k">const</span> r2 = (<span class="t-k">await</span> report(talent, { targetType: <span class="t-s">'reply'</span>, targetId: reply2.id, reason: <span class="t-s">'harassment'</span> })).body
+    expect((<span class="t-k">await</span> act(a, r2.id, <span class="t-s">'remove_member'</span>)).body.status).toBe(<span class="t-s">'actioned'</span>)
+    <span class="t-k">const</span> [m2] = <span class="t-k">await</span> sql<span class="t-s">`select status, removal_count from membership where user_id = ${troll.id} and community_id = ${communityId}`</span>
+    expect(m2).toMatchObject({ status: <span class="t-s">'removed'</span>, removal_count: <span class="t-n">2</span> })
+    expect((<span class="t-k">await</span> join(troll, communityId)).body.error.details.reason).toBe(<span class="t-s">'removed'</span>)
+    <span class="t-c">// The count is scoped to the community: an unrelated community is unaffected.</span>
+    <span class="t-k">const</span> a2 = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm2 = (<span class="t-k">await</span> api(<span class="t-s">'/api/admin/communities'</span>, { method: <span class="t-s">'POST'</span>, cookie: a2.cookie, body: { name: <span class="t-s">`Other ${Date.now()}${Math.random()}`</span> } })).body
+    expect((<span class="t-k">await</span> join(troll, comm2.id)).body.status).toBe(<span class="t-s">'active'</span>)
+    <span class="t-k">const</span> [m3] = <span class="t-k">await</span> sql<span class="t-s">`select removal_count from membership where user_id = ${troll.id} and community_id = ${comm2.id}`</span>
+    expect(m3.removal_count).toBe(<span class="t-n">0</span>)
+  })
+
+  it(<span class="t-s">'reinstating a removed member clears the block but not the removal count'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">const</span> d = <span class="t-k">await</span> drop(talent, communityId)
+    <span class="t-k">const</span> reply = (<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { body: <span class="t-s">'rude'</span> } })).body
+    <span class="t-k">const</span> r = (<span class="t-k">await</span> report(talent, { targetType: <span class="t-s">'reply'</span>, targetId: reply.id, reason: <span class="t-s">'harassment'</span> })).body
+    <span class="t-k">await</span> act(a, r.id, <span class="t-s">'remove_member'</span>)
+    <span class="t-c">// Non-admin cannot reinstate; a missing membership 404s.</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${communityId}/members/${f.id}/reinstate`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { reason: <span class="t-s">'appeal'</span> } })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> nobody = <span class="t-k">await</span> fan()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${communityId}/members/${nobody.id}/reinstate`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { reason: <span class="t-s">'appeal'</span> } })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> back = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${communityId}/members/${f.id}/reinstate`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { reason: <span class="t-s">'appeal accepted'</span> } })
+    expect(back.body).toMatchObject({ status: <span class="t-s">'active'</span>, leftAt: <span class="t-k">null</span> })
+    <span class="t-c">// Owner ruling: the count stays at 1 even though the block is cleared.</span>
+    <span class="t-k">const</span> [m] = <span class="t-k">await</span> sql<span class="t-s">`select status, removal_count, blocked_until from membership where user_id = ${f.id} and community_id = ${communityId}`</span>
+    expect(m).toMatchObject({ status: <span class="t-s">'active'</span>, removal_count: <span class="t-n">1</span>, blocked_until: <span class="t-k">null</span> })
+    <span class="t-c">// A later removal still counts as removal #2 → permanent.</span>
+    <span class="t-k">const</span> reply2 = (<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: { body: <span class="t-s">'again'</span> } })).body
+    <span class="t-k">const</span> r2 = (<span class="t-k">await</span> report(talent, { targetType: <span class="t-s">'reply'</span>, targetId: reply2.id, reason: <span class="t-s">'harassment'</span> })).body
+    <span class="t-k">await</span> act(a, r2.id, <span class="t-s">'remove_member'</span>)
+    <span class="t-k">const</span> [m2] = <span class="t-k">await</span> sql<span class="t-s">`select removal_count from membership where user_id = ${f.id} and community_id = ${communityId}`</span>
+    expect(m2.removal_count).toBe(<span class="t-n">2</span>)
+    expect((<span class="t-k">await</span> join(f, communityId)).body.error.details.reason).toBe(<span class="t-s">'removed'</span>)
+  })
+
+  it(<span class="t-s">'voluntary leave generates no membership.removed notification'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> comm = (<span class="t-k">await</span> api(<span class="t-s">'/api/admin/communities'</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { name: <span class="t-s">`Comm ${Date.now()}${Math.random()}`</span> } })).body
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, comm.id)
+    <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${comm.id}/leave`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from notification where user_id = ${f.id} and type = 'membership.removed'`</span>
+    expect(n).toBe(<span class="t-n">0</span>)
+  })
+
+  it(<span class="t-s">'blocking hides the blocked user\'s drops and replies for the blocker only'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> g = <span class="t-k">await</span> fan()
+    <span class="t-k">await</span> join(f, communityId)
+    <span class="t-k">await</span> join(g, communityId)
+    <span class="t-k">const</span> d = <span class="t-k">await</span> drop(talent, communityId, <span class="t-s">'public-ish'</span>)
+    <span class="t-k">const</span> reply = (<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { method: <span class="t-s">'POST'</span>, cookie: g.cookie, body: { body: <span class="t-s">'hi'</span> } })).body
+    <span class="t-c">// Sanity: f can see the drop and g's reply before blocking.</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}`</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { cookie: f.cookie })).body.items.map((x: any) =&gt; x.id)).toContain(reply.id)
+    <span class="t-c">// Block validation: self-block rejected, nonexistent target 404s, create is idempotent.</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/users/${f.id}/block`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/users/ghost_user/block'</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> b1 = <span class="t-k">await</span> api(<span class="t-s">`/api/users/${g.id}/block`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    expect(b1.status).toBe(<span class="t-n">201</span>)
+    expect(b1.body).toMatchObject({ id: expect.any(String), createdAt: expect.any(String) })
+    <span class="t-k">const</span> b2 = <span class="t-k">await</span> api(<span class="t-s">`/api/users/${g.id}/block`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    expect(b2.status).toBe(<span class="t-n">200</span>)
+    expect(b2.body.id).toBe(b1.body.id)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from block where blocker_id = ${f.id}`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    <span class="t-c">// Replies from a blocked author are filtered out of the blocker's reply listing only.</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { cookie: f.cookie })).body.items.map((x: any) =&gt; x.id)).not.toContain(reply.id)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { cookie: g.cookie })).body.items.map((x: any) =&gt; x.id)).toContain(reply.id)
+    <span class="t-c">// Unblock is idempotent: deleting a nonexistent block still succeeds, and replies return.</span>
+    <span class="t-k">await</span> api(<span class="t-s">`/api/users/${g.id}/block`</span>, { method: <span class="t-s">'DELETE'</span>, cookie: f.cookie })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/users/${g.id}/block`</span>, { method: <span class="t-s">'DELETE'</span>, cookie: f.cookie })).status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { cookie: f.cookie })).body.items.map((x: any) =&gt; x.id)).toContain(reply.id)
+    <span class="t-c">// Blocking the talent hides the drop on every surface for f; g is unaffected.</span>
+    <span class="t-k">await</span> api(<span class="t-s">`/api/users/${talent.id}/block`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}`</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">404</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}/drops`</span>, { cookie: f.cookie })).body.items).toEqual([])
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/feed'</span>, { cookie: f.cookie })).body.items).toEqual([])
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}`</span>, { cookie: g.cookie })).status).toBe(<span class="t-n">200</span>)
+    <span class="t-c">// No notification, no membership or posting side-effects for the blocked user.</span>
+    <span class="t-k">const</span> [{ nn }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as nn from notification where user_id in (${talent.id}, ${g.id}) and type like 'block%'`</span>
+    expect(nn).toBe(<span class="t-n">0</span>)
+    <span class="t-k">const</span> [gm] = <span class="t-k">await</span> sql<span class="t-s">`select status from membership where user_id = ${g.id} and community_id = ${communityId}`</span>
+    expect(gm.status).toBe(<span class="t-s">'active'</span>)
+  })
+
+  it(<span class="t-s">'remove_member retires the Originals number; veto_community hides it'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> troll = <span class="t-k">await</span> fan()
+    expect((<span class="t-k">await</span> join(troll, communityId)).body.originalPosition).toBe(<span class="t-n">1</span>)
+    <span class="t-k">const</span> d = <span class="t-k">await</span> drop(talent, communityId)
+    <span class="t-k">const</span> reply = (<span class="t-k">await</span> api(<span class="t-s">`/api/drops/${d.id}/replies`</span>, { method: <span class="t-s">'POST'</span>, cookie: troll.cookie, body: { body: <span class="t-s">'rude'</span> } })).body
+    <span class="t-k">const</span> r = (<span class="t-k">await</span> report(talent, { targetType: <span class="t-s">'reply'</span>, targetId: reply.id, reason: <span class="t-s">'harassment'</span> })).body
+    expect((<span class="t-k">await</span> act(a, r.id, <span class="t-s">'veto_community'</span>)).status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">await</span> api(<span class="t-s">`/api/admin/communities/${communityId}/restore`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })
+    <span class="t-k">const</span> r2 = (<span class="t-k">await</span> report(talent, { targetType: <span class="t-s">'reply'</span>, targetId: reply.id, reason: <span class="t-s">'harassment'</span> })).body
+    expect((<span class="t-k">await</span> act(a, r2.id, <span class="t-s">'remove_member'</span>)).body.status).toBe(<span class="t-s">'actioned'</span>)
+    expect((<span class="t-k">await</span> join(troll, communityId)).body.error.details.reason).toBe(<span class="t-s">'removed'</span>)
+    <span class="t-k">const</span> next = <span class="t-k">await</span> fan()
+    expect((<span class="t-k">await</span> join(next, communityId)).body.originalPosition).toBe(<span class="t-n">2</span>)
+    <span class="t-k">const</span> r3 = (<span class="t-k">await</span> report(talent, { targetType: <span class="t-s">'community'</span>, targetId: communityId, reason: <span class="t-s">'other'</span> })).body
+    expect((<span class="t-k">await</span> act(a, r3.id, <span class="t-s">'remove_member'</span>)).body.error.code).toBe(<span class="t-s">'VALIDATION_FAILED'</span>)
+  })
+
+  it(<span class="t-s">'admins search, suspend and reinstate users; suspension logs the user out'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> other = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> found = (<span class="t-k">await</span> api(<span class="t-s">`/api/admin/users?q=${encodeURIComponent(f.user.email)}`</span>, { cookie: a.cookie })).body.items
+    expect(found.map((u: any) =&gt; u.id)).toEqual([f.id])
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/users?role=super_admin&amp;limit=100'</span>, { cookie: a.cookie })).body.items.every((u: any) =&gt; u.roles.includes(<span class="t-s">'super_admin'</span>))).toBe(<span class="t-k">true</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/users/${a.id}/suspend`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { reason: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/users/${other.id}/suspend`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { reason: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/users/${f.id}/suspend`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> s = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/users/${f.id}/suspend`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { reason: <span class="t-s">'spam'</span>, internalNote: <span class="t-s">'bot'</span> } })
+    expect(s.body.status).toBe(<span class="t-s">'suspended'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { cookie: f.cookie })).status).toBe(<span class="t-n">401</span>)
+    <span class="t-k">const</span> back = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/users/${f.id}/reinstate`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { reason: <span class="t-s">'appeal accepted'</span> } })
+    expect(back.body.status).toBe(<span class="t-s">'active'</span>)
+    <span class="t-k">const</span> actions = (<span class="t-k">await</span> sql<span class="t-s">`select action from admin_audit where target_id = ${f.id} order by created_at`</span>).map(r =&gt; r.action)
+    expect(actions).toEqual([<span class="t-s">'user.suspended'</span>, <span class="t-s">'user.reinstated'</span>])
+    <span class="t-k">const</span> g = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> reporter = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> r = (<span class="t-k">await</span> report(reporter, { targetType: <span class="t-s">'user'</span>, targetId: g.id, reason: <span class="t-s">'impersonation'</span> })).body
+    expect((<span class="t-k">await</span> act(a, r.id, <span class="t-s">'suspend_user'</span>)).body.status).toBe(<span class="t-s">'actioned'</span>)
+    <span class="t-k">const</span> [{ status }] = <span class="t-k">await</span> sql<span class="t-s">`select status from "user" where id = ${g.id}`</span>
+    expect(status).toBe(<span class="t-s">'suspended'</span>)
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-signup-concurrency-test-ts"><summary><code>tests/e2e/signup-concurrency.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/signup-concurrency.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { newUser, signUp, sql, testEnv } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-c">// Regression: hooks querying outside Better Auth's transaction exhausted the DB pool under load.</span>
+describe(<span class="t-s">'concurrent sign-ups'</span>, () =&gt; {
+  it(<span class="t-s">'12 simultaneous sign-ups all complete'</span>, { timeout: <span class="t-n">60_000</span> }, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> results = <span class="t-k">await</span> Promise.all(Array.<span class="t-k">from</span>({ length: <span class="t-n">12</span> }, () =&gt; signUp(newUser())))
+    expect(results.map(r =&gt; r.status)).toEqual(Array(<span class="t-n">12</span>).fill(<span class="t-n">200</span>))
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-talent-test-ts"><summary><code>tests/e2e/talent.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/talent.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-k">async</span> <span class="t-k">function</span> adminSession() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> verifiedSession()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set roles = 'fan,super_admin' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">const</span> apply = (cookie: string, categoryId: string, extra: Record&lt;string, unknown&gt; = {}) =&gt;
+  api(<span class="t-s">'/api/talent-applications'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId, displayName: <span class="t-s">'Rising Star'</span>, bio: <span class="t-s">'Hi'</span>, links: [{ label: <span class="t-s">'IG'</span>, url: <span class="t-s">'https://instagram.com/x'</span> }], ...extra } })
+
+describe(<span class="t-s">'talent applications (TAL-01..03, ADM-02..05)'</span>, () =&gt; {
+  it(<span class="t-s">'validates input and allows only one pending application'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv, music } = <span class="t-k">await</span> catalog()
+    <span class="t-k">const</span> { cookie } = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> apply(cookie, music.id)).body.error.code).toBe(<span class="t-s">'VALIDATION_FAILED'</span>)
+    expect((<span class="t-k">await</span> apply(cookie, realityTv.id, { links: [{ label: <span class="t-s">'x'</span>, url: <span class="t-s">'http://insecure.com'</span> }] })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> apply(cookie, realityTv.id, { evidenceMediaIds: [<span class="t-s">'m1'</span>] })).body.error.code).toBe(<span class="t-s">'FEATURE_DISABLED'</span>)
+    <span class="t-k">const</span> first = <span class="t-k">await</span> apply(cookie, realityTv.id)
+    expect(first.status).toBe(<span class="t-n">201</span>)
+    expect(first.body).toMatchObject({ status: <span class="t-s">'pending'</span>, displayName: <span class="t-s">'Rising Star'</span> })
+    expect(first.body).not.toHaveProperty(<span class="t-s">'internalNote'</span>)
+    <span class="t-k">const</span> second = <span class="t-k">await</span> apply(cookie, realityTv.id)
+    expect(second.status).toBe(<span class="t-n">409</span>)
+    expect(second.body.error.details.existingId).toBe(first.body.id)
+    <span class="t-k">const</span> edited = <span class="t-k">await</span> api(<span class="t-s">`/api/talent-applications/${first.body.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie, body: { bio: <span class="t-s">'Updated'</span> } })
+    expect(edited.body.bio).toBe(<span class="t-s">'Updated'</span>)
+  })
+
+  it(<span class="t-s">'admin-only queue; accept creates talent, community, role, audit and notification atomically'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv } = <span class="t-k">await</span> catalog()
+    <span class="t-k">const</span> fan = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> admin = <span class="t-k">await</span> adminSession()
+    <span class="t-k">const</span> app = (<span class="t-k">await</span> apply(fan.cookie, realityTv.id, { displayName: <span class="t-s">'Queue Star'</span> })).body
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/applications'</span>, { cookie: fan.cookie })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> queue = <span class="t-k">await</span> api(<span class="t-s">'/api/admin/applications?limit=100'</span>, { cookie: admin.cookie })
+    expect(queue.body.items.some((i: any) =&gt; i.id === app.id &amp;&amp; i.applicant.email === fan.user.email)).toBe(<span class="t-k">true</span>)
+    <span class="t-k">const</span> accepted = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.id}/accept`</span>, { method: <span class="t-s">'POST'</span>, cookie: admin.cookie, body: { internalNote: <span class="t-s">'looks legit'</span> } })
+    expect(accepted.status).toBe(<span class="t-n">200</span>)
+    expect(accepted.body.status).toBe(<span class="t-s">'accepted'</span>)
+    <span class="t-k">const</span> again = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.id}/accept`</span>, { method: <span class="t-s">'POST'</span>, cookie: admin.cookie, body: {} })
+    expect(again.status).toBe(<span class="t-n">200</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.id}/decline`</span>, { method: <span class="t-s">'POST'</span>, cookie: admin.cookie, body: { decisionReason: <span class="t-s">'no'</span> } })).body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    <span class="t-k">const</span> [{ roles }] = <span class="t-k">await</span> sql<span class="t-s">`select roles from "user" where email = ${fan.user.email}`</span>
+    expect(roles.split(<span class="t-s">','</span>)).toContain(<span class="t-s">'talent'</span>)
+    <span class="t-k">const</span> [comm] = <span class="t-k">await</span> sql<span class="t-s">`select c.* from community c join talent t on t.id = c.owner_talent_id where t.id = ${accepted.body.talentId}`</span>
+    expect(comm).toMatchObject({ name: <span class="t-s">'Queue Star'</span>, status: <span class="t-s">'active'</span> })
+    <span class="t-k">const</span> [{ n: audits }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int n from admin_audit where target_id = ${app.id} and action = 'application.accepted'`</span>
+    expect(audits).toBe(<span class="t-n">1</span>)
+    <span class="t-k">const</span> [{ n: notes }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int n from notification n join "user" u on u.id = n.user_id where u.email = ${fan.user.email} and n.type = 'talent_application.accepted'`</span>
+    expect(notes).toBe(<span class="t-n">1</span>)
+    <span class="t-k">const</span> mine = <span class="t-k">await</span> api(<span class="t-s">'/api/talent-applications/me'</span>, { cookie: fan.cookie })
+    expect(mine.body.items[<span class="t-n">0</span>]).not.toHaveProperty(<span class="t-s">'internalNote'</span>)
+    expect((<span class="t-k">await</span> apply(fan.cookie, realityTv.id)).status).toBe(<span class="t-n">403</span>)
+  })
+
+  it(<span class="t-s">'decline needs a reason and blocks reapplying for 7 days'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv } = <span class="t-k">await</span> catalog()
+    <span class="t-k">const</span> fan = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> admin = <span class="t-k">await</span> adminSession()
+    <span class="t-k">const</span> app = (<span class="t-k">await</span> apply(fan.cookie, realityTv.id)).body
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.id}/decline`</span>, { method: <span class="t-s">'POST'</span>, cookie: admin.cookie, body: {} })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> declined = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.id}/decline`</span>, { method: <span class="t-s">'POST'</span>, cookie: admin.cookie, body: { decisionReason: <span class="t-s">'Add more links'</span> } })
+    expect(declined.body).toMatchObject({ status: <span class="t-s">'declined'</span>, decisionReason: <span class="t-s">'Add more links'</span> })
+    <span class="t-k">const</span> retry = <span class="t-k">await</span> apply(fan.cookie, realityTv.id)
+    expect(retry.body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    expect(retry.body.error.details.reapplyAfter).toBeTruthy()
+    <span class="t-k">await</span> sql<span class="t-s">`update talent_application set decided_at = now() - interval '8 days' where id = ${app.id}`</span>
+    expect((<span class="t-k">await</span> apply(fan.cookie, realityTv.id)).status).toBe(<span class="t-n">201</span>)
+  })
+})
+
+describe(<span class="t-s">'identity claims (TAL-04..05, ADM-06..07b)'</span>, () =&gt; {
+  it(<span class="t-s">'verify links the talent, auto-rejects rivals, and audits evidence views'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> [tal] = <span class="t-k">await</span> sql<span class="t-s">`insert into talent (slug, name, category_id) select ${`</span>claimable-${Date.now()}<span class="t-s">`}, 'Claimable', id from category where slug = 'reality-tv' returning id`</span>
+    <span class="t-k">const</span> a = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> b = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> admin = <span class="t-k">await</span> adminSession()
+    <span class="t-k">const</span> body = { evidenceLinks: [<span class="t-s">'https://instagram.com/me'</span>] }
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/talents/${tal.id}/claims`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> claimA = <span class="t-k">await</span> api(<span class="t-s">`/api/talents/${tal.id}/claims`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body })
+    expect(claimA.status).toBe(<span class="t-n">201</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/talents/${tal.id}/claims`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body })).status).toBe(<span class="t-n">409</span>)
+    <span class="t-k">const</span> claimB = <span class="t-k">await</span> api(<span class="t-s">`/api/talents/${tal.id}/claims`</span>, { method: <span class="t-s">'POST'</span>, cookie: b.cookie, body })
+    <span class="t-k">const</span> detail = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/claims/${claimA.body.id}`</span>, { cookie: admin.cookie })
+    expect(detail.body.evidenceLinks).toEqual(body.evidenceLinks)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int n from admin_audit where target_id = ${claimA.body.id} and action = 'claim.evidence_viewed'`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/claims/${claimA.body.id}/verify`</span>, { method: <span class="t-s">'POST'</span>, cookie: admin.cookie, body: {} })).body.status).toBe(<span class="t-s">'verified'</span>)
+    <span class="t-k">const</span> bMine = <span class="t-k">await</span> api(<span class="t-s">'/api/identity-claims/me'</span>, { cookie: b.cookie })
+    expect(bMine.body.items.find((c: any) =&gt; c.id === claimB.body.id).status).toBe(<span class="t-s">'rejected'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/talents/${tal.id}/claims`</span>, { method: <span class="t-s">'POST'</span>, cookie: b.cookie, body })).body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    <span class="t-k">const</span> pub = <span class="t-k">await</span> api(<span class="t-s">`/api/talents/${tal.id}`</span>)
+    expect(JSON.stringify(pub.body)).not.toContain(<span class="t-s">'instagram.com/me'</span>)
+    <span class="t-k">const</span> [{ c }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int c from community where owner_talent_id = ${tal.id}`</span>
+    expect(c).toBe(<span class="t-n">1</span>)
+  })
+
+  it(<span class="t-s">'admin dashboard counts are admin-only and count open reports'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> fan = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> admin = <span class="t-k">await</span> adminSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/dashboard'</span>, { cookie: fan.cookie })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> [{ id: fanId }] = <span class="t-k">await</span> sql<span class="t-s">`select id from "user" where email = ${fan.user.email}`</span>
+    <span class="t-k">const</span> reporter = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> r = <span class="t-k">await</span> api(<span class="t-s">'/api/reports'</span>, { method: <span class="t-s">'POST'</span>, cookie: reporter.cookie, body: { targetType: <span class="t-s">'user'</span>, targetId: fanId, reason: <span class="t-s">'impersonation'</span> } })
+    expect(r.status).toBe(<span class="t-n">201</span>)
+    <span class="t-k">const</span> dash = <span class="t-k">await</span> api(<span class="t-s">'/api/admin/dashboard'</span>, { cookie: admin.cookie })
+    expect(dash.body.counts.openReports).toBeGreaterThanOrEqual(<span class="t-n">1</span>)
+    expect(dash.body.counts.users).toBeGreaterThan(<span class="t-n">0</span>)
+  })
+})
+
+describe(<span class="t-s">'audit log (ADM-14)'</span>, () =&gt; {
+  it(<span class="t-s">'is admin-only, filterable and paginated newest first'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> fan = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> admin = <span class="t-k">await</span> adminSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/audit'</span>, { cookie: fan.cookie })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> first = <span class="t-k">await</span> api(<span class="t-s">'/api/admin/audit?targetType=identity_claim&amp;limit=1'</span>, { cookie: admin.cookie })
+    expect(first.status).toBe(<span class="t-n">200</span>)
+    expect(first.body.items).toHaveLength(<span class="t-n">1</span>)
+    expect(first.body.items[<span class="t-n">0</span>].targetType).toBe(<span class="t-s">'identity_claim'</span>)
+    <span class="t-k">if</span> (first.body.nextCursor) {
+      <span class="t-k">const</span> next = <span class="t-k">await</span> api(<span class="t-s">`/api/admin/audit?targetType=identity_claim&amp;limit=1&amp;cursor=${encodeURIComponent(first.body.nextCursor)}`</span>, { cookie: admin.cookie })
+      expect(next.body.items[<span class="t-n">0</span>].id).not.toBe(first.body.items[<span class="t-n">0</span>].id)
+    }
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/admin/audit?cursor=bogus'</span>, { cookie: admin.cookie })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/admin/audit/${first.body.items[0].id}`</span>, { method: <span class="t-s">'DELETE'</span>, cookie: admin.cookie })).status).toBe(<span class="t-n">404</span>)
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-e2e-watch-parties-test-ts"><summary><code>tests/e2e/watch-parties.test.ts</code> <small>explained in <a href="20-tests.html">Automated tests</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/watch-parties.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-k">type</span> S = Awaited&lt;ReturnType&lt;<span class="t-k">typeof</span> verifiedSession&gt;&gt; &amp; { id: string }
+<span class="t-k">async</span> <span class="t-k">function</span> fan(): Promise&lt;S&gt; {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> verifiedSession()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set onboarding_status = 'completed' where email = ${s.user.email}`</span>
+  <span class="t-k">const</span> [{ id }] = <span class="t-k">await</span> sql<span class="t-s">`select id from "user" where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> { ...s, id: id <span class="t-k">as</span> string }
+}
+<span class="t-k">async</span> <span class="t-k">function</span> admin() {
+  <span class="t-k">const</span> s = <span class="t-k">await</span> fan()
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set roles = 'fan,super_admin' where email = ${s.user.email}`</span>
+  <span class="t-k">return</span> s
+}
+<span class="t-k">async</span> <span class="t-k">function</span> talentWithCommunity(a: S) {
+  <span class="t-k">const</span> t = <span class="t-k">await</span> fan()
+  <span class="t-k">const</span> { realityTv } = <span class="t-k">await</span> catalog()
+  <span class="t-k">const</span> app = <span class="t-k">await</span> api(<span class="t-s">'/api/talent-applications'</span>, { method: <span class="t-s">'POST'</span>, cookie: t.cookie, body: { categoryId: realityTv.id, displayName: <span class="t-s">`Star ${Math.random()}`</span>, bio: <span class="t-s">'Hi'</span>, links: [] } })
+  <span class="t-k">await</span> api(<span class="t-s">`/api/admin/applications/${app.body.id}/accept`</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: {} })
+  <span class="t-k">const</span> [c] = <span class="t-k">await</span> sql<span class="t-s">`select c.id from community c join talent tl on tl.id = c.owner_talent_id where tl.user_id = ${t.id}`</span>
+  <span class="t-k">return</span> { talent: t, communityId: c!.id <span class="t-k">as</span> string }
+}
+<span class="t-k">const</span> inHours = (h: number) =&gt; <span class="t-k">new</span> Date(Date.now() + h * <span class="t-n">3600_000</span>).toISOString()
+<span class="t-k">const</span> party = (s: S, body: Record&lt;string, unknown&gt;) =&gt; api(<span class="t-s">'/api/watch-parties'</span>, { method: <span class="t-s">'POST'</span>, cookie: s.cookie, body: { title: <span class="t-s">'Eviction night'</span>, startsAt: inHours(<span class="t-n">24</span>), timeZone: <span class="t-s">'Africa/Lagos'</span>, link: <span class="t-s">'https://instagram.com/live'</span>, ...body } })
+<span class="t-k">const</span> rsvp = (s: S, id: string, method: <span class="t-s">'PUT'</span> | <span class="t-s">'DELETE'</span>) =&gt; api(<span class="t-s">`/api/watch-parties/${id}/rsvp`</span>, { method, cookie: s.cookie })
+<span class="t-k">const</span> runJob = (auth?: string) =&gt; api(<span class="t-s">'/api/internal/jobs/notifications'</span>, { method: <span class="t-s">'POST'</span>, body: {}, headers: auth ? { authorization: auth } : {} })
+
+describe(<span class="t-s">'watch parties, RSVPs and notifications (WP-01..08, NOT-01..04, OPS-02)'</span>, () =&gt; {
+  it(<span class="t-s">'talent creates parties; members with alerts are notified; RSVP is idempotent'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> [f1, f2] = [<span class="t-k">await</span> fan(), <span class="t-k">await</span> fan()]
+    <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: f1.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    expect((<span class="t-k">await</span> party(f1, { communityId })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> party(talent, { communityId, timeZone: <span class="t-s">'Mars/Base'</span> })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> party(talent, { communityId, link: <span class="t-s">'http://insecure.example'</span> })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> party(talent, { communityId, startsAt: inHours(-<span class="t-n">1</span>) })).status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> party(talent, { communityId, endsAt: inHours(<span class="t-n">23</span>) })).status).toBe(<span class="t-n">400</span>)
+    <span class="t-k">const</span> p = (<span class="t-k">await</span> party(talent, { communityId, startsAt: <span class="t-s">'2030-05-01T19:00:00+01:00'</span> })).body
+    expect(p).toMatchObject({ startsAt: <span class="t-s">'2030-05-01T18:00:00.000Z'</span>, timeZone: <span class="t-s">'Africa/Lagos'</span>, status: <span class="t-s">'scheduled'</span>, rsvpCount: <span class="t-n">0</span> })
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from notification where user_id = ${f1.id} and type = 'watch_party.created'`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    <span class="t-k">const</span> results = <span class="t-k">await</span> Promise.all([rsvp(f1, p.id, <span class="t-s">'PUT'</span>), rsvp(f1, p.id, <span class="t-s">'PUT'</span>), rsvp(f2, p.id, <span class="t-s">'PUT'</span>)])
+    expect(results.every(r =&gt; r.status === <span class="t-n">200</span> &amp;&amp; r.body.going)).toBe(<span class="t-k">true</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p.id}`</span>, { cookie: f1.cookie })).body).toMatchObject({ rsvpCount: <span class="t-n">2</span>, viewerRsvp: <span class="t-k">true</span> })
+    expect((<span class="t-k">await</span> rsvp(f2, p.id, <span class="t-s">'DELETE'</span>)).body).toEqual({ going: <span class="t-k">false</span>, rsvpCount: <span class="t-n">1</span> })
+    expect((<span class="t-k">await</span> rsvp(f2, p.id, <span class="t-s">'DELETE'</span>)).body).toEqual({ going: <span class="t-k">false</span>, rsvpCount: <span class="t-n">1</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p.id}`</span>)).body.viewerRsvp).toBe(<span class="t-k">false</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: f1.cookie, body: { title: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">403</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { title: <span class="t-s">'Finale night'</span> } })).body.title).toBe(<span class="t-s">'Finale night'</span>)
+  })
+
+  it(<span class="t-s">'cancel notifies RSVPs once and moves the party to past'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> p1 = (<span class="t-k">await</span> party(talent, { communityId, startsAt: inHours(<span class="t-n">48</span>) })).body
+    <span class="t-k">const</span> p2 = (<span class="t-k">await</span> party(talent, { communityId, startsAt: inHours(<span class="t-n">24</span>) })).body
+    <span class="t-k">const</span> page1 = (<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties?communityId=${communityId}&amp;limit=1`</span>)).body
+    expect(page1.items.map((i: any) =&gt; i.id)).toEqual([p2.id])
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties?communityId=${communityId}&amp;limit=1&amp;cursor=${encodeURIComponent(page1.nextCursor)}`</span>)).body.items.map((i: any) =&gt; i.id)).toEqual([p1.id])
+    <span class="t-k">await</span> rsvp(f, p1.id, <span class="t-s">'PUT'</span>)
+    <span class="t-k">const</span> cancel = () =&gt; api(<span class="t-s">`/api/watch-parties/${p1.id}/cancel`</span>, { method: <span class="t-s">'POST'</span>, cookie: talent.cookie, body: {} })
+    expect((<span class="t-k">await</span> cancel()).body.status).toBe(<span class="t-s">'cancelled'</span>)
+    expect((<span class="t-k">await</span> cancel()).status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from notification where user_id = ${f.id} and type = 'watch_party.cancelled'`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    expect((<span class="t-k">await</span> rsvp(f, p1.id, <span class="t-s">'PUT'</span>)).body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p1.id}`</span>, { method: <span class="t-s">'PATCH'</span>, cookie: talent.cookie, body: { title: <span class="t-s">'x'</span> } })).status).toBe(<span class="t-n">409</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties?status=past&amp;communityId=${communityId}`</span>)).body.items.map((i: any) =&gt; i.id)).toEqual([p1.id])
+  })
+
+  it(<span class="t-s">'the job is secret-protected, sends one reminder, and ends parties'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { talent, communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> f = <span class="t-k">await</span> fan()
+    <span class="t-k">const</span> p = (<span class="t-k">await</span> party(talent, { communityId, startsAt: inHours(<span class="t-n">24</span>) })).body
+    <span class="t-k">await</span> rsvp(f, p.id, <span class="t-s">'PUT'</span>)
+    expect((<span class="t-k">await</span> runJob()).status).toBe(<span class="t-n">404</span>)
+    expect((<span class="t-k">await</span> runJob(<span class="t-s">'Bearer wrong'</span>)).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">await</span> sql<span class="t-s">`update watch_party set starts_at = now() + interval '30 minutes' where id = ${p.id}`</span>
+    expect((<span class="t-k">await</span> runJob(<span class="t-s">'Bearer test-cron-secret'</span>)).status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">await</span> runJob(<span class="t-s">'Bearer test-cron-secret'</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from notification where user_id = ${f.id} and type = 'watch_party.reminder'`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    <span class="t-k">await</span> sql<span class="t-s">`update watch_party set starts_at = now() - interval '10 minutes' where id = ${p.id}`</span>
+    <span class="t-k">await</span> runJob(<span class="t-s">'Bearer test-cron-secret'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p.id}`</span>)).body.status).toBe(<span class="t-s">'live'</span>)
+    <span class="t-k">await</span> sql<span class="t-s">`update watch_party set starts_at = now() - interval '4 hours' where id = ${p.id}`</span>
+    <span class="t-k">await</span> runJob(<span class="t-s">'Bearer test-cron-secret'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/watch-parties/${p.id}`</span>)).body.status).toBe(<span class="t-s">'ended'</span>)
+  })
+
+  it(<span class="t-s">'notifications: own only, unread count matches, read and read-all are idempotent'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> [f, other] = [<span class="t-k">await</span> fan(), <span class="t-k">await</span> fan()]
+    <span class="t-k">for</span> (<span class="t-k">const</span> id <span class="t-k">of</span> [f.id, f.id, f.id, other.id]) <span class="t-k">await</span> sql<span class="t-s">`insert into notification (user_id, type, data) values (${id}, 'badge.awarded', ${sql.json({ badgeId: 'b1' })})`</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/notifications/unread-count'</span>, { cookie: f.cookie })).body).toEqual({ count: <span class="t-n">3</span> })
+    <span class="t-k">const</span> list = (<span class="t-k">await</span> api(<span class="t-s">'/api/notifications?limit=2'</span>, { cookie: f.cookie })).body
+    expect(list.items).toHaveLength(<span class="t-n">2</span>)
+    expect(list.items[<span class="t-n">0</span>]).toMatchObject({ <span class="t-k">type</span>: <span class="t-s">'badge.awarded'</span>, summary: <span class="t-s">'You earned a badge'</span>, target: { <span class="t-k">type</span>: <span class="t-s">'badge'</span>, id: <span class="t-s">'b1'</span> }, readAt: <span class="t-k">null</span> })
+    <span class="t-k">const</span> theirs = (<span class="t-k">await</span> api(<span class="t-s">'/api/notifications'</span>, { cookie: other.cookie })).body.items[<span class="t-n">0</span>]
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/notifications/${theirs.id}/read`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: {} })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> read = (<span class="t-k">await</span> api(<span class="t-s">`/api/notifications/${list.items[0].id}/read`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: {} })).body
+    expect(read.readAt).not.toBeNull()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/notifications/${list.items[0].id}/read`</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: {} })).body.readAt).toBe(read.readAt)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/notifications?unreadOnly=true'</span>, { cookie: f.cookie })).body.items).toHaveLength(<span class="t-n">2</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/notifications/read-all'</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: {} })).body).toEqual({ updated: <span class="t-n">2</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/notifications/read-all'</span>, { method: <span class="t-s">'POST'</span>, cookie: f.cookie, body: {} })).body).toEqual({ updated: <span class="t-n">0</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/notifications/unread-count'</span>, { cookie: other.cookie })).body).toEqual({ count: <span class="t-n">1</span> })
+  })
+
+  it(<span class="t-s">'purge erases accounts past the 30-day grace and anonymises their ledger'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> a = <span class="t-k">await</span> admin()
+    <span class="t-k">const</span> { communityId } = <span class="t-k">await</span> talentWithCommunity(a)
+    <span class="t-k">const</span> [gone, waiting] = [<span class="t-k">await</span> fan(), <span class="t-k">await</span> fan()]
+    <span class="t-k">await</span> api(<span class="t-s">`/api/communities/${communityId}/join`</span>, { method: <span class="t-s">'POST'</span>, cookie: gone.cookie, body: { lane: <span class="t-s">'rider'</span> } })
+    <span class="t-k">await</span> api(<span class="t-s">'/api/admin/xp-adjustments'</span>, { method: <span class="t-s">'POST'</span>, cookie: a.cookie, body: { userId: gone.id, amount: <span class="t-n">10</span>, reason: <span class="t-s">'prize'</span> } })
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set status = 'pending_deletion', deletion_requested_at = now() - interval '31 days' where id = ${gone.id}`</span>
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set status = 'pending_deletion', deletion_requested_at = now() - interval '10 days' where id = ${waiting.id}`</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/internal/jobs/purge'</span>, { method: <span class="t-s">'POST'</span>, body: {} })).status).toBe(<span class="t-n">404</span>)
+    <span class="t-k">const</span> r = <span class="t-k">await</span> api(<span class="t-s">'/api/internal/jobs/purge'</span>, { method: <span class="t-s">'POST'</span>, body: {}, headers: { authorization: <span class="t-s">'Bearer test-cron-secret'</span> } })
+    expect(r.body.purged).toBeGreaterThanOrEqual(<span class="t-n">1</span>)
+    expect(<span class="t-k">await</span> sql<span class="t-s">`select id from "user" where id = ${gone.id}`</span>).toHaveLength(<span class="t-n">0</span>)
+    expect(<span class="t-k">await</span> sql<span class="t-s">`select id from "user" where id = ${waiting.id}`</span>).toHaveLength(<span class="t-n">1</span>)
+    <span class="t-k">const</span> [{ n }] = <span class="t-k">await</span> sql<span class="t-s">`select count(*)::int as n from xp_transaction where user_id is null and reason = 'prize' and actor_id = ${a.id}`</span>
+    expect(n).toBe(<span class="t-n">1</span>)
+    <span class="t-k">const</span> [c] = <span class="t-k">await</span> sql<span class="t-s">`select member_count, originals_assigned from community where id = ${communityId}`</span>
+    expect(c).toMatchObject({ member_count: <span class="t-n">0</span>, originals_assigned: <span class="t-n">1</span> })
+  })
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-unit-age-test-ts"><summary><code>tests/unit/age.test.ts</code> <small>explained in <a href="08-accounts.html">Accounts, sign-in and sessions</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/unit/age.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { ageOn, isValidIsoDate } <span class="t-k">from</span> <span class="t-s">'../../server/utils/age'</span>
+
+describe(<span class="t-s">'ageOn'</span>, () =&gt; {
+  <span class="t-k">const</span> today = <span class="t-k">new</span> Date(<span class="t-s">'2026-10-31T12:00:00Z'</span>)
+  it(<span class="t-s">'counts a birthday today as a full year'</span>, () =&gt; expect(ageOn(<span class="t-s">'2008-10-31'</span>, today)).toBe(<span class="t-n">18</span>))
+  it(<span class="t-s">'is one less the day before the birthday'</span>, () =&gt; expect(ageOn(<span class="t-s">'2008-11-01'</span>, today)).toBe(<span class="t-n">17</span>))
+})
+
+describe(<span class="t-s">'isValidIsoDate'</span>, () =&gt; {
+  it(<span class="t-s">'accepts real dates'</span>, () =&gt; expect(isValidIsoDate(<span class="t-s">'2000-02-29'</span>)).toBe(<span class="t-k">true</span>))
+  it(<span class="t-s">'rejects impossible dates'</span>, () =&gt; expect(isValidIsoDate(<span class="t-s">'2001-02-29'</span>)).toBe(<span class="t-k">false</span>))
+  it(<span class="t-s">'rejects other formats'</span>, () =&gt; expect(isValidIsoDate(<span class="t-s">'31/10/2000'</span>)).toBe(<span class="t-k">false</span>))
+})</code></pre></figure></details>
+<details class="ref" id="f-tests-unit-cursor-test-ts"><summary><code>tests/unit/cursor.test.ts</code> <small>explained in <a href="07-input.html">Checking input, paging and rate limits</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/unit/cursor.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { decodeCursor, encodeCursor } <span class="t-k">from</span> <span class="t-s">'../../server/utils/cursor'</span>
+
+describe(<span class="t-s">'signed cursor'</span>, () =&gt; {
+  <span class="t-k">const</span> secret = <span class="t-s">'test-secret'</span>
+  it(<span class="t-s">'round-trips'</span>, () =&gt; {
+    <span class="t-k">const</span> c = encodeCursor({ createdAt: <span class="t-s">'2026-10-31T00:00:00Z'</span>, id: <span class="t-s">'abc'</span> }, secret)
+    expect(decodeCursor(c, secret)).toEqual({ createdAt: <span class="t-s">'2026-10-31T00:00:00Z'</span>, id: <span class="t-s">'abc'</span> })
+  })
+  it(<span class="t-s">'rejects tampering'</span>, () =&gt; {
+    <span class="t-k">const</span> c = encodeCursor({ id: <span class="t-s">'abc'</span> }, secret)
+    <span class="t-k">const</span> forged = <span class="t-s">`${Buffer.from(JSON.stringify({ id: 'zzz' })).toString('base64url')}.${c.split('.')[1]}`</span>
+    expect(decodeCursor(forged, secret)).toBeNull()
+  })
+  it(<span class="t-s">'rejects a different secret and garbage'</span>, () =&gt; {
+    expect(decodeCursor(encodeCursor({ id: <span class="t-n">1</span> }, secret), <span class="t-s">'other'</span>)).toBeNull()
+    expect(decodeCursor(<span class="t-s">'not-a-cursor'</span>, secret)).toBeNull()
+  })
+})</code></pre></figure></details>
+      
+      
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

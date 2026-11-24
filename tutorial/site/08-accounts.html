@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounts, sign-in and sessions · Build Clautverse</title>
+<meta name="description" content="Add Better Auth with email verification, a username, an age gate, and the guard every private endpoint calls.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="08-accounts">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts" aria-current="page">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 3 · People</p><h1>Accounts, sign-in and sessions</h1><p class="meta">About 6 min read</p><p class="lead">Almost everything interesting in Clautverse needs to know who is asking. This chapter adds sign-up, sign-in, email verification and a one-line guard, <code>requireUser</code>, that private endpoints call first.</p>
+
+<h2 id="the-ideas">The ideas<a class="anchor" href="#the-ideas" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p><strong>Authentication</strong> answers "who are you?" (you sign in). <strong>Authorization</strong> answers "are you allowed to do this?" (a fan may join a community; only the Star may post in it). After you sign in, the server gives your browser a <strong>session cookie</strong>, like a festival wristband. On later requests the browser shows it automatically, so you do not log in again for every click.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>Passwords are never stored; Better Auth stores a salted hash in <code>account.password</code>. The session token lives in the <code>session</code> table and is sent back as a cookie (<code>better-auth.session_token</code>). We do not write any of the cryptography ourselves, which is the right call for security-sensitive code.</p>
+</aside>
+<aside class="callout warn"><p class="callout-label">Security</p>
+<p>Authentication code is where mistakes hurt most. Read this chapter to <em>understand</em> it, but before putting real users on any system like this, have someone experienced review it.</p></aside>
+
+<h2 id="small-helpers-first-age-and-email">Small helpers first: age and email<a class="anchor" href="#small-helpers-first-age-and-email" aria-label="Link to this section">#</a></h2>
+<p>Clautverse is 18+. Create <code>server/utils/age.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/age.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">export</span> <span class="t-k">const</span> MINIMUM_AGE = <span class="t-n">18</span>
+
+<span class="t-c">/** Age in whole years on `today` for an ISO date (YYYY-MM-DD). */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> ageOn(dateOfBirth: string, today: Date = <span class="t-k">new</span> Date()): number {
+  <span class="t-k">const</span> [y, m, d] = dateOfBirth.split(<span class="t-s">'-'</span>).map(Number) <span class="t-k">as</span> [number, number, number]
+  <span class="t-k">let</span> age = today.getUTCFullYear() - y
+  <span class="t-k">const</span> month = today.getUTCMonth() + <span class="t-n">1</span>
+  <span class="t-k">if</span> (month &lt; m || (month === m &amp;&amp; today.getUTCDate() &lt; d)) age--
+  <span class="t-k">return</span> age
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> isValidIsoDate(value: unknown): value is string {
+  <span class="t-k">if</span> (<span class="t-k">typeof</span> value !== <span class="t-s">'string'</span> || !/^\d{<span class="t-n">4</span>}-\d{<span class="t-n">2</span>}-\d{<span class="t-n">2</span>}$/.test(value)) <span class="t-k">return</span> <span class="t-k">false</span>
+  <span class="t-k">const</span> date = <span class="t-k">new</span> Date(<span class="t-s">`${value}T00:00:00Z`</span>)
+  <span class="t-k">return</span> !Number.isNaN(date.getTime()) &amp;&amp; date.toISOString().startsWith(value)
+}</code></pre></figure>
+<ul>
+  <li><code>ageOn(dateOfBirth, today)</code> counts whole years. It subtracts one if this year's birthday has not happened yet. The <code>today</code> parameter has a default (<code>new Date()</code>) so tests can pass a fixed date.</li>
+  <li><code>isValidIsoDate</code> accepts only real dates in <code>YYYY-MM-DD</code> form. Note how it builds the date and checks it prints back the same: that catches <code>2001-02-29</code>, which JavaScript would otherwise quietly turn into 1 March.</li>
+</ul>
+<p>And its test, <code>tests/unit/age.test.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/unit/age.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { ageOn, isValidIsoDate } <span class="t-k">from</span> <span class="t-s">'../../server/utils/age'</span>
+
+describe(<span class="t-s">'ageOn'</span>, () =&gt; {
+  <span class="t-k">const</span> today = <span class="t-k">new</span> Date(<span class="t-s">'2026-10-31T12:00:00Z'</span>)
+  it(<span class="t-s">'counts a birthday today as a full year'</span>, () =&gt; expect(ageOn(<span class="t-s">'2008-10-31'</span>, today)).toBe(<span class="t-n">18</span>))
+  it(<span class="t-s">'is one less the day before the birthday'</span>, () =&gt; expect(ageOn(<span class="t-s">'2008-11-01'</span>, today)).toBe(<span class="t-n">17</span>))
+})
+
+describe(<span class="t-s">'isValidIsoDate'</span>, () =&gt; {
+  it(<span class="t-s">'accepts real dates'</span>, () =&gt; expect(isValidIsoDate(<span class="t-s">'2000-02-29'</span>)).toBe(<span class="t-k">true</span>))
+  it(<span class="t-s">'rejects impossible dates'</span>, () =&gt; expect(isValidIsoDate(<span class="t-s">'2001-02-29'</span>)).toBe(<span class="t-k">false</span>))
+  it(<span class="t-s">'rejects other formats'</span>, () =&gt; expect(isValidIsoDate(<span class="t-s">'31/10/2000'</span>)).toBe(<span class="t-k">false</span>))
+})</code></pre></figure>
+<p>Sign-up and password-reset emails go through one function. Create <code>server/utils/email.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/email.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">export</span> <span class="t-k">interface</span> OutgoingEmail { to: string, subject: string, text: string }
+
+<span class="t-c">/**
+ * Sends via Mailtrap (REST API, no SDK).
+ * - NUXT_MAILTRAP_API_TOKEN set → live sending endpoint.
+ * - NUXT_MAILTRAP_INBOX_ID also set → Mailtrap Email Testing sandbox instead.
+ * - No token → local dev/tests: logs the email instead of sending.
+ */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> sendEmail(email: OutgoingEmail) {
+  <span class="t-k">const</span> { mailtrapApiToken, mailtrapInboxId, emailFrom } = useRuntimeConfig()
+  <span class="t-k">if</span> (!mailtrapApiToken) {
+    <span class="t-k">if</span> (process.env.NODE_ENV === <span class="t-s">'production'</span>) <span class="t-k">throw</span> <span class="t-k">new</span> Error(<span class="t-s">'NUXT_MAILTRAP_API_TOKEN is not set'</span>)
+    console.info(<span class="t-s">`[email] to=${email.to} subject="${email.subject}"\n${email.text}`</span>)
+    <span class="t-k">return</span>
+  }
+  <span class="t-k">const</span> url = mailtrapInboxId
+    ? <span class="t-s">`https://sandbox.api.mailtrap.io/api/send/${mailtrapInboxId}`</span>
+    : <span class="t-s">'https://send.api.mailtrap.io/api/send'</span>
+  <span class="t-k">try</span> {
+    <span class="t-k">await</span> $fetch(url, {
+      method: <span class="t-s">'POST'</span>,
+      headers: { Authorization: <span class="t-s">`Bearer ${mailtrapApiToken}`</span> },
+      body: { <span class="t-k">from</span>: { email: emailFrom }, to: [{ email: email.to }], subject: email.subject, text: email.text },
+    })
+  }
+  <span class="t-k">catch</span> (e) {
+    <span class="t-k">throw</span> <span class="t-k">new</span> Error(<span class="t-s">`Email send failed: ${e instanceof Error ? e.message : 'Mailtrap error'}`</span>)
+  }
+}</code></pre></figure>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>While you develop, no real emails are sent: the text is printed in your terminal, including the confirmation link you would normally click in your inbox. If you later add a Mailtrap account, put its token in <code>.env</code> and the same code sends real mail.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p><code>$fetch</code> is Nitro's built-in HTTP client. In production a missing token throws, so you can never silently send nothing. <code>process.env.NODE_ENV</code> is <code>production</code> only in a real deployment.</p>
+</aside>
+
+<h2 id="the-better-auth-setup">The Better Auth setup<a class="anchor" href="#the-better-auth-setup" aria-label="Link to this section">#</a></h2>
+<p>Create <code>server/utils/auth.ts</code>. It is the biggest file so far; the walk-through below explains each block.</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/auth.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { betterAuth, getCurrentAdapter } <span class="t-k">from</span> <span class="t-s">'better-auth'</span>
+<span class="t-k">import</span> { APIError } <span class="t-k">from</span> <span class="t-s">'better-auth/api'</span>
+<span class="t-k">import</span> { drizzleAdapter } <span class="t-k">from</span> <span class="t-s">'better-auth/adapters/drizzle'</span>
+<span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> <span class="t-k">type</span> { H3Event } <span class="t-k">from</span> <span class="t-s">'h3'</span>
+
+<span class="t-k">export</span> <span class="t-k">const</span> USERNAME_RE = /^[a-z0-<span class="t-n">9_</span>]{<span class="t-n">3</span>,<span class="t-n">30</span>}$/
+<span class="t-k">export</span> <span class="t-k">const</span> RESERVED_USERNAMES = <span class="t-k">new</span> Set([<span class="t-s">'admin'</span>, <span class="t-s">'administrator'</span>, <span class="t-s">'clautverse'</span>, <span class="t-s">'support'</span>, <span class="t-s">'help'</span>, <span class="t-s">'api'</span>, <span class="t-s">'root'</span>, <span class="t-s">'system'</span>, <span class="t-s">'moderator'</span>, <span class="t-s">'me'</span>])
+<span class="t-k">export</span> <span class="t-k">const</span> DELETION_GRACE_DAYS = <span class="t-n">30</span>
+
+<span class="t-k">function</span> createAuth() {
+  <span class="t-k">const</span> config = useRuntimeConfig()
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">return</span> betterAuth({
+    baseURL: config.betterAuthUrl,
+    secret: config.betterAuthSecret,
+    basePath: <span class="t-s">'/api/auth'</span>,
+    database: drizzleAdapter(db, { provider: <span class="t-s">'pg'</span>, schema, transaction: <span class="t-k">true</span> }),
+    emailAndPassword: {
+      enabled: <span class="t-k">true</span>,
+      requireEmailVerification: <span class="t-k">true</span>,
+      minPasswordLength: <span class="t-n">8</span>,
+      maxPasswordLength: <span class="t-n">128</span>,
+      revokeSessionsOnPasswordReset: <span class="t-k">true</span>,
+      sendResetPassword: <span class="t-k">async</span> ({ user, url }) =&gt; {
+        <span class="t-k">await</span> sendEmail({ to: user.email, subject: <span class="t-s">'Reset your Clautverse password'</span>, text: <span class="t-s">`Reset your password: ${url}\n\nIf you didn't ask for this, ignore this email.`</span> })
+      },
+    },
+    emailVerification: {
+      sendOnSignUp: <span class="t-k">true</span>,
+      autoSignInAfterVerification: <span class="t-k">true</span>,
+      sendVerificationEmail: <span class="t-k">async</span> ({ user, url }) =&gt; {
+        <span class="t-k">await</span> sendEmail({ to: user.email, subject: <span class="t-s">'Confirm your Clautverse email'</span>, text: <span class="t-s">`Confirm your email: ${url}`</span> })
+      },
+    },
+    user: {
+      additionalFields: {
+        username: { <span class="t-k">type</span>: <span class="t-s">'string'</span>, required: <span class="t-k">true</span>, input: <span class="t-k">true</span> },
+        dateOfBirth: { <span class="t-k">type</span>: <span class="t-s">'string'</span>, required: <span class="t-k">true</span>, input: <span class="t-k">true</span>, returned: <span class="t-k">false</span> },
+        displayName: { <span class="t-k">type</span>: <span class="t-s">'string'</span>, required: <span class="t-k">false</span>, input: <span class="t-k">true</span> },
+        roles: { <span class="t-k">type</span>: <span class="t-s">'string'</span>, required: <span class="t-k">false</span>, input: <span class="t-k">false</span>, defaultValue: <span class="t-s">'fan'</span> },
+        status: { <span class="t-k">type</span>: <span class="t-s">'string'</span>, required: <span class="t-k">false</span>, input: <span class="t-k">false</span>, defaultValue: <span class="t-s">'active'</span> },
+        onboardingStatus: { <span class="t-k">type</span>: <span class="t-s">'string'</span>, required: <span class="t-k">false</span>, input: <span class="t-k">false</span>, defaultValue: <span class="t-s">'not_started'</span> },
+        deletionRequestedAt: { <span class="t-k">type</span>: <span class="t-s">'date'</span>, required: <span class="t-k">false</span>, input: <span class="t-k">false</span>, returned: <span class="t-k">false</span> },
+      },
+    },
+    rateLimit: { enabled: config.authRateLimitEnabled !== <span class="t-k">false</span>, storage: <span class="t-s">'database'</span>, window: <span class="t-n">60</span>, max: <span class="t-n">30</span> },
+    databaseHooks: {
+      user: {
+        create: {
+          before: <span class="t-k">async</span> (input, ctx) =&gt; {
+            <span class="t-k">const</span> username = String(input.username ?? <span class="t-s">''</span>).trim().toLowerCase()
+            <span class="t-k">if</span> (!USERNAME_RE.test(username) || RESERVED_USERNAMES.has(username))
+              <span class="t-k">throw</span> <span class="t-k">new</span> APIError(<span class="t-s">'BAD_REQUEST'</span>, { code: <span class="t-s">'VALIDATION_FAILED'</span>, message: <span class="t-s">'username must be 3-30 characters: a-z, 0-9 or _'</span> })
+            <span class="t-k">const</span> dob = input.dateOfBirth
+            <span class="t-k">if</span> (!isValidIsoDate(dob))
+              <span class="t-k">throw</span> <span class="t-k">new</span> APIError(<span class="t-s">'BAD_REQUEST'</span>, { code: <span class="t-s">'VALIDATION_FAILED'</span>, message: <span class="t-s">'dateOfBirth must be YYYY-MM-DD'</span> })
+            <span class="t-k">if</span> (ageOn(dob) &lt; MINIMUM_AGE)
+              <span class="t-k">throw</span> <span class="t-k">new</span> APIError(<span class="t-s">'BAD_REQUEST'</span>, { code: <span class="t-s">'UNDER_MINIMUM_AGE'</span>, message: <span class="t-s">`You must be ${MINIMUM_AGE} or older to join Clautverse.`</span> })
+            <span class="t-c">// Query through Better Auth's active transaction: a separate pool connection here</span>
+            <span class="t-c">// deadlocks the pool when many sign-ups run at once.</span>
+            <span class="t-k">const</span> adapter = ctx ? <span class="t-k">await</span> getCurrentAdapter(ctx.context.adapter) : <span class="t-k">null</span>
+            <span class="t-k">const</span> taken = adapter
+              ? <span class="t-k">await</span> adapter.findOne({ model: <span class="t-s">'user'</span>, where: [{ field: <span class="t-s">'username'</span>, value: username }] })
+              : (<span class="t-k">await</span> db.select({ id: schema.user.id }).<span class="t-k">from</span>(schema.user).where(eq(schema.user.username, username)).limit(<span class="t-n">1</span>))[<span class="t-n">0</span>]
+            <span class="t-k">if</span> (taken) <span class="t-k">throw</span> <span class="t-k">new</span> APIError(<span class="t-s">'BAD_REQUEST'</span>, { code: <span class="t-s">'USERNAME_TAKEN'</span>, message: <span class="t-s">'That username is taken.'</span> })
+            <span class="t-k">return</span> { data: { ...input, username, roles: <span class="t-s">'fan'</span>, status: <span class="t-s">'active'</span>, onboardingStatus: <span class="t-s">'not_started'</span> } }
+          },
+        },
+      },
+      session: {
+        create: {
+          before: <span class="t-k">async</span> (session, ctx) =&gt; {
+            <span class="t-k">const</span> adapter = ctx ? <span class="t-k">await</span> getCurrentAdapter(ctx.context.adapter) : <span class="t-k">null</span>
+            <span class="t-k">const</span> u = adapter
+              ? <span class="t-k">await</span> adapter.findOne&lt;DbUser&gt;({ model: <span class="t-s">'user'</span>, where: [{ field: <span class="t-s">'id'</span>, value: session.userId }] })
+              : (<span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.user).where(eq(schema.user.id, session.userId)).limit(<span class="t-n">1</span>))[<span class="t-n">0</span>]
+            <span class="t-k">if</span> (!u) <span class="t-k">return</span> <span class="t-k">false</span>
+            <span class="t-k">if</span> (u.status === <span class="t-s">'suspended'</span>) <span class="t-k">throw</span> <span class="t-k">new</span> APIError(<span class="t-s">'FORBIDDEN'</span>, { code: <span class="t-s">'ACCOUNT_SUSPENDED'</span>, message: <span class="t-s">'This account is suspended.'</span> })
+            <span class="t-k">if</span> (u.status === <span class="t-s">'pending_deletion'</span>) {
+              <span class="t-k">const</span> cutoff = Date.now() - DELETION_GRACE_DAYS * <span class="t-n">86_400_000</span>
+              <span class="t-k">if</span> (!u.deletionRequestedAt || <span class="t-k">new</span> Date(u.deletionRequestedAt).getTime() &lt; cutoff) <span class="t-k">return</span> <span class="t-k">false</span>
+              <span class="t-c">// Signing in during the grace period restores the account (decision 17).</span>
+              <span class="t-k">if</span> (adapter) <span class="t-k">await</span> adapter.update({ model: <span class="t-s">'user'</span>, where: [{ field: <span class="t-s">'id'</span>, value: u.id }], update: { status: <span class="t-s">'active'</span>, deletionRequestedAt: <span class="t-k">null</span> } })
+              <span class="t-k">else</span> <span class="t-k">await</span> db.update(schema.user).set({ status: <span class="t-s">'active'</span>, deletionRequestedAt: <span class="t-k">null</span> }).where(eq(schema.user.id, u.id))
+            }
+          },
+        },
+      },
+    },
+  })
+}
+
+<span class="t-k">let</span> _auth: ReturnType&lt;<span class="t-k">typeof</span> createAuth&gt; | <span class="t-k">undefined</span>
+<span class="t-k">export</span> <span class="t-k">function</span> useAuth() {
+  _auth ??= createAuth()
+  <span class="t-k">return</span> _auth
+}
+
+<span class="t-k">export</span> <span class="t-k">type</span> DbUser = <span class="t-k">typeof</span> schema.user.$inferSelect
+
+<span class="t-k">export</span> <span class="t-k">interface</span> RequireUserOptions { verified?: boolean, onboarded?: boolean }
+
+<span class="t-c">/** Loads the signed-in user or throws the right envelope error (review §1.5). */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> requireUser(event: H3Event, opts: RequireUserOptions = {}): Promise&lt;DbUser&gt; {
+  <span class="t-k">const</span> { verified = <span class="t-k">true</span>, onboarded = <span class="t-k">false</span> } = opts
+  <span class="t-k">const</span> session = <span class="t-k">await</span> useAuth().api.getSession({ headers: event.headers })
+  <span class="t-k">if</span> (!session) <span class="t-k">throw</span> apiError(<span class="t-s">'UNAUTHENTICATED'</span>, <span class="t-s">'Sign in to continue.'</span>)
+  <span class="t-k">const</span> [u] = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.user).where(eq(schema.user.id, session.user.id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!u || u.status === <span class="t-s">'pending_deletion'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'UNAUTHENTICATED'</span>, <span class="t-s">'Sign in to continue.'</span>)
+  <span class="t-k">if</span> (u.status === <span class="t-s">'suspended'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'ACCOUNT_SUSPENDED'</span>, <span class="t-s">'This account is suspended.'</span>)
+  <span class="t-k">if</span> (verified &amp;&amp; !u.emailVerified) <span class="t-k">throw</span> apiError(<span class="t-s">'EMAIL_NOT_VERIFIED'</span>, <span class="t-s">'Confirm your email address to continue.'</span>)
+  <span class="t-k">if</span> (onboarded &amp;&amp; u.onboardingStatus !== <span class="t-s">'completed'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'ONBOARDING_REQUIRED'</span>, <span class="t-s">'Finish onboarding first.'</span>)
+  event.context.user = u
+  <span class="t-k">return</span> u
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> userRoles(u: DbUser): string[] {
+  <span class="t-k">return</span> u.roles.split(<span class="t-s">','</span>).filter(Boolean)
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> toMe(u: DbUser) {
+  <span class="t-k">return</span> {
+    id: u.id,
+    username: u.username,
+    displayName: u.displayName,
+    avatarUrl: u.image,
+    email: u.email,
+    emailVerified: u.emailVerified,
+    roles: userRoles(u),
+    status: u.status,
+    onboardingStatus: u.onboardingStatus,
+    createdAt: u.createdAt.toISOString(),
+  }
+}</code></pre></figure>
+
+<h3>Block by block</h3>
+<ul>
+  <li><strong>Constants at the top.</strong> <code>USERNAME_RE</code> allows 3 to 30 characters of <code>a-z</code>, <code>0-9</code> and <code>_</code>. <code>RESERVED_USERNAMES</code> blocks names like <code>admin</code> and <code>support</code>. <code>DELETION_GRACE_DAYS = 30</code> is the "change your mind" window for account deletion (chapter 9).</li>
+  <li><strong><code>emailAndPassword</code></strong>: password login is on, an unverified email cannot sign in (<code>requireEmailVerification</code>), passwords are 8 to 128 characters, and resetting a password signs out other devices. <code>sendResetPassword</code> calls our <code>sendEmail</code>.</li>
+  <li><strong><code>emailVerification</code></strong>: a confirmation email is sent at sign-up, and clicking the link signs the person in.</li>
+  <li><strong><code>user.additionalFields</code></strong>: tells Better Auth about our extra columns. <code>input: true</code> means a sign-up request may supply it; <code>input: false</code> means only the server may set it, so nobody can sign up with <code>roles: "super_admin"</code>. <code>returned: false</code> hides a field from responses (date of birth stays private).</li>
+  <li><strong><code>rateLimit</code></strong>: Better Auth's own limiter, stored in the <code>rate_limit</code> table, 30 calls per 60 seconds, switchable with the <code>authRateLimitEnabled</code> setting.</li>
+  <li><strong><code>databaseHooks.user.create.before</code></strong>: runs just before a new user row is saved. It lower-cases and checks the username, checks the date format, enforces the minimum age (<code>UNDER_MINIMUM_AGE</code>), checks the username is not taken, and forces safe defaults (<code>roles: 'fan'</code>, <code>status: 'active'</code>) no matter what the caller sent. The comment explains a real bug the project hit: querying through a second database connection while Better Auth holds a transaction can freeze the connection pool when many sign-ups arrive together, so the hook uses Better Auth's current transaction (<code>getCurrentAdapter</code>).</li>
+  <li><strong><code>databaseHooks.session.create.before</code></strong>: runs before every sign-in. A suspended user is refused (<code>ACCOUNT_SUSPENDED</code>). A user whose deletion is pending can sign in only within the 30-day window, and doing so cancels the deletion.</li>
+  <li><strong><code>useAuth()</code></strong>: creates the Better Auth object once and reuses it (the same lazy pattern as <code>useDb</code>).</li>
+</ul>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The last third of the file is <strong>our own guard layer</strong>:</p>
+<ul>
+<li><code>requireUser(event, { verified, onboarded })</code> reads the session from the request headers, loads our <code>user</code> row, and throws the right error: <code>UNAUTHENTICATED</code> (no session, or deletion pending), <code>ACCOUNT_SUSPENDED</code>, <code>EMAIL_NOT_VERIFIED</code>, or <code>ONBOARDING_REQUIRED</code>. By default it requires a verified email; endpoints opt into stricter or looser checks. On success it returns the user, which is how handlers get <code>u.id</code>.</li>
+<li><code>userRoles</code> splits the comma-separated roles text; <code>toMe</code> shapes the user for the API and deliberately leaves out the date of birth.</li>
+</ul>
+</aside>
+
+<h2 id="expose-the-auth-routes">Expose the auth routes<a class="anchor" href="#expose-the-auth-routes" aria-label="Link to this section">#</a></h2>
+<p>Better Auth brings its own endpoints (<code>sign-up/email</code>, <code>sign-in/email</code>, <code>sign-out</code>, <code>verify-email</code>, <code>get-session</code>, password reset, and more). One catch-all file hands them over. Create <code>server/api/auth/[...all].ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/auth/[...all].ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// AUTH-01..04b: Better Auth endpoints (sign-up/email, sign-in/email, sign-out, password reset, verify-email, ...)</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(event =&gt; useAuth().handler(toWebRequest(event)))</code></pre></figure>
+<p>And one small endpoint of ours so sign-up screens can show "username taken" live. Create <code>server/api/auth/username-check.get.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/auth/username-check.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// AUTH-05</span>
+<span class="t-k">const</span> query = z.object({ username: z.string().trim().toLowerCase() })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'username-check'</span>, clientIp(event), <span class="t-n">30</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> { username } = readQuery(event, query)
+  <span class="t-k">if</span> (!USERNAME_RE.test(username)) <span class="t-k">return</span> { username, available: <span class="t-k">false</span>, reason: <span class="t-s">'invalid'</span> }
+  <span class="t-k">if</span> (RESERVED_USERNAMES.has(username)) <span class="t-k">return</span> { username, available: <span class="t-k">false</span>, reason: <span class="t-s">'reserved'</span> }
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> useDb().select({ id: schema.user.id }).<span class="t-k">from</span>(schema.user).where(eq(schema.user.username, username)).limit(<span class="t-n">1</span>)
+  <span class="t-k">return</span> row ? { username, available: <span class="t-k">false</span>, reason: <span class="t-s">'taken'</span> } : { username, available: <span class="t-k">true</span> }
+})</code></pre></figure>
+<ul>
+  <li>It uses three helpers from chapter 7: <code>rateLimit</code> (30 per minute per IP), <code>readQuery</code> and Zod (<code>.trim().toLowerCase()</code> cleans the input).</li>
+  <li>It answers <code>available: false</code> with a <code>reason</code> (<code>invalid</code>, <code>reserved</code>, <code>taken</code>) or <code>available: true</code>.</li>
+  <li>The <code>// AUTH-05</code> comment is the route's ID in the API contract (chapter 18).</li>
+</ul>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Restart <code>pnpm dev</code>, then try the whole life of an account from the terminal. Replace the example email if you like.</p>
+<p><strong>1. Sign up</strong> (send an <code>Origin</code> header, as the project's own tests do; Better Auth uses it to guard against cross-site request forgery):</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -i -X POST http://localhost:<span class="t-n">3000</span>/api/auth/sign-up/email \
+  -H <span class="t-s">'Content-Type: application/json'</span> -H <span class="t-s">'Origin: http://localhost:3000'</span> \
+  -d <span class="t-s">'{"email":"ada@example.com","password":"correct-horse-9","name":"Ada","username":"ada_fan","dateOfBirth":"1995-05-05"}'</span></code></pre></figure>
+<p>Expect status <code>200</code>. In the <strong>server</strong> terminal you will see a line starting <code>[email] to=ada@example.com</code> with a confirmation link.</p>
+<p><strong>2. Mark the email verified</strong> (the shortcut for local development: the same thing the link would do):</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>docker exec clautverse-pg psql -U postgres -d clautverse -c <span class="t-s">"update \"user\" set email_verified = true where email = 'ada@example.com'"</span></code></pre></figure>
+<p><strong>3. Sign in</strong> and keep the cookie in a file called <code>jar.txt</code>:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -i -c jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/auth/sign-<span class="t-k">in</span>/email \
+  -H <span class="t-s">'Content-Type: application/json'</span> -H <span class="t-s">'Origin: http://localhost:3000'</span> \
+  -d <span class="t-s">'{"email":"ada@example.com","password":"correct-horse-9"}'</span>
+curl -b jar.txt http://localhost:<span class="t-n">3000</span>/api/auth/get-session</code></pre></figure>
+<p>The second command should print your session and user (without the date of birth).</p>
+<p><strong>4. Try to break the rules:</strong> sign up with <code>"dateOfBirth":"2015-01-01"</code>. Expect status <code>400</code> and a body whose <code>code</code> is <code>UNDER_MINIMUM_AGE</code>. Then call <code>curl "http://localhost:3000/api/auth/username-check?username=ada_fan"</code> and see <code>"reason":"taken"</code>.</p>
+<p>Also run <code>pnpm test:unit</code>: now 2 test files pass (cursor and age).</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>Errors thrown <em>inside</em> Better Auth's own routes (such as the under-18 rejection) use Better Auth's format, <code>{ "code", "message" }</code>, not our <code>{ "error": {…} }</code> envelope. Errors from our own endpoints use the envelope. The project's tests rely on this difference.</p>
+</aside>
+<p><code>jar.txt</code> holds a live session cookie and is not part of the project. Delete it (<code>rm jar.txt</code>) before you commit: <code>git add -A && git commit -m "Accounts with Better Auth"</code>.</p>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="07-input.html"><small>Previous</small>Checking input, paging and rate limits</a><a class="next" href="09-profile.html"><small>Next</small>My account: profile and deletion</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#the-ideas">The ideas</a></li><li><a href="#small-helpers-first-age-and-email">Small helpers first: age and email</a></li><li><a href="#the-better-auth-setup">The Better Auth setup</a></li><li><a href="#expose-the-auth-routes">Expose the auth routes</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

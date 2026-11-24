@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The admin area and the audit trail · Build Clautverse</title>
+<meta name="description" content="Reviewing applications, hiding communities, working the report queue, correcting XP, and logging every step.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="17-admin">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin" aria-current="page">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 5 · Stars, safety and admin</p><h1>The admin area and the audit trail</h1><p class="meta">About 4 min read</p><p class="lead">Admins keep the platform healthy. Their endpoints all live under <code>/api/admin</code> and share one rule: <strong>every action is checked, reasoned and recorded</strong>. This chapter shows the pattern with the most important routes and lists the rest.</p>
+
+<h2 id="how-admin-access-works">How admin access works<a class="anchor" href="#how-admin-access-works" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>An admin is a normal account with an extra role word, <code>super_admin</code>, in its <code>roles</code> text. There is deliberately no public way to get that role: sign-up forces <code>roles</code> to <code>fan</code> (chapter 8). You grant it by hand in the database, as you did in the chapter 12 check:</p>
+</aside>
+<figure class="code" data-lang="sql"><div class="code-head"><span class="code-file">granting admin by hand (local development)</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">update</span> <span class="t-s">"user"</span> <span class="t-k">set</span> roles = <span class="t-s">'fan,super_admin'</span> <span class="t-k">where</span> email = <span class="t-s">'ada@example.com'</span>;</code></pre></figure>
+<p>Every admin endpoint begins with <code>const admin = await requireAdmin(event)</code> (from <code>admin.ts</code>, chapter 11), which answers <code>UNAUTHENTICATED</code> or <code>FORBIDDEN</code> as appropriate.</p>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The same four-part shape repeats in almost every admin write: <strong>1)</strong> <code>requireAdmin</code>; <strong>2)</strong> validate the body (a reason is usually required); <strong>3)</strong> a transaction that locks the row (<code>.for('update')</code>), checks its current state, changes it; <strong>4)</strong> <code>audit(...)</code> and often <code>notify(...)</code> <em>inside that same transaction</em>, so a change can never exist without its audit row.</p>
+</aside>
+
+<h2 id="accepting-a-star-s-application">Accepting a Star's application<a class="anchor" href="#accepting-a-star-s-application" aria-label="Link to this section">#</a></h2>
+<p>This is the endpoint that turns a fan into a Star. You wrote the application side in chapter 15.</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/admin/applications/[id]/accept.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// ADM-04: role + talent + community + audit + notification in one transaction.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> admin = <span class="t-k">await</span> requireAdmin(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { internalNote } = <span class="t-k">await</span> readJsonBody(event, decisionBody)
+  <span class="t-k">const</span> t = schema.talentApplication
+  <span class="t-k">return</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [app] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(t).where(eq(t.id, id)).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!app) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Application not found.'</span>)
+    <span class="t-k">if</span> (app.status === <span class="t-s">'accepted'</span>) <span class="t-k">return</span> adminApplicationView(app)
+    <span class="t-k">if</span> (app.status === <span class="t-s">'declined'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This application was already declined.'</span>)
+    <span class="t-k">const</span> [existing] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.talent).where(eq(schema.talent.userId, app.userId)).limit(<span class="t-n">1</span>)
+    <span class="t-k">const</span> tal = existing ?? (<span class="t-k">await</span> tx.insert(schema.talent).values({
+      slug: <span class="t-k">await</span> uniqueSlug(tx, schema.talent, slugify(app.displayName)),
+      name: app.displayName,
+      categoryId: app.categoryId,
+      bio: app.bio || <span class="t-k">null</span>,
+      userId: app.userId,
+    }).returning())[<span class="t-n">0</span>]!
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> ensureTalentCommunity(tx, tal)
+    <span class="t-k">await</span> grantRole(tx, app.userId, <span class="t-s">'talent'</span>)
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.update(t).set({ status: <span class="t-s">'accepted'</span>, decidedAt: <span class="t-k">new</span> Date(), decidedBy: admin.id, internalNote: internalNote ?? <span class="t-k">null</span>, talentId: tal.id })
+      .where(eq(t.id, id)).returning()
+    <span class="t-k">await</span> audit(tx, admin.id, <span class="t-s">'application.accepted'</span>, <span class="t-s">'talent_application'</span>, id, { talentId: tal.id, communityId: comm.id })
+    <span class="t-k">await</span> notify(tx, app.userId, <span class="t-s">'talent_application.accepted'</span>, { applicationId: id, talentId: tal.id, communityId: comm.id })
+    <span class="t-k">return</span> adminApplicationView(row!)
+  })
+})</code></pre></figure>
+<p>Inside one transaction it: locks the application; returns quietly if it is already accepted (safe to retry); refuses if it was declined; creates the <code>talent</code> profile with a unique slug (or reuses one); creates the Star's community with <code>ensureTalentCommunity</code>; adds the <code>talent</code> role with <code>grantRole</code>; marks the application accepted; writes the audit row; and notifies the applicant. If any step fails, none of it happens.</p>
+
+<h2 id="working-the-report-queue">Working the report queue<a class="anchor" href="#working-the-report-queue" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/admin/reports/[id]/actions.post.ts</code> applies one of five actions to a report and closes it:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/admin/reports/[id]/actions.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// ADM-13: apply the action and close the report in one transaction; everything audited.</span>
+<span class="t-k">const</span> body = z.object({
+  action: z.enum([<span class="t-s">'dismiss'</span>, <span class="t-s">'remove_content'</span>, <span class="t-s">'suspend_user'</span>, <span class="t-s">'remove_member'</span>, <span class="t-s">'veto_community'</span>]),
+  internalNote: z.string().trim().max(<span class="t-n">2000</span>).optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> admin = <span class="t-k">await</span> requireAdmin(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { action, internalNote } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [r] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.report).where(eq(schema.report.id, id)).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!r) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Report not found.'</span>)
+    <span class="t-k">if</span> (r.status !== <span class="t-s">'open'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This report is already closed.'</span>)
+    <span class="t-k">const</span> subject = action === <span class="t-s">'dismiss'</span> ? <span class="t-k">null</span> : <span class="t-k">await</span> reportSubject(tx, r)
+    <span class="t-k">const</span> unsupported = () =&gt; apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">`"${action}" does not apply to a ${r.targetType} report.`</span>, { fields: { action: <span class="t-s">'not_applicable'</span> } })
+    <span class="t-k">if</span> (action !== <span class="t-s">'dismiss'</span> &amp;&amp; !subject) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'The reported item no longer exists.'</span>)
+    <span class="t-k">if</span> (action === <span class="t-s">'remove_content'</span>) {
+      <span class="t-k">if</span> (subject?.drop) <span class="t-k">await</span> tx.update(schema.drop).set({ status: <span class="t-s">'removed'</span> }).where(eq(schema.drop.id, subject.drop.id))
+      <span class="t-k">else</span> <span class="t-k">if</span> (subject?.reply) {
+        <span class="t-k">if</span> (subject.reply.status === <span class="t-s">'active'</span>)
+          <span class="t-k">await</span> tx.update(schema.drop).set({ replyCount: sql<span class="t-s">`greatest(${schema.drop.replyCount} - 1, 0)`</span> }).where(eq(schema.drop.id, subject.reply.dropId))
+        <span class="t-k">await</span> tx.update(schema.reply).set({ status: <span class="t-s">'removed'</span> }).where(eq(schema.reply.id, subject.reply.id))
+      }
+      <span class="t-k">else</span> <span class="t-k">throw</span> unsupported()
+      <span class="t-k">await</span> audit(tx, admin.id, <span class="t-s">`${r.targetType}.removed`</span>, r.targetType, r.targetId, { reportId: r.id })
+    }
+    <span class="t-k">else</span> <span class="t-k">if</span> (action === <span class="t-s">'suspend_user'</span>) {
+      <span class="t-k">if</span> (!subject?.userId) <span class="t-k">throw</span> unsupported()
+      <span class="t-k">await</span> suspendUser(tx, admin, subject.userId, { reason: <span class="t-s">`Report ${r.id} (${r.reason})`</span>, internalNote })
+    }
+    <span class="t-k">else</span> <span class="t-k">if</span> (action === <span class="t-s">'remove_member'</span>) {
+      <span class="t-k">if</span> (!subject?.userId || !subject.communityId) <span class="t-k">throw</span> unsupported()
+      <span class="t-k">await</span> removeMember(tx, admin.id, subject.userId, subject.communityId)
+    }
+    <span class="t-k">else</span> <span class="t-k">if</span> (action === <span class="t-s">'veto_community'</span>) {
+      <span class="t-k">if</span> (!subject?.communityId) <span class="t-k">throw</span> unsupported()
+      <span class="t-k">await</span> tx.update(schema.community).set({ status: <span class="t-s">'vetoed'</span> }).where(eq(schema.community.id, subject.communityId))
+      <span class="t-k">await</span> audit(tx, admin.id, <span class="t-s">'community.vetoed'</span>, <span class="t-s">'community'</span>, subject.communityId, { reportId: r.id })
+    }
+    <span class="t-k">const</span> [closed] = <span class="t-k">await</span> tx.update(schema.report).set({
+      status: action === <span class="t-s">'dismiss'</span> ? <span class="t-s">'dismissed'</span> : <span class="t-s">'actioned'</span>, action, internalNote: internalNote ?? <span class="t-k">null</span>, decidedBy: admin.id, decidedAt: <span class="t-k">new</span> Date(),
+    }).where(eq(schema.report.id, id)).returning()
+    <span class="t-k">await</span> audit(tx, admin.id, action === <span class="t-s">'dismiss'</span> ? <span class="t-s">'report.dismissed'</span> : <span class="t-s">'report.actioned'</span>, <span class="t-s">'report'</span>, id, { action })
+    <span class="t-k">return</span> closed!
+  })
+  <span class="t-k">return</span> adminReportView(row)
+})</code></pre></figure>
+<ul>
+  <li><code>dismiss</code>, <code>remove_content</code>, <code>suspend_user</code>, <code>remove_member</code> or <code>veto_community</code>.</li>
+  <li>It first looks up what was reported with <code>reportSubject</code> (chapter 16), and rejects an action that makes no sense for that target (for example <code>remove_content</code> on a user report) with <code>not_applicable</code>.</li>
+  <li><code>suspend_user</code> and <code>remove_member</code> reuse <code>suspendUser</code> and <code>removeMember</code> so the rules are written once.</li>
+</ul>
+
+<h2 id="hiding-a-community-veto">Hiding a community (veto)<a class="anchor" href="#hiding-a-community-veto" aria-label="Link to this section">#</a></h2>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/admin/communities/[id]/veto.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// ADM-09: memberships and Originals positions are preserved; veto only hides the community.</span>
+<span class="t-k">const</span> body = z.object({ internalNote: z.string().trim().max(<span class="t-n">2000</span>).optional() }).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> admin = <span class="t-k">await</span> requireAdmin(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { internalNote } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> c = schema.community
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [comm] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(c).where(eq(c.id, id)).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!comm) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Community not found.'</span>)
+    <span class="t-k">if</span> (comm.status === <span class="t-s">'vetoed'</span>) <span class="t-k">return</span> comm
+    <span class="t-k">const</span> [updated] = <span class="t-k">await</span> tx.update(c).set({ status: <span class="t-s">'vetoed'</span> }).where(eq(c.id, id)).returning()
+    <span class="t-k">await</span> audit(tx, admin.id, <span class="t-s">'community.vetoed'</span>, <span class="t-s">'community'</span>, id, internalNote ? { internalNote } : {})
+    <span class="t-k">return</span> updated!
+  })
+  <span class="t-k">return</span> communityDetail(row, <span class="t-k">null</span>)
+})</code></pre></figure>
+<p>Veto only flips <code>status</code> to <code>vetoed</code>. Memberships and Originals numbers are untouched, so a restore brings everything back. The hiding itself is done by <code>loadVisibleCommunity</code> (chapter 11).</p>
+
+<h2 id="correcting-xp-without-rewriting-history">Correcting XP without rewriting history<a class="anchor" href="#correcting-xp-without-rewriting-history" aria-label="Link to this section">#</a></h2>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/admin/xp-adjustments.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { randomUUID } <span class="t-k">from</span> <span class="t-s">'node:crypto'</span>
+<span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// ADM-17: corrections are new ledger rows with a reason — never edits.</span>
+<span class="t-k">const</span> body = z.object({ userId: z.string().min(<span class="t-n">1</span>).max(<span class="t-n">100</span>), amount: z.number().int().min(-<span class="t-n">100_000</span>).max(<span class="t-n">100_000</span>).refine(n =&gt; n !== <span class="t-n">0</span>, <span class="t-s">'must not be 0'</span>), reason: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">500</span>) }).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> admin = <span class="t-k">await</span> requireAdmin(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [target] = <span class="t-k">await</span> tx.select({ id: schema.user.id }).<span class="t-k">from</span>(schema.user).where(eq(schema.user.id, input.userId)).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!target) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'User not found.'</span>)
+    <span class="t-k">const</span> x = <span class="t-k">await</span> grantXp(tx, { userId: input.userId, amount: input.amount, sourceType: <span class="t-s">'admin_adjustment'</span>, sourceId: randomUUID(), actorId: admin.id, reason: input.reason })
+    <span class="t-k">await</span> audit(tx, admin.id, <span class="t-s">'xp.adjusted'</span>, <span class="t-s">'user'</span>, input.userId, { amount: input.amount, reason: input.reason, xpTransactionId: x.id })
+    <span class="t-k">return</span> x
+  })
+  setResponseStatus(event, <span class="t-n">201</span>)
+  <span class="t-k">return</span> xpView(row)
+})</code></pre></figure>
+<ul>
+  <li>A correction is a <strong>new ledger row</strong> (positive or negative, never zero) with a required reason and the admin's ID. A random UUID is used as <code>sourceId</code> because each adjustment is its own event.</li>
+  <li>It is also written to the audit log.</li>
+</ul>
+
+<h2 id="the-audit-log">The audit log<a class="anchor" href="#the-audit-log" aria-label="Link to this section">#</a></h2>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/admin/audit.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, gte, lte, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// ADM-14: read-only. No route updates or deletes audit rows.</span>
+<span class="t-k">const</span> query = z.object({
+  actorId: z.string().max(<span class="t-n">100</span>).optional(),
+  targetType: z.string().max(<span class="t-n">50</span>).optional(),
+  targetId: z.string().max(<span class="t-n">100</span>).optional(),
+  <span class="t-k">from</span>: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional(),
+  to: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional(),
+  ...pageQuery,
+})
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">await</span> requireAdmin(event)
+  <span class="t-k">const</span> { actorId, targetType, targetId, <span class="t-k">from</span>, to, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> c = readCursor&lt;{ t: string, id: string }&gt;(cursor, <span class="t-s">'adm-audit'</span>)
+  <span class="t-k">const</span> a = schema.adminAudit
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(a).where(and(
+    actorId ? eq(a.actorId, actorId) : <span class="t-k">undefined</span>,
+    targetType ? eq(a.targetType, targetType) : <span class="t-k">undefined</span>,
+    targetId ? eq(a.targetId, targetId) : <span class="t-k">undefined</span>,
+    <span class="t-k">from</span> ? gte(a.createdAt, <span class="t-k">new</span> Date(<span class="t-k">from</span>)) : <span class="t-k">undefined</span>,
+    to ? lte(a.createdAt, <span class="t-k">new</span> Date(to)) : <span class="t-k">undefined</span>,
+    c ? sql<span class="t-s">`(${a.createdAt}, ${a.id}) &lt; (${c.t}::timestamptz, ${c.id}::uuid)`</span> : <span class="t-k">undefined</span>,
+  )).orderBy(desc(a.createdAt), desc(a.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, <span class="t-s">'adm-audit'</span>, r =&gt; ({ t: r.createdAt.toISOString(), id: r.id }), r =&gt; ({
+    id: r.id, actorId: r.actorId, action: r.action, targetType: r.targetType, targetId: r.targetId, metadata: r.metadata, createdAt: r.createdAt.toISOString(),
+  }))
+})</code></pre></figure>
+<p>This is read-only: no route in the project updates or deletes <code>admin_audit</code> rows. Admins can filter by who, what kind of target and a time range.</p>
+
+<h2 id="suspending-a-user">Suspending a user<a class="anchor" href="#suspending-a-user" aria-label="Link to this section">#</a></h2>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/admin/users/[id]/suspend.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// ADM-11</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> admin = <span class="t-k">await</span> requireAdmin(event)
+  <span class="t-k">const</span> id = readUserIdParam(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, adminActionBody)
+  <span class="t-k">return</span> adminUserView(<span class="t-k">await</span> useDb().transaction(tx =&gt; suspendUser(tx, admin, id, input)))
+})</code></pre></figure>
+<p>The handler is three lines because the logic lives in <code>suspendUser</code> (chapter 11): admins cannot be suspended, and suspending deletes the person's sessions so they are signed out everywhere.</p>
+
+<h2 id="every-admin-route">Every admin route<a class="anchor" href="#every-admin-route" aria-label="Link to this section">#</a></h2>
+<p>The remaining files follow the same pattern. Each link opens the full code in the reference pages, ready to copy.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Area</th><th>Route files (under <code>server/api/admin</code>)</th></tr></thead>
+<tbody>
+<tr><td>Overview</td><td><a href="ref-routes.html#f-server-api-admin-dashboard-get-ts"><code>dashboard.get.ts</code></a> (six counts, fetched in parallel)</td></tr>
+<tr><td>Applications</td><td><a href="ref-routes.html#f-server-api-admin-applications-index-get-ts"><code>applications/index.get.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-applications-id-index-get-ts"><code>applications/[id]/index.get.ts</code></a>, accept (above), <a href="ref-routes.html#f-server-api-admin-applications-id-decline-post-ts"><code>applications/[id]/decline.post.ts</code></a> (needs a reason for the applicant)</td></tr>
+<tr><td>Identity claims (to be removed)</td><td><a href="ref-routes.html#f-server-api-admin-claims-index-get-ts"><code>claims/index.get.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-claims-id-index-get-ts"><code>claims/[id]/index.get.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-claims-id-verify-post-ts"><code>claims/[id]/verify.post.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-claims-id-reject-post-ts"><code>claims/[id]/reject.post.ts</code></a></td></tr>
+<tr><td>Communities</td><td><a href="ref-routes.html#f-server-api-admin-communities-index-get-ts"><code>communities/index.get.ts</code></a> (includes vetoed ones), <a href="ref-routes.html#f-server-api-admin-communities-index-post-ts"><code>communities/index.post.ts</code></a>, veto (above), <a href="ref-routes.html#f-server-api-admin-communities-id-restore-post-ts"><code>communities/[id]/restore.post.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-communities-id-members-userid-reinstate-post-ts"><code>communities/[id]/members/[userId]/reinstate.post.ts</code></a></td></tr>
+<tr><td>Users</td><td><a href="ref-routes.html#f-server-api-admin-users-index-get-ts"><code>users/index.get.ts</code></a> (search), suspend (above), <a href="ref-routes.html#f-server-api-admin-users-id-reinstate-post-ts"><code>users/[id]/reinstate.post.ts</code></a></td></tr>
+<tr><td>Reports</td><td><a href="ref-routes.html#f-server-api-admin-reports-index-get-ts"><code>reports/index.get.ts</code></a> (oldest first), actions (above)</td></tr>
+<tr><td>XP rules and corrections</td><td><a href="ref-routes.html#f-server-api-admin-xp-rules-get-ts"><code>xp-rules.get.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-xp-rules-put-ts"><code>xp-rules.put.ts</code></a>, xp-adjustments (above)</td></tr>
+<tr><td>Badges</td><td><a href="ref-routes.html#f-server-api-admin-badges-index-get-ts"><code>badges/index.get.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-badges-index-post-ts"><code>badges/index.post.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-badges-id-index-get-ts"><code>badges/[id]/index.get.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-badges-id-index-patch-ts"><code>badges/[id]/index.patch.ts</code></a>, <a href="ref-routes.html#f-server-api-admin-badges-id-awards-post-ts"><code>badges/[id]/awards.post.ts</code></a></td></tr>
+<tr><td>Audit</td><td>audit.get (above)</td></tr>
+</tbody></table></div>
+<aside class="callout tip"><p class="callout-label">Two small things to know</p>
+<p>The member-reinstate route carries the route ID <code>ADM-16</code>, the same number as the badge routes. The plan (task 2c) renumbers it to ADM-19. And the plan also removes two badge routes that exist only in the contract file, not as code.</p></aside>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Accept the application you submitted in chapter 15 (you are an admin since chapter 12). Find its id from the list, then accept it:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -b jar.txt <span class="t-s">"http://localhost:3000/api/admin/applications?status=pending"</span>
+curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/admin/applications/APPLICATION_ID/accept \
+  -H <span class="t-s">'Content-Type: application/json'</span> -d <span class="t-s">'{}'</span>
+curl -b jar.txt <span class="t-s">"http://localhost:3000/api/admin/audit"</span>
+curl -b jar.txt http://localhost:<span class="t-n">3000</span>/api/communities</code></pre></figure>
+<p>Expected: the application becomes <code>accepted</code>; the audit list shows an <code>application.accepted</code> entry; and a new community named after the applicant appears in the public list. Check the dashboard too: <code>curl -b jar.txt http://localhost:3000/api/admin/dashboard</code>. Commit: <code>git add -A && git commit -m "Admin area and audit trail"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="16-safety.html"><small>Previous</small>Reports and blocks</a><a class="next" href="18-contract.html"><small>Next</small>The API contract (OpenAPI)</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#how-admin-access-works">How admin access works</a></li><li><a href="#accepting-a-star-s-application">Accepting a Star's application</a></li><li><a href="#working-the-report-queue">Working the report queue</a></li><li><a href="#hiding-a-community-veto">Hiding a community (veto)</a></li><li><a href="#correcting-xp-without-rewriting-history">Correcting XP without rewriting history</a></li><li><a href="#the-audit-log">The audit log</a></li><li><a href="#suspending-a-user">Suspending a user</a></li><li><a href="#every-admin-route">Every admin route</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

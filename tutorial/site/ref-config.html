@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Config and setup files · Build Clautverse</title>
+<meta name="description" content="">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="ref-config">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html" aria-current="page">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <h1>Reference: Config and setup files</h1><p class="lead">Every file in this group, exactly as it is in the repository (commit <code>227fbaa</code>). Each file says which chapter explains it.</p>
+<details class="ref" id="f-env-example"><summary><code>.env.example</code> <small>explained in <a href="02-config.html">Packages, settings and secrets</a></small></summary><figure class="code" data-lang="env"><div class="code-head"><span class="code-file">.env.example</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c"># Copy to .env and fill in. Never commit .env.</span>
+NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:<span class="t-n">5432</span>/clautverse
+<span class="t-c"># Long random string, e.g. `openssl rand -base64 32`</span>
+NUXT_BETTER_AUTH_SECRET=
+NUXT_BETTER_AUTH_URL=http://localhost:<span class="t-n">3000</span>
+<span class="t-c"># Leave empty locally: emails are printed to the server console instead of sent.</span>
+<span class="t-c"># Set to send via Mailtrap; add NUXT_MAILTRAP_INBOX_ID to target the testing sandbox.</span>
+NUXT_MAILTRAP_API_TOKEN=
+NUXT_MAILTRAP_INBOX_ID=
+NUXT_EMAIL_FROM=<span class="t-s">"Clautverse &lt;no-reply@example.com&gt;"</span>
+<span class="t-c"># Long random string used to sign pagination cursors</span>
+NUXT_CURSOR_SECRET=
+NUXT_CRON_SECRET=</code></pre></figure></details>
+<details class="ref" id="f-gitignore"><summary><code>.gitignore</code> <small>explained in <a href="02-config.html">Packages, settings and secrets</a></small></summary><figure class="code" data-lang="text"><div class="code-head"><span class="code-file">.gitignore</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c"># Nuxt dev/build outputs</span>
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+<span class="t-c"># Node dependencies</span>
+node_modules
+
+<span class="t-c"># Logs</span>
+logs
+*.log
+
+<span class="t-c"># Misc</span>
+.DS_Store
+.fleet
+.idea
+
+<span class="t-c"># Local env files</span>
+.env
+.env.*
+!.env.example</code></pre></figure></details>
+<details class="ref" id="f-drizzle-config-ts"><summary><code>drizzle.config.ts</code> <small>explained in <a href="04-database-tables.html">Run PostgreSQL and design the tables</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">drizzle.config.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { defineConfig } <span class="t-k">from</span> <span class="t-s">'drizzle-kit'</span>
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineConfig({
+  dialect: <span class="t-s">'postgresql'</span>,
+  schema: <span class="t-s">'./server/db/schema/index.ts'</span>,
+  out: <span class="t-s">'./server/db/migrations'</span>,
+  dbCredentials: { url: process.env.NUXT_DATABASE_URL ?? <span class="t-s">''</span> },
+  strict: <span class="t-k">true</span>,
+})</code></pre></figure></details>
+<details class="ref" id="f-nuxt-config-ts"><summary><code>nuxt.config.ts</code> <small>explained in <a href="19-explorer.html">The API Explorer page (Vue)</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">nuxt.config.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// https://nuxt.com/docs/api/configuration/nuxt-config</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineNuxtConfig({
+  compatibilityDate: <span class="t-s">'2025-07-15'</span>,
+  devtools: { enabled: <span class="t-k">true</span> },
+  css: [<span class="t-s">'~/assets/css/docs.css'</span>],
+  runtimeConfig: {
+    databaseUrl: <span class="t-s">''</span>,
+    betterAuthSecret: <span class="t-s">''</span>,
+    betterAuthUrl: <span class="t-s">'http://localhost:3000'</span>,
+    mailtrapApiToken: <span class="t-s">''</span>,
+    mailtrapInboxId: <span class="t-s">''</span>,
+    emailFrom: <span class="t-s">'Clautverse &lt;no-reply@clautverse.local&gt;'</span>,
+    cursorSecret: <span class="t-s">''</span>,
+    appVersion: <span class="t-s">'dev'</span>,
+    authRateLimitEnabled: <span class="t-k">true</span>,
+    cronSecret: <span class="t-s">''</span>,
+  },
+  routeRules: { <span class="t-s">'/docs/**'</span>: { redirect: <span class="t-s">'/'</span> } },
+  nitro: {
+    errorHandler: <span class="t-s">'~~/server/error-handler.ts'</span>,
+  },
+})</code></pre></figure></details>
+<details class="ref" id="f-package-json"><summary><code>package.json</code> <small>explained in <a href="02-config.html">Packages, settings and secrets</a></small></summary><figure class="code" data-lang="json"><div class="code-head"><span class="code-file">package.json</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>{
+  <span class="t-s">"name"</span>: <span class="t-s">"clautverse"</span>,
+  <span class="t-s">"type"</span>: <span class="t-s">"module"</span>,
+  <span class="t-s">"private"</span>: <span class="t-k">true</span>,
+  <span class="t-s">"scripts"</span>: {
+    <span class="t-s">"build"</span>: <span class="t-s">"nuxt build"</span>,
+    <span class="t-s">"dev"</span>: <span class="t-s">"nuxt dev"</span>,
+    <span class="t-s">"generate"</span>: <span class="t-s">"nuxt generate"</span>,
+    <span class="t-s">"preview"</span>: <span class="t-s">"nuxt preview"</span>,
+    <span class="t-s">"postinstall"</span>: <span class="t-s">"nuxt prepare"</span>,
+    <span class="t-s">"typecheck"</span>: <span class="t-s">"nuxt typecheck"</span>,
+    <span class="t-s">"db:generate"</span>: <span class="t-s">"drizzle-kit generate"</span>,
+    <span class="t-s">"db:migrate"</span>: <span class="t-s">"drizzle-kit migrate"</span>,
+    <span class="t-s">"db:seed"</span>: <span class="t-s">"node scripts/seed.mjs"</span>,
+    <span class="t-s">"test"</span>: <span class="t-s">"vitest run"</span>,
+    <span class="t-s">"test:unit"</span>: <span class="t-s">"vitest run --project unit"</span>,
+    <span class="t-s">"test:e2e"</span>: <span class="t-s">"vitest run --project e2e"</span>
+  },
+  <span class="t-s">"dependencies"</span>: {
+    <span class="t-s">"better-auth"</span>: <span class="t-s">"^1.7.14"</span>,
+    <span class="t-s">"drizzle-orm"</span>: <span class="t-s">"^0.45.4"</span>,
+    <span class="t-s">"nuxt"</span>: <span class="t-s">"^4.6.3"</span>,
+    <span class="t-s">"postgres"</span>: <span class="t-s">"3.4.9"</span>,
+    <span class="t-s">"vue"</span>: <span class="t-s">"^3.5.44"</span>,
+    <span class="t-s">"vue-router"</span>: <span class="t-s">"^5.4.0"</span>,
+    <span class="t-s">"yaml"</span>: <span class="t-s">"^2.9.1"</span>,
+    <span class="t-s">"zod"</span>: <span class="t-s">"^4.6.7"</span>
+  },
+  <span class="t-s">"devDependencies"</span>: {
+    <span class="t-s">"@nuxt/test-utils"</span>: <span class="t-s">"^4.3.4"</span>,
+    <span class="t-s">"@types/node"</span>: <span class="t-s">"^24.19.2"</span>,
+    <span class="t-s">"drizzle-kit"</span>: <span class="t-s">"^0.31.11"</span>,
+    <span class="t-s">"typescript"</span>: <span class="t-s">"5.9.3"</span>,
+    <span class="t-s">"vitest"</span>: <span class="t-s">"^4.1.12"</span>,
+    <span class="t-s">"vue-tsc"</span>: <span class="t-s">"^3.3.14"</span>
+  },
+  <span class="t-s">"engines"</span>: {
+    <span class="t-s">"node"</span>: <span class="t-s">"&gt;=24"</span>
+  }
+}</code></pre></figure></details>
+<details class="ref" id="f-pnpm-workspace-yaml"><summary><code>pnpm-workspace.yaml</code> <small>explained in <a href="02-config.html">Packages, settings and secrets</a></small></summary><figure class="code" data-lang="yaml"><div class="code-head"><span class="code-file">pnpm-workspace.yaml</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>allowBuilds:
+  better-sqlite3: <span class="t-k">false</span>
+  esbuild: <span class="t-k">true</span>
+minimumReleaseAgeExclude: []</code></pre></figure></details>
+<details class="ref" id="f-public-robots-txt"><summary><code>public/robots.txt</code> <small>listed here only</small></summary><figure class="code" data-lang="text"><div class="code-head"><span class="code-file">public/robots.txt</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>User-Agent: *
+Disallow:</code></pre></figure></details>
+<details class="ref" id="f-scripts-seed-mjs"><summary><code>scripts/seed.mjs</code> <small>explained in <a href="05-connect-migrate.html">Connect, migrate, seed and check health</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">scripts/seed.mjs</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// Seeds categories, countries and Stars for local dev/tests. Idempotent. Usage: node --env-file=.env scripts/seed.mjs</span>
+<span class="t-k">import</span> postgres <span class="t-k">from</span> <span class="t-s">'postgres'</span>
+
+<span class="t-k">const</span> sql = postgres(process.env.NUXT_DATABASE_URL, { prepare: <span class="t-k">false</span>, max: <span class="t-n">1</span> })
+<span class="t-k">await</span> sql.begin(<span class="t-k">async</span> (tx) =&gt; {
+  <span class="t-k">await</span> tx<span class="t-s">`insert into category (slug, name, active, sort_order) values
+    ('reality-tv', 'Reality TV', true, 0), ('music', 'Music', false, 1), ('sports', 'Sports', false, 2)
+    on conflict (slug) do nothing`</span>
+  <span class="t-k">await</span> tx<span class="t-s">`insert into country (code, name) values ('NG', 'Nigeria'), ('GH', 'Ghana'), ('ZA', 'South Africa')
+    on conflict (code) do nothing`</span>
+  <span class="t-c">// Placeholder Stars until task 5 seeds the fictional pilot set.</span>
+  <span class="t-k">await</span> tx<span class="t-s">`insert into talent (slug, name, category_id, country_id, known_for, bio)
+    select v.slug, v.name, c.id, k.id, v.known_for, 'Housemate' from (values
+      ('ada', 'Ada', 'Housemate, Season 10 · 2025'), ('bisi', 'Bisi', 'Housemate, Season 10 · 2025'), ('chidi', 'Chidi', 'Housemate, Season 10 · 2025')
+    ) as v(slug, name, known_for)
+    join category c on c.slug = 'reality-tv' join country k on k.code = 'NG'
+    on conflict (slug) do nothing`</span>
+})
+<span class="t-k">await</span> sql.end()
+console.log(<span class="t-s">'seeded'</span>)</code></pre></figure></details>
+<details class="ref" id="f-tsconfig-json"><summary><code>tsconfig.json</code> <small>listed here only</small></summary><figure class="code" data-lang="json"><div class="code-head"><span class="code-file">tsconfig.json</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>{
+  <span class="t-c">// https://nuxt.com/docs/guide/concepts/typescript</span>
+  <span class="t-s">"files"</span>: [],
+  <span class="t-s">"references"</span>: [
+    {
+      <span class="t-s">"path"</span>: <span class="t-s">"./.nuxt/tsconfig.app.json"</span>
+    },
+    {
+      <span class="t-s">"path"</span>: <span class="t-s">"./.nuxt/tsconfig.server.json"</span>
+    },
+    {
+      <span class="t-s">"path"</span>: <span class="t-s">"./.nuxt/tsconfig.shared.json"</span>
+    },
+    {
+      <span class="t-s">"path"</span>: <span class="t-s">"./.nuxt/tsconfig.node.json"</span>
+    }
+  ]
+}</code></pre></figure></details>
+<details class="ref" id="f-vitest-config-ts"><summary><code>vitest.config.ts</code> <small>explained in <a href="07-input.html">Checking input, paging and rate limits</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">vitest.config.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { defineConfig } <span class="t-k">from</span> <span class="t-s">'vitest/config'</span>
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineConfig({
+  test: {
+    projects: [
+      { test: { name: <span class="t-s">'unit'</span>, include: [<span class="t-s">'tests/unit/**/*.test.ts'</span>], environment: <span class="t-s">'node'</span> } },
+      {
+        test: {
+          name: <span class="t-s">'e2e'</span>,
+          include: [<span class="t-s">'tests/e2e/**/*.test.ts'</span>],
+          environment: <span class="t-s">'node'</span>,
+          globalSetup: [<span class="t-s">'tests/e2e/global-setup.ts'</span>],
+          testTimeout: <span class="t-n">30_000</span>,
+          hookTimeout: <span class="t-n">240_000</span>,
+          fileParallelism: <span class="t-k">false</span>,
+        },
+      },
+    ],
+  },
+})</code></pre></figure></details>
+      
+      
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

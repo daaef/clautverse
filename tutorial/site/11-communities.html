@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Communities, joining and Originals · Build Clautverse</title>
+<meta name="description" content="The core of the product, with the rules that need transactions and row locks to stay correct.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="11-communities">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities" aria-current="page">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 4 · Features</p><h1>Communities, joining and Originals</h1><p class="meta">About 6 min read</p><p class="lead">A community is the home of one Star's fans. This is the heart of Clautverse, and it contains the trickiest rule: the first 100 members get permanent "Originals" numbers, even when hundreds of people join at the same instant.</p>
+
+<h2 id="the-shared-toolbox-admin-ts">The shared toolbox: <code>admin.ts</code><a class="anchor" href="#the-shared-toolbox-admin-ts" aria-label="Link to this section">#</a></h2>
+<p>Before communities, we add the helper file that many chapters use. Despite its name it holds more than admin code. Create <code>server/utils/admin.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/admin.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> <span class="t-k">type</span> { H3Event } <span class="t-k">from</span> <span class="t-s">'h3'</span>
+<span class="t-k">import</span> { eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-k">export</span> <span class="t-k">type</span> Tx = Parameters&lt;Parameters&lt;ReturnType&lt;<span class="t-k">typeof</span> useDb&gt;[<span class="t-s">'transaction'</span>]&gt;[<span class="t-n">0</span>]&gt;[<span class="t-n">0</span>]
+<span class="t-k">export</span> <span class="t-k">type</span> DbOrTx = ReturnType&lt;<span class="t-k">typeof</span> useDb&gt; | Tx
+
+<span class="t-k">export</span> <span class="t-k">const</span> SUPER_ADMIN = <span class="t-s">'super_admin'</span>
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> requireAdmin(event: H3Event) {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">if</span> (!userRoles(u).includes(SUPER_ADMIN)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Admins only.'</span>)
+  <span class="t-k">return</span> u
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> grantRole(tx: DbOrTx, userId: string, role: string) {
+  <span class="t-k">await</span> tx.update(schema.user).set({
+    roles: sql<span class="t-s">`case when (',' || ${schema.user.roles} || ',') like ${`</span>%,${role},%<span class="t-s">`} then ${schema.user.roles} else ${schema.user.roles} || ${`</span>,${role}<span class="t-s">`} end`</span>,
+  }).where(eq(schema.user.id, userId))
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> audit(tx: DbOrTx, actorId: string, action: string, targetType: string, targetId: string, metadata: Record&lt;string, unknown&gt; = {}) {
+  <span class="t-k">await</span> tx.insert(schema.adminAudit).values({ actorId, action, targetType, targetId, metadata })
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> notify(tx: DbOrTx, userId: string, <span class="t-k">type</span>: string, data: Record&lt;string, unknown&gt; = {}) {
+  <span class="t-k">await</span> tx.insert(schema.notification).values({ userId, <span class="t-k">type</span>, data })
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> slugify(name: string) {
+  <span class="t-k">return</span> name.toLowerCase().normalize(<span class="t-s">'NFKD'</span>).replace(/[^\w\s-]/g, <span class="t-s">''</span>).trim().replace(/[\s_-]+/g, <span class="t-s">'-'</span>).slice(<span class="t-n">0</span>, <span class="t-n">50</span>) || <span class="t-s">'talent'</span>
+}
+
+<span class="t-c">/** First free slug among `base`, `base-2`, `base-3`… for the given table. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> uniqueSlug(tx: DbOrTx, table: <span class="t-k">typeof</span> schema.talent | <span class="t-k">typeof</span> schema.community, base: string) {
+  <span class="t-k">const</span> taken = <span class="t-k">new</span> Set((<span class="t-k">await</span> tx.select({ slug: table.slug }).<span class="t-k">from</span>(table).where(sql<span class="t-s">`${table.slug} = ${base} or ${table.slug} like ${`</span>${base}-%<span class="t-s">`}`</span>)).map(r =&gt; r.slug))
+  <span class="t-k">if</span> (!taken.has(base)) <span class="t-k">return</span> base
+  <span class="t-k">for</span> (<span class="t-k">let</span> i = <span class="t-n">2</span>; ; i++) <span class="t-k">if</span> (!taken.has(<span class="t-s">`${base}-${i}`</span>)) <span class="t-k">return</span> <span class="t-s">`${base}-${i}`</span>
+}
+
+<span class="t-c">/** Decision 14: accepting an application or claim auto-creates the talent's single community. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> ensureTalentCommunity(tx: DbOrTx, talentRow: <span class="t-k">typeof</span> schema.talent.$inferSelect) {
+  <span class="t-k">const</span> [existing] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.community).where(eq(schema.community.ownerTalentId, talentRow.id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (existing) <span class="t-k">return</span> existing
+  <span class="t-k">const</span> [created] = <span class="t-k">await</span> tx.insert(schema.community).values({
+    ownerTalentId: talentRow.id,
+    slug: <span class="t-k">await</span> uniqueSlug(tx, schema.community, talentRow.slug),
+    name: talentRow.name,
+    imageUrl: talentRow.imageUrl,
+  }).returning()
+  <span class="t-k">return</span> created!
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> publicUser = (u: Pick&lt;<span class="t-k">typeof</span> schema.user.$inferSelect, <span class="t-s">'id'</span> | <span class="t-s">'username'</span> | <span class="t-s">'displayName'</span> | <span class="t-s">'image'</span>&gt;) =&gt;
+  ({ id: u.id, username: u.username, displayName: u.displayName, avatarUrl: u.image })
+
+<span class="t-k">export</span> <span class="t-k">const</span> adminUserView = (u: DbUser) =&gt; ({
+  id: u.id, email: u.email, username: u.username, displayName: u.displayName, image: u.image,
+  roles: userRoles(u), status: u.status, onboardingStatus: u.onboardingStatus, emailVerified: u.emailVerified,
+  createdAt: u.createdAt.toISOString(),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> adminActionBody = z.object({ reason: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">500</span>), internalNote: z.string().trim().max(<span class="t-n">2000</span>).optional() }).strict()
+
+<span class="t-c">/** ADM-11: suspend logs the user out everywhere. Admins cannot suspend themselves or other admins. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> suspendUser(tx: DbOrTx, actor: DbUser, userId: string, input: { reason: string, internalNote?: string }) {
+  <span class="t-k">const</span> [target] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.user).where(eq(schema.user.id, userId)).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!target) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'User not found.'</span>)
+  <span class="t-k">if</span> (target.id === actor.id || userRoles(target).includes(SUPER_ADMIN)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Admins cannot be suspended.'</span>)
+  <span class="t-k">if</span> (target.status === <span class="t-s">'pending_deletion'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This account is being deleted.'</span>)
+  <span class="t-k">if</span> (target.status === <span class="t-s">'suspended'</span>) <span class="t-k">return</span> target
+  <span class="t-k">const</span> [updated] = <span class="t-k">await</span> tx.update(schema.user).set({ status: <span class="t-s">'suspended'</span> }).where(eq(schema.user.id, userId)).returning()
+  <span class="t-k">await</span> tx.delete(schema.session).where(eq(schema.session.userId, userId))
+  <span class="t-k">await</span> audit(tx, actor.id, <span class="t-s">'user.suspended'</span>, <span class="t-s">'user'</span>, userId, { reason: input.reason, internalNote: input.internalNote ?? <span class="t-k">null</span> })
+  <span class="t-k">return</span> updated!
+}</code></pre></figure>
+<div class="tablewrap"><table>
+<thead><tr><th>Helper</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>Tx</code>, <code>DbOrTx</code></td><td>Types for "a database transaction" and "either the database or a transaction", so a helper can work inside or outside one.</td></tr>
+<tr><td><code>requireAdmin(event)</code></td><td><code>requireUser</code> plus a check for the <code>super_admin</code> role. Non-admins get <code>FORBIDDEN</code>.</td></tr>
+<tr><td><code>audit(tx, actorId, action, …)</code></td><td>Writes one row to the append-only <code>admin_audit</code> table: who did what to what.</td></tr>
+<tr><td><code>notify(tx, userId, type, data)</code></td><td>Adds an in-app notification (chapter 14).</td></tr>
+<tr><td><code>grantRole</code></td><td>Adds a role to the comma-separated list without duplicating it.</td></tr>
+<tr><td><code>slugify</code>, <code>uniqueSlug</code></td><td>Turn "Ada O." into <code>ada-o</code> and find a free variant (<code>ada-o-2</code>…).</td></tr>
+<tr><td><code>ensureTalentCommunity</code></td><td>Creates a Star's one community if it does not exist yet.</td></tr>
+<tr><td><code>publicUser</code></td><td>The safe subset of a user (id, username, display name, avatar) that may be shown to others. No email, no birth date.</td></tr>
+<tr><td><code>suspendUser</code></td><td>Suspends an account and signs it out everywhere (used in chapters 16 and 17).</td></tr>
+</tbody></table></div>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>A <strong>view</strong> function such as <code>publicUser</code> is a deliberate filter between the database row and the outside world. Rows contain private things; views decide what is allowed to leave the building. Almost every <code>…View</code> function in this project exists for that reason.</p>
+</aside>
+
+<h2 id="community-helpers">Community helpers<a class="anchor" href="#community-helpers" aria-label="Link to this section">#</a></h2>
+<p>Create <code>server/utils/community.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/community.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> <span class="t-k">type</span> { H3Event } <span class="t-k">from</span> <span class="t-s">'h3'</span>
+<span class="t-k">import</span> { and, eq, inArray } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-k">type</span> Community = <span class="t-k">typeof</span> schema.community.$inferSelect
+<span class="t-k">type</span> Membership = <span class="t-k">typeof</span> schema.membership.$inferSelect
+
+<span class="t-k">export</span> <span class="t-k">const</span> ORIGINALS_CAP = <span class="t-n">100</span>
+
+<span class="t-c">/** Signed-in viewer if any; never throws. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> optionalUser(event: H3Event) {
+  <span class="t-k">const</span> session = <span class="t-k">await</span> useAuth().api.getSession({ headers: event.headers }).<span class="t-k">catch</span>(() =&gt; <span class="t-k">null</span>)
+  <span class="t-k">if</span> (!session) <span class="t-k">return</span> <span class="t-k">null</span>
+  <span class="t-k">const</span> [u] = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.user).where(eq(schema.user.id, session.user.id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">return</span> u &amp;&amp; u.status === <span class="t-s">'active'</span> ? u : <span class="t-k">null</span>
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> isAdmin = (u: DbUser | <span class="t-k">null</span> | <span class="t-k">undefined</span>) =&gt; !!u &amp;&amp; userRoles(u).includes(SUPER_ADMIN)
+
+<span class="t-k">export</span> <span class="t-k">const</span> membershipView = (m: Membership) =&gt; ({
+  id: m.id, communityId: m.communityId, status: m.status, alertsEnabled: m.alertsEnabled, lane: m.lane,
+  originalPosition: m.status === <span class="t-s">'removed'</span> ? <span class="t-k">null</span> : m.originalPosition,
+  joinedAt: m.joinedAt.toISOString(), leftAt: m.leftAt?.toISOString() ?? <span class="t-k">null</span>,
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> communityCard = (c: Community, viewer: Membership | <span class="t-k">null</span> | <span class="t-k">undefined</span>) =&gt; ({
+  id: c.id, slug: c.slug, name: c.name, imageUrl: c.imageUrl, talentId: c.ownerTalentId, status: c.status,
+  memberCount: c.memberCount, originalsAssigned: c.originalsAssigned, createdAt: c.createdAt.toISOString(),
+  viewerMembership: viewer ? membershipView(viewer) : <span class="t-k">null</span>,
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> communityDetail = (c: Community, viewer: Membership | <span class="t-k">null</span> | <span class="t-k">undefined</span>) =&gt; ({
+  ...communityCard(c, viewer), description: c.description, rules: c.rules, originalsCap: ORIGINALS_CAP,
+})
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> viewerMemberships(userId: string | <span class="t-k">undefined</span>, communityIds: string[]) {
+  <span class="t-k">if</span> (!userId || !communityIds.length) <span class="t-k">return</span> <span class="t-k">new</span> Map&lt;string, Membership&gt;()
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.membership)
+    .where(and(eq(schema.membership.userId, userId), inArray(schema.membership.communityId, communityIds)))
+  <span class="t-k">return</span> <span class="t-k">new</span> Map(rows.map(r =&gt; [r.communityId, r]))
+}
+
+<span class="t-c">/** Vetoed communities are 404 for everyone except admins. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> loadVisibleCommunity(id: string, viewer: DbUser | <span class="t-k">null</span>, tx: DbOrTx = useDb(), lock = <span class="t-k">false</span>) {
+  <span class="t-k">const</span> q = tx.select().<span class="t-k">from</span>(schema.community).where(eq(schema.community.id, id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">const</span> [c] = lock ? <span class="t-k">await</span> q.<span class="t-k">for</span>(<span class="t-s">'update'</span>) : <span class="t-k">await</span> q
+  <span class="t-k">if</span> (!c || (c.status === <span class="t-s">'vetoed'</span> &amp;&amp; !isAdmin(viewer))) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Community not found.'</span>)
+  <span class="t-k">return</span> c
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> isCommunityOwner(c: Community, userId: string, tx: DbOrTx = useDb()) {
+  <span class="t-k">if</span> (!c.ownerTalentId) <span class="t-k">return</span> <span class="t-k">false</span>
+  <span class="t-k">const</span> [t] = <span class="t-k">await</span> tx.select({ userId: schema.talent.userId }).<span class="t-k">from</span>(schema.talent).where(eq(schema.talent.id, c.ownerTalentId)).limit(<span class="t-n">1</span>)
+  <span class="t-k">return</span> t?.userId === userId
+}</code></pre></figure>
+<ul>
+  <li><code>optionalUser(event)</code>: for pages anyone can see, but which look different when signed in. It returns the user or <code>null</code> and never throws.</li>
+  <li><code>isAdmin</code>, <code>isCommunityOwner</code>: the two "who is staff here?" checks.</li>
+  <li><code>loadVisibleCommunity(id, viewer, tx, lock)</code>: loads a community, or throws <code>NOT_FOUND</code>. A <strong>vetoed</strong> community (hidden by an admin) looks non-existent to everyone except admins. With <code>lock = true</code> it adds <code>FOR UPDATE</code>, explained below.</li>
+  <li><code>communityCard</code>, <code>communityDetail</code>, <code>membershipView</code>: the shapes returned to callers. Notice <code>originalPosition</code> is hidden (null) for a removed member.</li>
+  <li><code>ORIGINALS_CAP = 100</code>: the one place the number lives.</li>
+</ul>
+
+<h2 id="reading-communities">Reading communities<a class="anchor" href="#reading-communities" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/communities/index.get.ts</code> lists communities, searchable and sortable:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, desc, eq, ilike, inArray, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// COM-01. "popular" = most members (decision 20.7). Cursors are scoped to their sort.</span>
+<span class="t-k">const</span> query = z.object({
+  q: z.string().trim().max(<span class="t-n">60</span>).optional(),
+  talentId: z.uuid().optional(),
+  categoryId: z.uuid().optional(),
+  sort: z.enum([<span class="t-s">'popular'</span>, <span class="t-s">'newest'</span>, <span class="t-s">'name'</span>]).<span class="t-k">default</span>(<span class="t-s">'popular'</span>),
+  ...pageQuery,
+})
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> { q, talentId, categoryId, sort, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> scope = <span class="t-s">`com-${sort}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ v: string | number, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> c = schema.community
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">let</span> talentIds: string[] | <span class="t-k">undefined</span>
+  <span class="t-k">if</span> (categoryId) {
+    talentIds = (<span class="t-k">await</span> db.select({ id: schema.talent.id }).<span class="t-k">from</span>(schema.talent).where(eq(schema.talent.categoryId, categoryId))).map(r =&gt; r.id)
+    <span class="t-k">if</span> (!talentIds.length) <span class="t-k">return</span> { items: [], nextCursor: <span class="t-k">null</span> }
+  }
+  <span class="t-k">const</span> keyset = !cur ? <span class="t-k">undefined</span>
+    : sort === <span class="t-s">'popular'</span> ? sql<span class="t-s">`(${c.memberCount}, ${c.id}) &lt; (${Number(cur.v)}, ${cur.id}::uuid)`</span>
+      : sort === <span class="t-s">'newest'</span> ? sql<span class="t-s">`(${c.createdAt}, ${c.id}) &lt; (${String(cur.v)}::timestamptz, ${cur.id}::uuid)`</span>
+        : sql<span class="t-s">`(${c.name}, ${c.id}) &gt; (${String(cur.v)}, ${cur.id}::uuid)`</span>
+  <span class="t-k">const</span> order = sort === <span class="t-s">'popular'</span> ? [desc(c.memberCount), desc(c.id)] : sort === <span class="t-s">'newest'</span> ? [desc(c.createdAt), desc(c.id)] : [asc(c.name), asc(c.id)]
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(c).where(and(
+    eq(c.status, <span class="t-s">'active'</span>),
+    q ? ilike(c.name, <span class="t-s">`%${q.replace(/[%_\\]/g, '\\$&amp;')}%`</span>) : <span class="t-k">undefined</span>,
+    talentId ? eq(c.ownerTalentId, talentId) : <span class="t-k">undefined</span>,
+    talentIds ? inArray(c.ownerTalentId, talentIds) : <span class="t-k">undefined</span>,
+    keyset,
+  )).orderBy(...order).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">const</span> mine = <span class="t-k">await</span> viewerMemberships(viewer?.id, rows.map(r =&gt; r.id))
+  <span class="t-k">return</span> toPage(rows, limit, scope,
+    r =&gt; ({ v: sort === <span class="t-s">'popular'</span> ? r.memberCount : sort === <span class="t-s">'newest'</span> ? r.createdAt.toISOString() : r.name, id: r.id }),
+    r =&gt; communityCard(r, mine.get(r.id)))
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>This file shows keyset pagination (chapter 7) for three different sorts. For "popular" the cursor holds <code>(memberCount, id)</code> and the filter is the SQL row comparison <code>(member_count, id) &lt; (a, b)</code>. The <code>scope</code> string includes the sort name, so a popular-cursor cannot be used on the newest list. Note <code>limit + 1</code> from chapter 7 and <code>toPage</code> at the end.</p>
+</aside>
+<p><code>server/api/communities/[id]/index.get.ts</code> is a good example of a tiny public endpoint:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/[id]/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// COM-02</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> c = <span class="t-k">await</span> loadVisibleCommunity(id, viewer)
+  <span class="t-k">const</span> mine = <span class="t-k">await</span> viewerMemberships(viewer?.id, [c.id])
+  <span class="t-k">return</span> communityDetail(c, mine.get(c.id))
+})</code></pre></figure>
+<p><code>server/api/communities/[id]/index.patch.ts</code> lets the Star (or an admin) edit name, description and rules:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/[id]/index.patch.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// COM-10: owner or admin; status is not writable here (veto is ADM-09).</span>
+<span class="t-k">const</span> body = z.object({
+  name: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">80</span>).optional(),
+  description: z.string().trim().max(<span class="t-n">2000</span>).nullable().optional(),
+  rules: z.string().trim().max(<span class="t-n">4000</span>).nullable().optional(),
+  imageMediaId: z.string().optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { imageMediaId, ...input } = <span class="t-k">await</span> readJsonBody(event, body)
+  rejectMediaIds(imageMediaId)
+  <span class="t-k">const</span> c = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(id, u, tx, <span class="t-k">true</span>)
+    <span class="t-k">const</span> owner = <span class="t-k">await</span> isCommunityOwner(comm, u.id, tx)
+    <span class="t-k">if</span> (!owner &amp;&amp; !isAdmin(u)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the community\'s talent can edit it.'</span>)
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.update(schema.community).set(input).where(eq(schema.community.id, id)).returning()
+    <span class="t-k">if</span> (!owner) <span class="t-k">await</span> audit(tx, u.id, <span class="t-s">'community.updated'</span>, <span class="t-s">'community'</span>, id, input)
+    <span class="t-k">return</span> row!
+  })
+  <span class="t-k">return</span> communityDetail(c, <span class="t-k">null</span>)
+})</code></pre></figure>
+<ul>
+  <li>The Zod shape has no <code>status</code> field on purpose, so this endpoint cannot hide a community. That is a separate admin action (chapter 17).</li>
+  <li><code>imageMediaId</code> is accepted but rejected with <code>FEATURE_DISABLED</code> through <code>rejectMediaIds</code> (a helper from chapter 10), because uploads are not built yet.</li>
+  <li>When an admin (not the owner) edits, the change is recorded with <code>audit</code>.</li>
+</ul>
+
+<h2 id="joining-the-hard-part">Joining: the hard part<a class="anchor" href="#joining-the-hard-part" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Picture a signing-up desk giving out numbered badges 1 to 100. If two assistants each look at the list, both see "next number: 57", and both hand out 57, you have a problem. The fix is to let only <em>one</em> assistant work at the desk at a time. In the database that is a <strong>row lock</strong>.</p>
+</aside>
+<p>Create <code>server/api/communities/[id]/join.post.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/[id]/join.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// COM-03. The community row lock serialises joins, so at most 100 Originals positions are ever</span>
+<span class="t-c">// handed out; positions are permanent and never reassigned (decision 6).</span>
+<span class="t-k">const</span> body = z.object({
+  lane: z.enum([<span class="t-s">'rider'</span>, <span class="t-s">'fandom_builder'</span>, <span class="t-s">'builder'</span>, <span class="t-s">'analyst'</span>, <span class="t-s">'creator'</span>, <span class="t-s">'mutual'</span>]),
+  alertsEnabled: z.boolean().optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event, { onboarded: <span class="t-k">true</span> })
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'community-join'</span>, u.id, <span class="t-n">60</span>, <span class="t-n">3600</span>)
+  <span class="t-k">const</span> { lane, alertsEnabled } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> c = schema.community
+  <span class="t-k">const</span> result = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(id, <span class="t-k">null</span>, tx, <span class="t-k">true</span>)
+    <span class="t-k">const</span> [existing] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(m).where(and(eq(m.userId, u.id), eq(m.communityId, id))).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (existing?.status === <span class="t-s">'active'</span>) <span class="t-k">return</span> { created: <span class="t-k">false</span>, row: existing }
+    <span class="t-c">// DEC-03: a second removal is a permanent ban; a first removal blocks rejoin only while</span>
+    <span class="t-c">// blockedUntil is still in the future (the exact boundary instant counts as elapsed).</span>
+    <span class="t-k">if</span> (existing?.status === <span class="t-s">'removed'</span>) {
+      <span class="t-k">const</span> stillBlocked = existing.removalCount &gt;= <span class="t-n">2</span> || (!!existing.blockedUntil &amp;&amp; existing.blockedUntil &gt; <span class="t-k">new</span> Date())
+      <span class="t-k">if</span> (stillBlocked) {
+        <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'You were removed from this community.'</span>, { reason: <span class="t-s">'removed'</span>, blockedUntil: existing.blockedUntil?.toISOString() ?? <span class="t-k">null</span> })
+      }
+    }
+    <span class="t-k">if</span> (existing) {
+      <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.update(m).set({ status: <span class="t-s">'active'</span>, leftAt: <span class="t-k">null</span>, lane, ...(alertsEnabled === <span class="t-k">undefined</span> ? {} : { alertsEnabled }) })
+        .where(eq(m.id, existing.id)).returning()
+      <span class="t-k">await</span> tx.update(c).set({ memberCount: sql<span class="t-s">`${c.memberCount} + 1`</span> }).where(eq(c.id, id))
+      <span class="t-k">return</span> { created: <span class="t-k">false</span>, row: row! }
+    }
+    <span class="t-k">const</span> position = comm.originalsAssigned &lt; ORIGINALS_CAP ? comm.originalsAssigned + <span class="t-n">1</span> : <span class="t-k">null</span>
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.insert(m).values({ userId: u.id, communityId: id, lane, alertsEnabled: alertsEnabled ?? <span class="t-k">true</span>, originalPosition: position }).onConflictDoNothing().returning()
+    <span class="t-k">if</span> (!row) <span class="t-k">return</span> { created: <span class="t-k">false</span>, row: (<span class="t-k">await</span> tx.select().<span class="t-k">from</span>(m).where(and(eq(m.userId, u.id), eq(m.communityId, id))).limit(<span class="t-n">1</span>))[<span class="t-n">0</span>]! }
+    <span class="t-c">// Count only successful inserts; the community lock still protects position allocation.</span>
+    <span class="t-k">await</span> tx.update(c).set({ memberCount: sql<span class="t-s">`${c.memberCount} + 1`</span>, ...(position ? { originalsAssigned: position } : {}) }).where(eq(c.id, id))
+    <span class="t-k">return</span> { created: <span class="t-k">true</span>, row }
+  })
+  setResponseStatus(event, result.created ? <span class="t-n">201</span> : <span class="t-n">200</span>)
+  <span class="t-k">return</span> membershipView(result.row)
+})</code></pre></figure>
+<p>Read it in this order:</p>
+<ol class="flow">
+  <li><strong>Guards.</strong> <code>requireUser(event, { onboarded: true })</code> (finish onboarding first), the ID, a rate limit (60 per hour), and a Zod body. A <code>lane</code> is <strong>required</strong>, one of six codes.</li>
+  <li><strong>Open a transaction</strong> and lock the community row with <code>loadVisibleCommunity(id, null, tx, true)</code>. Anyone else joining the same community waits here until this transaction finishes.</li>
+  <li><strong>Already an active member?</strong> Return the existing membership (status 200). Joining twice is harmless.</li>
+  <li><strong>Previously removed?</strong> The first removal blocks rejoining for 30 days (<code>blockedUntil</code>); a second removal is permanent. Either returns <code>FORBIDDEN</code>.</li>
+  <li><strong>Previously left?</strong> Reactivate the same row with the newly chosen lane. Their Originals number stays retired.</li>
+  <li><strong>Brand new?</strong> If fewer than 100 numbers have been handed out, take the next one (<code>originalsAssigned + 1</code>); otherwise <code>originalPosition</code> is <code>null</code> (a normal member). Insert the membership and bump the counters.</li>
+  <li><strong>Respond</strong> with 201 if a new row was created, 200 otherwise.</li>
+</ol>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<ul>
+<li><code>.for('update')</code> is SQL's <code>SELECT … FOR UPDATE</code>. Because the community row is locked, the "read counter, then write counter + 1" sequence cannot interleave with another join. There is also a database-level safety net: <code>unique(communityId, originalPosition)</code> in the schema.</li>
+<li><code>onConflictDoNothing()</code> plus the fallback <code>select</code> handles the duplicate-sign-up race without crashing.</li>
+<li><code>originalsAssigned</code> is a counter that only increases. When a member leaves, <code>originalPosition</code> is set to null but the counter does not go down, so numbers are <strong>never reused</strong>.</li>
+<li><code>sql`${c.memberCount} + 1`</code> makes the database do the addition, so two updates cannot overwrite each other with stale numbers.</li>
+</ul>
+</aside>
+
+<h2 id="leaving-listing-members-the-originals-wall">Leaving, listing members, the Originals wall<a class="anchor" href="#leaving-listing-members-the-originals-wall" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/communities/[id]/leave.post.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/[id]/leave.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// COM-04. DEC-04: leaving retires the Originals number — the column is nulled and the slot stays</span>
+<span class="t-c">// consumed in originalsAssigned; lane is cleared too. All in the same transaction as the status flip.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> c = schema.community
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(id, <span class="t-k">null</span>, tx, <span class="t-k">true</span>)
+    <span class="t-k">const</span> [existing] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(m).where(and(eq(m.userId, u.id), eq(m.communityId, id))).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!existing) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'You are not a member of this community.'</span>)
+    <span class="t-k">if</span> (existing.status !== <span class="t-s">'active'</span>) <span class="t-k">return</span> existing
+    <span class="t-k">if</span> (<span class="t-k">await</span> isCommunityOwner(comm, u.id, tx)) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'You cannot leave your own community.'</span>)
+    <span class="t-k">const</span> [updated] = <span class="t-k">await</span> tx.update(m).set({ status: <span class="t-s">'left'</span>, leftAt: <span class="t-k">new</span> Date(), originalPosition: <span class="t-k">null</span>, lane: <span class="t-k">null</span> }).where(eq(m.id, existing.id)).returning()
+    <span class="t-k">await</span> tx.update(c).set({ memberCount: sql<span class="t-s">`greatest(${c.memberCount} - 1, 0)`</span> }).where(eq(c.id, id))
+    <span class="t-k">return</span> updated!
+  })
+  <span class="t-k">return</span> membershipView(row)
+})</code></pre></figure>
+<ul>
+  <li>The Star cannot leave their own community (<code>INVALID_STATE</code>).</li>
+  <li>Leaving clears the lane and the Originals number in the same transaction as the status change. The counter <code>memberCount</code> goes down with <code>greatest(x - 1, 0)</code> so it can never go negative.</li>
+</ul>
+<p><code>server/api/communities/[id]/members.get.ts</code> (only members, the Star and admins may see the list):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/[id]/members.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, eq, isNotNull, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// COM-07: active members, the owner and admins only. Never exposes email or date of birth.</span>
+<span class="t-k">const</span> query = z.object({ originalsOnly: z.enum([<span class="t-s">'true'</span>, <span class="t-s">'false'</span>]).optional(), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { originalsOnly, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(id, u)
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">if</span> (!isAdmin(u) &amp;&amp; !(<span class="t-k">await</span> isCommunityOwner(comm, u.id))) {
+    <span class="t-k">const</span> [mine] = <span class="t-k">await</span> db.select({ status: m.status }).<span class="t-k">from</span>(m).where(and(eq(m.userId, u.id), eq(m.communityId, id))).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (mine?.status !== <span class="t-s">'active'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Join this community to see its members.'</span>, { reason: <span class="t-s">'not_member'</span> })
+  }
+  <span class="t-k">const</span> scope = <span class="t-s">`com-members-${id}-${originalsOnly ?? 'false'}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> db.select({ m, user: schema.user }).<span class="t-k">from</span>(m).innerJoin(schema.user, eq(schema.user.id, m.userId)).where(and(
+    eq(m.communityId, id), eq(m.status, <span class="t-s">'active'</span>), eq(schema.user.status, <span class="t-s">'active'</span>),
+    originalsOnly === <span class="t-s">'true'</span> ? isNotNull(m.originalPosition) : <span class="t-k">undefined</span>,
+    cur ? sql<span class="t-s">`(${m.joinedAt}, ${m.id}) &gt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>,
+  )).orderBy(asc(m.joinedAt), asc(m.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ t: r.m.joinedAt.toISOString(), id: r.m.id }),
+    r =&gt; ({ user: publicUser(r.user), joinedAt: r.m.joinedAt.toISOString(), lane: r.m.lane, originalPosition: r.m.originalPosition }))
+})</code></pre></figure>
+<p><code>server/api/communities/[id]/originals.get.ts</code> is the public "wall" of the first 100; removed or deleted people appear as a retired slot with no user:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/[id]/originals.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, eq, gt, isNotNull } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// COM-08: public Originals wall. Removed or deleted users appear as retired slots.</span>
+<span class="t-k">const</span> query = z.object(pageQuery)
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { limit, cursor } = readQuery(event, query)
+  <span class="t-k">await</span> loadVisibleCommunity(id, <span class="t-k">await</span> optionalUser(event))
+  <span class="t-k">const</span> scope = <span class="t-s">`com-originals-${id}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ p: number }&gt;(cursor, scope)
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ m, user: schema.user }).<span class="t-k">from</span>(m).innerJoin(schema.user, eq(schema.user.id, m.userId)).where(and(
+    eq(m.communityId, id), isNotNull(m.originalPosition), cur ? gt(m.originalPosition, cur.p) : <span class="t-k">undefined</span>,
+  )).orderBy(asc(m.originalPosition)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ p: r.m.originalPosition }), (r) =&gt; {
+    <span class="t-k">const</span> retired = r.m.status === <span class="t-s">'removed'</span> || r.user.status !== <span class="t-s">'active'</span>
+    <span class="t-k">return</span> { position: r.m.originalPosition!, user: retired ? <span class="t-k">null</span> : publicUser(r.user), retired, assignedAt: r.m.joinedAt.toISOString() }
+  })
+})</code></pre></figure>
+
+<h2 id="my-memberships">My memberships<a class="anchor" href="#my-memberships" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/me/memberships.get.ts</code> lists the communities I joined (or left):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/me/memberships.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// COM-05</span>
+<span class="t-k">const</span> query = z.object({ status: z.enum([<span class="t-s">'active'</span>, <span class="t-s">'left'</span>]).<span class="t-k">default</span>(<span class="t-s">'active'</span>), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { status, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> scope = <span class="t-s">`me-memberships-${status}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ m, c: schema.community }).<span class="t-k">from</span>(m).innerJoin(schema.community, eq(schema.community.id, m.communityId)).where(and(
+    eq(m.userId, u.id), eq(m.status, status), eq(schema.community.status, <span class="t-s">'active'</span>),
+    cur ? sql<span class="t-s">`(${m.joinedAt}, ${m.id}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>,
+  )).orderBy(desc(m.joinedAt), desc(m.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ t: r.m.joinedAt.toISOString(), id: r.m.id }),
+    r =&gt; ({ ...membershipView(r.m), community: communityCard(r.c, r.m) }))
+})</code></pre></figure>
+<p><code>server/api/memberships/[id].patch.ts</code> turns alerts on or off for one membership:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/memberships/[id].patch.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// COM-06. `lane` will be added here once lanes are defined (additive change).</span>
+<span class="t-k">const</span> body = z.object({ alertsEnabled: z.boolean() }).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'membership-update'</span>, u.id, <span class="t-n">60</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> { alertsEnabled } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(m).where(and(eq(m.id, id), eq(m.userId, u.id))).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!row) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Membership not found.'</span>)
+  <span class="t-k">if</span> (row.status !== <span class="t-s">'active'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This membership is not active.'</span>)
+  <span class="t-k">const</span> [updated] = <span class="t-k">await</span> db.update(m).set({ alertsEnabled }).where(eq(m.id, id)).returning()
+  <span class="t-k">return</span> membershipView(updated!)
+})</code></pre></figure>
+<ul>
+  <li>The lookup is <code>where id = … AND user_id = me</code>, so someone else's membership simply "does not exist" for you. Always scope data by the caller's own ID when it is theirs.</li>
+</ul>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Communities are normally created when an admin approves a Star (chapter 17). To test now, create one by hand for the seeded Star Ada:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>docker exec clautverse-pg psql -U postgres -d clautverse -c <span class="t-s">"insert into community (owner_talent_id, slug, name) select id, slug, name from talent where slug = 'ada'"</span>
+curl http://localhost:<span class="t-n">3000</span>/api/communities</code></pre></figure>
+<p>Copy the community <code>id</code>, then join as the onboarded fan from chapter 10:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/communities/COMMUNITY_ID/join \
+  -H <span class="t-s">'Content-Type: application/json'</span> -d <span class="t-s">'{"lane":"rider"}'</span></code></pre></figure>
+<p>Expect status 201 and <code>"originalPosition":1</code>. Repeat the same call: status 200, same membership. Open <code>/api/communities/COMMUNITY_ID/originals</code> to see slot 1. Call <code>/leave</code>, then join again with another lane: <code>originalPosition</code> is now <code>null</code> because number 1 is retired for good. Commit: <code>git add -A && git commit -m "Communities, joining and Originals"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="10-catalog.html"><small>Previous</small>Categories, Stars and onboarding</a><a class="next" href="12-drops.html"><small>Next</small>Drops, replies, likes and the feed</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#the-shared-toolbox-admin-ts">The shared toolbox: <code>admin.ts</code></a></li><li><a href="#community-helpers">Community helpers</a></li><li><a href="#reading-communities">Reading communities</a></li><li><a href="#joining-the-hard-part">Joining: the hard part</a></li><li><a href="#leaving-listing-members-the-originals-wall">Leaving, listing members, the Originals wall</a></li><li><a href="#my-memberships">My memberships</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

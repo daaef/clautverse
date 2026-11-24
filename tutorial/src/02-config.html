@@ -1,0 +1,118 @@
+<!--@meta
+part: Part 1 · Set up
+title: Packages, settings and secrets
+summary: Add the libraries, tell Nuxt about our settings, and keep passwords out of the code.
+-->
+<p class="lead">The starter is empty. Now we add the libraries Clautverse uses and set up the configuration files. Nothing visible changes yet; this is the groundwork.</p>
+
+<h2>Install the libraries</h2>
+<plain>
+<p>A <strong>package</strong> is code someone else wrote and shared. Instead of writing our own login system or database layer we install tested ones. <code>pnpm add</code> downloads a package and records it in <code>package.json</code>.</p>
+</plain>
+<p>Run these two commands inside the <code>clautverse</code> folder. The versions are the ones this guide was written with. Using the same ones avoids surprises.</p>
+<!--@code bash | terminal: libraries the app uses-->
+pnpm add better-auth@<!--@pkg better-auth--> drizzle-orm@<!--@pkg drizzle-orm--> postgres@<!--@pkg postgres--> yaml@<!--@pkg yaml--> zod@<!--@pkg zod-->
+<!--@/code-->
+<!--@code bash | terminal: tools used only while developing-->
+pnpm add -D drizzle-kit@<!--@pkg drizzle-kit--> @nuxt/test-utils@<!--@pkg @nuxt/test-utils--> @types/node@<!--@pkg @types/node--> typescript@<!--@pkg typescript--> vitest@<!--@pkg vitest--> vue-tsc@<!--@pkg vue-tsc-->
+<!--@/code-->
+<div class="tablewrap"><table>
+<thead><tr><th>Package</th><th>What we use it for</th><th>Chapter</th></tr></thead>
+<tbody>
+<tr><td><code>better-auth</code></td><td>Accounts, sign-in, sessions, email verification</td><td>8</td></tr>
+<tr><td><code>drizzle-orm</code></td><td>Describe tables and run queries in TypeScript</td><td>4, 5</td></tr>
+<tr><td><code>postgres</code></td><td>The driver: the actual connection to PostgreSQL</td><td>5</td></tr>
+<tr><td><code>zod</code></td><td>Checking the shape of incoming data</td><td>7</td></tr>
+<tr><td><code>yaml</code></td><td>Reads the API contract file for the Explorer</td><td>18</td></tr>
+<tr><td><code>drizzle-kit</code> (dev)</td><td>Turns table definitions into migration files</td><td>4, 5</td></tr>
+<tr><td><code>vitest</code>, <code>@nuxt/test-utils</code> (dev)</td><td>Run the automated tests, including starting the app for end-to-end tests</td><td>20</td></tr>
+<tr><td><code>typescript</code>, <code>vue-tsc</code>, <code>@types/node</code> (dev)</td><td>Type checking for the server and the Vue page</td><td>21</td></tr>
+</tbody></table></div>
+<tech>
+<p><code>dependencies</code> are needed when the app runs; <code>devDependencies</code> only while building and testing. <code>postgres</code> is pinned to an exact version (no <code>^</code>); the others allow compatible updates.</p>
+</tech>
+
+<h2>Add the scripts</h2>
+<p>Open <code>package.json</code>. The starter already has <code>dev</code>, <code>build</code>, <code>generate</code>, <code>preview</code> and <code>postinstall</code>. Add the rest so the <code>scripts</code> section matches this, and add the <code>engines</code> block at the bottom:</p>
+<!--@block package.json '"scripts"' | scripts-->
+<!--@block package.json '"engines"' | engines-->
+<ul>
+  <li><code>typecheck</code>: ask TypeScript to find mistakes without running anything.</li>
+  <li><code>db:generate</code>, <code>db:migrate</code>, <code>db:seed</code>: the three database commands you will use in chapter 5.</li>
+  <li><code>test</code>, <code>test:unit</code>, <code>test:e2e</code>: run all tests, only the fast ones, or only the full-app ones (chapter 20).</li>
+</ul>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p><code>"type": "module"</code> in <code>package.json</code> makes every <code>.js</code> file use modern <code>import</code> syntax. The <code>postinstall</code> script runs <code>nuxt prepare</code> after every install to generate the hidden <code>.nuxt</code> type files.</p></aside>
+
+<h2>Tell pnpm which install scripts it may run</h2>
+<p>Create <code>pnpm-workspace.yaml</code> in the project root:</p>
+<!--@file pnpm-workspace.yaml-->
+<plain>
+<p>Some packages run a small setup program when installed. That is a security risk if you do not trust the package, so pnpm blocks them until you say yes. This file says yes to <code>esbuild</code> (a tool Nuxt needs) and no to <code>better-sqlite3</code>. The last line is an empty exception list for another pnpm safety setting, which delays brand-new package releases. If pnpm ever asks you which build scripts to allow, allow <code>esbuild</code>.</p>
+</plain>
+
+<h2>Nuxt settings</h2>
+<p>Replace <code>nuxt.config.ts</code> with this <strong>starter version</strong>. It adds a block of settings called <code>runtimeConfig</code>. (The finished file has three more lines that we add in chapters 6 and 19, once the files they point to exist.)</p>
+<!--@code ts | nuxt.config.ts (starter version)-->
+// https://nuxt.com/docs/api/configuration/nuxt-config
+export default defineNuxtConfig({
+  compatibilityDate: '2025-07-15',
+  devtools: { enabled: true },
+  runtimeConfig: {
+    databaseUrl: '',
+    betterAuthSecret: '',
+    betterAuthUrl: 'http://localhost:3000',
+    mailtrapApiToken: '',
+    mailtrapInboxId: '',
+    emailFrom: 'Clautverse <no-reply@clautverse.local>',
+    cursorSecret: '',
+    appVersion: 'dev',
+    authRateLimitEnabled: true,
+    cronSecret: '',
+  },
+})
+<!--@/code-->
+<plain>
+<p><code>runtimeConfig</code> is a list of settings the server may read. Empty ones (<code>''</code>) are placeholders for secrets that must be provided from outside, so they never appear in the code.</p>
+</plain>
+<tech>
+<p>Nuxt fills each key from an environment variable named <code>NUXT_</code> plus the key in UPPER_SNAKE_CASE. So <code>databaseUrl</code> is set by <code>NUXT_DATABASE_URL</code> and <code>betterAuthSecret</code> by <code>NUXT_BETTER_AUTH_SECRET</code>. In server code you read them with <code>useRuntimeConfig()</code>. Keys not under <code>public</code> never reach the browser.</p>
+</tech>
+<div class="tablewrap"><table>
+<thead><tr><th>Setting</th><th>Environment variable</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>databaseUrl</code></td><td><code>NUXT_DATABASE_URL</code></td><td>Address and login for PostgreSQL</td></tr>
+<tr><td><code>betterAuthSecret</code></td><td><code>NUXT_BETTER_AUTH_SECRET</code></td><td>A long random string the auth library uses to protect its data</td></tr>
+<tr><td><code>betterAuthUrl</code></td><td><code>NUXT_BETTER_AUTH_URL</code></td><td>The public address of this app (default <code>http://localhost:3000</code>)</td></tr>
+<tr><td><code>mailtrapApiToken</code>, <code>mailtrapInboxId</code></td><td><code>NUXT_MAILTRAP_API_TOKEN</code>, <code>NUXT_MAILTRAP_INBOX_ID</code></td><td>Optional. If the token is empty, emails are printed in the terminal instead of sent</td></tr>
+<tr><td><code>emailFrom</code></td><td><code>NUXT_EMAIL_FROM</code></td><td>The "from" name and address on emails</td></tr>
+<tr><td><code>cursorSecret</code></td><td><code>NUXT_CURSOR_SECRET</code></td><td>Signs the "next page" tokens so nobody can forge them (chapter 7)</td></tr>
+<tr><td><code>appVersion</code></td><td><code>NUXT_APP_VERSION</code></td><td>Shown by the health check</td></tr>
+<tr><td><code>authRateLimitEnabled</code></td><td><code>NUXT_AUTH_RATE_LIMIT_ENABLED</code></td><td>Switch for the login rate limit; the tests turn it off</td></tr>
+<tr><td><code>cronSecret</code></td><td><code>NUXT_CRON_SECRET</code></td><td>Password for the internal background-job routes (chapter 14)</td></tr>
+</tbody></table></div>
+
+<h2>Secrets: the <code>.env</code> file</h2>
+<p>Create <code>.env.example</code> (a template that is safe to save in git) with these contents:</p>
+<!--@file .env.example-->
+<p>Now make your real, private copy and fill in the two secrets:</p>
+<!--@code bash | terminal-->
+cp .env.example .env
+openssl rand -base64 32
+openssl rand -base64 32
+<!--@/code-->
+<p>Each <code>openssl</code> line prints a random string. Paste one after <code>NUXT_BETTER_AUTH_SECRET=</code> and the other after <code>NUXT_CURSOR_SECRET=</code>. For <code>NUXT_CRON_SECRET</code> you can paste a third. On Windows without <code>openssl</code>, any long random string works (a password manager can make one).</p>
+<warn>
+<p><strong>Never save <code>.env</code> in git.</strong> It holds secrets. The next file prevents that. If you ever commit a real secret by accident, treat it as leaked and replace it.</p>
+</warn>
+
+<h2>What git should ignore</h2>
+<p>Good news: the starter's <code>.gitignore</code> is already exactly what this project uses (we compared them). It ignores your private <code>.env</code> files but keeps <code>.env.example</code>. Open it and check it matches:</p>
+<!--@file .gitignore-->
+
+<h2>The TypeScript file stays as it is</h2>
+<p>The project's <code>tsconfig.json</code> is identical to the starter's: it just points at four files Nuxt generates. Leave it alone.</p>
+
+<check>
+<p>Run <code>pnpm dev</code> again. The Nuxt welcome page still loads and the terminal shows no errors. Then run <code>git status</code>: <code>.env</code> must <strong>not</strong> be listed. Commit your work: <code>git add -A && git commit -m "Add libraries, scripts and config"</code>.</p>
+</check>

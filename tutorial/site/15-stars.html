@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Becoming a Star · Build Clautverse</title>
+<meta name="description" content="How a fan applies to be a Star, what a Star sees on their dashboard, and the (soon to be removed) identity claims.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="15-stars">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars" aria-current="page">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 5 · Stars, safety and admin</p><h1>Becoming a Star</h1><p class="meta">About 3 min read</p><p class="lead">Communities exist because Stars exist. A fan applies; an admin reviews (chapter 17); an accepted Star gets the <code>talent</code> role, a profile and their own community. This chapter builds the applicant's and the Star's side.</p>
+
+<h2 id="helpers-created-in-chapter-10">Helpers (created in chapter 10)<a class="anchor" href="#helpers-created-in-chapter-10" aria-label="Link to this section">#</a></h2>
+<p>You created <code>server/utils/talent-applications.ts</code> in chapter 10. Here is what its parts are for (the code is on that chapter's page and in the <a href="ref-helpers.html#f-server-utils-talent-applications-ts"><code>reference</code></a>):</p>
+<ul>
+  <li><code>httpsLink</code>: a labelled link that must start with <code>https</code>. Links are only accepted as <code>https</code> so nobody can store a <code>javascript:</code> address that would run code when clicked.</li>
+  <li><code>rejectMediaIds</code>: file uploads are not built yet, so any attempt to send an uploaded-file ID answers <code>FEATURE_DISABLED</code> with a friendly message. This is a deliberate placeholder.</li>
+  <li><code>applicationView</code> vs <code>adminApplicationView</code>: the applicant never sees the admin's <code>internalNote</code> or who decided. The admin view adds them. Same data, two audiences.</li>
+  <li><code>REAPPLY_DAYS = 7</code>: after a decline, <code>reapplyAfter</code> tells the applicant when they may try again.</li>
+  <li><code>decisionBody</code>: the Zod shape for accept/decline (chapter 17).</li>
+  <li>The <code>claimView</code> functions belong to identity claims, below.</li>
+</ul>
+<p><code>server/utils/talentProfile.ts</code>, also from chapter 10, holds <code>talentView</code> (a Star's full profile) and <code>talentCard</code> (the short version used by discover).</p>
+
+<h2 id="applying">Applying<a class="anchor" href="#applying" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/talent-applications/index.post.ts</code> submits an application:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talent-applications/index.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// TAL-01</span>
+<span class="t-k">const</span> body = z.object({
+  categoryId: z.uuid(),
+  displayName: z.string().trim().min(<span class="t-n">2</span>).max(<span class="t-n">60</span>),
+  bio: z.string().trim().max(<span class="t-n">1000</span>).<span class="t-k">default</span>(<span class="t-s">''</span>),
+  links: z.array(httpsLink).max(<span class="t-n">5</span>).<span class="t-k">default</span>([]),
+  imageMediaId: z.string().optional(),
+  evidenceMediaIds: z.array(z.string()).max(<span class="t-n">5</span>).optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">if</span> (userRoles(u).includes(<span class="t-s">'talent'</span>)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'You are already a talent.'</span>)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'talent-application'</span>, u.id, <span class="t-n">5</span>, <span class="t-n">3600</span>)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  rejectMediaIds(input.evidenceMediaIds)
+  rejectMediaIds(input.imageMediaId)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> [cat] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.category).where(eq(schema.category.id, input.categoryId)).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!cat?.active) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Choose an active category.'</span>, { fields: { categoryId: cat ? <span class="t-s">'inactive'</span> : <span class="t-s">'not_found'</span> } })
+  <span class="t-k">const</span> [latest] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.talentApplication).where(eq(schema.talentApplication.userId, u.id))
+    .orderBy(desc(schema.talentApplication.submittedAt)).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (latest?.status === <span class="t-s">'pending'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'CONFLICT'</span>, <span class="t-s">'You already have a pending application.'</span>, { existingId: latest.id })
+  <span class="t-k">const</span> reapplyAfter = latest?.status === <span class="t-s">'declined'</span> ? applicationView(latest).reapplyAfter : <span class="t-k">null</span>
+  <span class="t-k">if</span> (reapplyAfter &amp;&amp; <span class="t-k">new</span> Date(reapplyAfter) &gt; <span class="t-k">new</span> Date()) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'You can apply again later.'</span>, { reapplyAfter })
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> db.insert(schema.talentApplication)
+    .values({ userId: u.id, categoryId: input.categoryId, displayName: input.displayName, bio: input.bio, links: input.links })
+    .onConflictDoNothing().returning()
+  <span class="t-k">if</span> (!row) {
+    <span class="t-k">const</span> [p] = <span class="t-k">await</span> db.select({ id: schema.talentApplication.id }).<span class="t-k">from</span>(schema.talentApplication)
+      .where(and(eq(schema.talentApplication.userId, u.id), eq(schema.talentApplication.status, <span class="t-s">'pending'</span>))).limit(<span class="t-n">1</span>)
+    <span class="t-k">throw</span> apiError(<span class="t-s">'CONFLICT'</span>, <span class="t-s">'You already have a pending application.'</span>, { existingId: p?.id })
+  }
+  setResponseStatus(event, <span class="t-n">201</span>)
+  <span class="t-k">return</span> applicationView(row)
+})</code></pre></figure>
+<ul>
+  <li>A Star cannot apply again; the category must exist and be active; you may have only <strong>one pending</strong> application; after a decline you must wait out <code>reapplyAfter</code>.</li>
+  <li>The "one pending application" rule is enforced twice: by a check in code (for a friendly message) and by the partial unique index <code>talent_application_one_pending_uq</code> in the schema (so even two simultaneous requests cannot both succeed). The code handles that race by catching the empty <code>returning()</code> result.</li>
+  <li>Rate limited to 5 per hour.</li>
+</ul>
+<p>Look at your applications and edit a pending one:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talent-applications/me.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// TAL-02</span>
+<span class="t-k">const</span> query = z.object(pageQuery)
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> c = readCursor&lt;{ t: string, id: string }&gt;(cursor, <span class="t-s">'tal-apps-me'</span>)
+  <span class="t-k">const</span> t = schema.talentApplication
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(t)
+    .where(and(eq(t.userId, u.id), c ? sql<span class="t-s">`(${t.submittedAt}, ${t.id}) &lt; (${c.t}::timestamptz, ${c.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(desc(t.submittedAt), desc(t.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, <span class="t-s">'tal-apps-me'</span>, r =&gt; ({ t: r.submittedAt.toISOString(), id: r.id }), applicationView)
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talent-applications/[id].patch.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// TAL-03: edit a pending application.</span>
+<span class="t-k">const</span> body = z.object({
+  displayName: z.string().trim().min(<span class="t-n">2</span>).max(<span class="t-n">60</span>).optional(),
+  bio: z.string().trim().max(<span class="t-n">1000</span>).optional(),
+  links: z.array(httpsLink).max(<span class="t-n">5</span>).optional(),
+  imageMediaId: z.string().optional(),
+  evidenceMediaIds: z.array(z.string()).max(<span class="t-n">5</span>).optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { imageMediaId, evidenceMediaIds, ...patch } = <span class="t-k">await</span> readJsonBody(event, body)
+  rejectMediaIds(evidenceMediaIds)
+  rejectMediaIds(imageMediaId)
+  <span class="t-k">const</span> t = schema.talentApplication
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> [app] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(t).where(and(eq(t.id, id), eq(t.userId, u.id))).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!app) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Application not found.'</span>)
+  <span class="t-k">if</span> (app.status !== <span class="t-s">'pending'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This application has already been decided.'</span>)
+  <span class="t-k">if</span> (!Object.keys(patch).length) <span class="t-k">return</span> applicationView(app)
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> db.update(t).set(patch).where(and(eq(t.id, id), eq(t.status, <span class="t-s">'pending'</span>))).returning()
+  <span class="t-k">if</span> (!row) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This application has already been decided.'</span>)
+  <span class="t-k">return</span> applicationView(row)
+})</code></pre></figure>
+
+<h2 id="the-star-s-own-screens">The Star's own screens<a class="anchor" href="#the-star-s-own-screens" aria-label="Link to this section">#</a></h2>
+<p>Once accepted, a Star has a dashboard with headline numbers and can edit their profile. Both need the <code>talent</code> role.</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talent/dashboard.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, gte, inArray, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// TAL-06: the caller's own talent + community headline numbers.</span>
+<span class="t-c">// newMembers7d = active members whose (latest) join was in the last 7 days.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">if</span> (!userRoles(u).includes(<span class="t-s">'talent'</span>)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only talents have a dashboard.'</span>)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> [t] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.talent).where(eq(schema.talent.userId, u.id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!t) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'No talent profile is linked to this account.'</span>)
+  <span class="t-k">const</span> [c] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.community).where(eq(schema.community.ownerTalentId, t.id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!c) <span class="t-k">return</span> { talent: talentView(t), community: <span class="t-k">null</span>, stats: <span class="t-k">null</span> }
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> [[nm], [pend], [wp]] = <span class="t-k">await</span> Promise.all([
+    db.select({ n: sql&lt;number&gt;<span class="t-s">`count(*)::int`</span> }).<span class="t-k">from</span>(m).where(and(eq(m.communityId, c.id), eq(m.status, <span class="t-s">'active'</span>), gte(m.joinedAt, sql<span class="t-s">`now() - interval '7 days'`</span>))),
+    db.select({ n: sql&lt;number&gt;<span class="t-s">`count(*)::int`</span> }).<span class="t-k">from</span>(schema.missionCompletion)
+      .innerJoin(schema.mission, eq(schema.mission.id, schema.missionCompletion.missionId))
+      .where(and(eq(schema.mission.communityId, c.id), eq(schema.missionCompletion.status, <span class="t-s">'submitted'</span>))),
+    db.select({ n: sql&lt;number&gt;<span class="t-s">`count(*)::int`</span>, rsvps: sql&lt;number&gt;<span class="t-s">`coalesce(sum(${schema.watchParty.rsvpCount}), 0)::int`</span> }).<span class="t-k">from</span>(schema.watchParty)
+      .where(and(eq(schema.watchParty.communityId, c.id), inArray(schema.watchParty.status, [<span class="t-s">'scheduled'</span>, <span class="t-s">'live'</span>]))),
+  ])
+  <span class="t-k">return</span> {
+    talent: talentView(t), community: communityCard(c, <span class="t-k">null</span>),
+    stats: { memberCount: c.memberCount, originalsCount: c.originalsAssigned, newMembers7d: nm!.n, pendingMissionApprovals: pend!.n, upcomingWatchParties: wp!.n, upcomingRsvps: wp!.rsvps },
+  }
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The dashboard runs three counting queries at the same time with <code>Promise.all</code> instead of one after another, which makes the endpoint about as fast as its slowest query rather than the sum. The destructuring <code>[[nm], [pend], [wp]]</code> unpacks "the first row of each result".</p>
+</aside>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talent/profile.patch.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// TAL-07: own linked profile only (no id in the path); status/isClaimed/userId not writable.</span>
+<span class="t-k">const</span> body = z.object({
+  name: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">80</span>).optional(),
+  knownFor: z.string().trim().max(<span class="t-n">80</span>).nullable().optional(),
+  countryId: z.uuid().nullable().optional(),
+  bio: z.string().trim().max(<span class="t-n">1000</span>).optional(),
+  links: z.array(httpsLink).max(<span class="t-n">10</span>).optional(),
+  imageMediaId: z.string().optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">if</span> (!userRoles(u).includes(<span class="t-s">'talent'</span>)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only talents can edit a talent profile.'</span>)
+  <span class="t-k">const</span> { imageMediaId, ...input } = <span class="t-k">await</span> readJsonBody(event, body)
+  rejectMediaIds(imageMediaId)
+  <span class="t-k">if</span> (input.countryId) {
+    <span class="t-k">const</span> [c] = <span class="t-k">await</span> useDb().select({ id: schema.country.id }).<span class="t-k">from</span>(schema.country).where(eq(schema.country.id, input.countryId)).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!c) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Some fields are invalid.'</span>, { fields: { countryId: <span class="t-s">'unknown'</span> } })
+  }
+  <span class="t-k">const</span> [t] = <span class="t-k">await</span> useDb().update(schema.talent).set(input).where(eq(schema.talent.userId, u.id)).returning()
+  <span class="t-k">if</span> (!t) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'No talent profile is linked to this account.'</span>)
+  <span class="t-k">return</span> talentView(t)
+})</code></pre></figure>
+<ul>
+  <li>There is no ID in the address: <code>PATCH /api/talent/profile</code> always edits <em>my own</em> profile. A fan cannot edit someone else's by guessing an ID, because the query is <code>where user_id = me</code>.</li>
+</ul>
+
+<h2 id="identity-claims-scheduled-for-removal">Identity claims (scheduled for removal)<a class="anchor" href="#identity-claims-scheduled-for-removal" aria-label="Link to this section">#</a></h2>
+<aside class="callout warn"><p class="callout-label">Heads-up</p>
+<p>An <strong>identity claim</strong> lets someone say "this existing Star profile is me" and attach evidence links for an admin to verify. The project plan (<code>docs/plan.md</code>, task 3) removes this feature because the design document has no separate claim flow. The code still exists at this snapshot, so it is shown here so the guide matches it. If you are building your own version, you can safely skip these two files and the <code>identity_claim</code> table.</p></aside>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talents/[id]/claims.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// TAL-04</span>
+<span class="t-k">const</span> body = z.object({
+  evidenceLinks: z.array(z.url({ protocol: /^https$/ }).max(<span class="t-n">500</span>)).max(<span class="t-n">5</span>).<span class="t-k">default</span>([]),
+  evidenceMediaIds: z.array(z.string()).max(<span class="t-n">5</span>).optional(),
+  message: z.string().trim().max(<span class="t-n">1000</span>).optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'identity-claim'</span>, u.id, <span class="t-n">10</span>, <span class="t-n">3600</span>)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  rejectMediaIds(input.evidenceMediaIds)
+  <span class="t-k">if</span> (!input.evidenceLinks.length) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Add at least one piece of evidence.'</span>, { fields: { evidenceLinks: <span class="t-s">'required'</span> } })
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> [tal] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.talent).where(eq(schema.talent.id, id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!tal) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Talent not found.'</span>)
+  <span class="t-k">if</span> (tal.userId) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This profile has already been claimed.'</span>)
+  <span class="t-k">const</span> c = schema.identityClaim
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> db.insert(c).values({ talentId: id, userId: u.id, evidenceLinks: input.evidenceLinks, message: input.message })
+    .onConflictDoNothing().returning()
+  <span class="t-k">if</span> (!row) {
+    <span class="t-k">const</span> [p] = <span class="t-k">await</span> db.select({ id: c.id }).<span class="t-k">from</span>(c).where(and(eq(c.userId, u.id), eq(c.talentId, id), eq(c.status, <span class="t-s">'pending'</span>))).limit(<span class="t-n">1</span>)
+    <span class="t-k">throw</span> apiError(<span class="t-s">'CONFLICT'</span>, <span class="t-s">'You already have a pending claim on this profile.'</span>, { existingId: p?.id })
+  }
+  setResponseStatus(event, <span class="t-n">201</span>)
+  <span class="t-k">return</span> claimView(row)
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/identity-claims/me.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// TAL-05</span>
+<span class="t-k">const</span> query = z.object(pageQuery)
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> c = readCursor&lt;{ t: string, id: string }&gt;(cursor, <span class="t-s">'claims-me'</span>)
+  <span class="t-k">const</span> t = schema.identityClaim
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(t)
+    .where(and(eq(t.userId, u.id), c ? sql<span class="t-s">`(${t.submittedAt}, ${t.id}) &lt; (${c.t}::timestamptz, ${c.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(desc(t.submittedAt), desc(t.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, <span class="t-s">'claims-me'</span>, r =&gt; ({ t: r.submittedAt.toISOString(), id: r.id }), claimView)
+})</code></pre></figure>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Submit an application as your test user (use the Reality TV category id from chapter 10):</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/talent-applications \
+  -H <span class="t-s">'Content-Type: application/json'</span> \
+  -d <span class="t-s">'{"categoryId":"CATEGORY_ID","displayName":"Ada Star","bio":"Hello","links":[{"label":"Site","url":"https://example.com"}]}'</span>
+curl -b jar.txt http://localhost:<span class="t-n">3000</span>/api/talent-applications/me</code></pre></figure>
+<p>The first call returns status <code>pending</code> with HTTP 201. Send it again and you get <code>CONFLICT</code> ("You already have a pending application"). Try a link beginning <code>http://</code> and see it rejected. In chapter 17 you will accept this application as an admin. Commit: <code>git add -A && git commit -m "Star applications, dashboard and profile"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="14-parties-notifications.html"><small>Previous</small>Watch parties, notifications and background jobs</a><a class="next" href="16-safety.html"><small>Next</small>Reports and blocks</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#helpers-created-in-chapter-10">Helpers (created in chapter 10)</a></li><li><a href="#applying">Applying</a></li><li><a href="#the-star-s-own-screens">The Star's own screens</a></li><li><a href="#identity-claims-scheduled-for-removal">Identity claims (scheduled for removal)</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

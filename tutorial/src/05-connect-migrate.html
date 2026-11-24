@@ -1,0 +1,79 @@
+<!--@meta
+part: Part 2 · Foundations
+title: Connect, migrate, seed and check health
+summary: Turn the table descriptions into real tables, add starter data, and build the health endpoint.
+-->
+<p class="lead">Now the app meets the database. You will write the connection helper, create the real tables, add a few starter rows, and build the first real endpoint: a health check.</p>
+
+<h2>The connection helper</h2>
+<p>Create the folder <code>server/utils</code> and the file <code>server/utils/db.ts</code>:</p>
+<!--@file server/utils/db.ts-->
+<plain>
+<p>Opening a connection is slow, so we open it once, the first time anyone needs it, and then reuse it. <code>useDb()</code> is the door every endpoint walks through to reach the database.</p>
+</plain>
+<tech>
+<ul>
+<li><code>let _db</code> at the top is a <strong>lazy singleton</strong>: created on first call, reused afterwards.</li>
+<li><code>useRuntimeConfig().databaseUrl</code> reads the setting from chapter 2. No URL means a clear error instead of a confusing one later.</li>
+<li><code>prepare: false</code> turns off prepared statements. The comment explains why: it keeps us compatible with Neon's pooled (PgBouncer) database endpoint, a hosted Postgres we may use later.</li>
+<li><code>max: 5</code> allows at most five connections at once.</li>
+<li><code>export { schema }</code> makes the table definitions available everywhere. Because Nitro auto-imports exports from <code>server/utils</code>, any endpoint can write <code>useDb()</code> and <code>schema.community</code> with no import.</li>
+</ul>
+</tech>
+
+<h2>Create the real tables (migrations)</h2>
+<plain>
+<p>A <strong>migration</strong> is a dated instruction like "add this drawer to the filing cabinet". Instead of editing the database by hand, we generate instructions from our TypeScript and run them in order. Anyone who runs the same instructions ends up with the same cabinet, and every change is saved in git.</p>
+</plain>
+<p>First, make your <code>.env</code> values visible to the two Drizzle commands. (Nuxt reads <code>.env</code> by itself when the app runs, but <code>drizzle-kit</code> is a separate tool and does not.) Run this once per terminal window:</p>
+<!--@code bash | terminal-->
+set -a; . ./.env; set +a
+<!--@/code-->
+<p>Then generate and apply the migration:</p>
+<!--@code bash | terminal-->
+pnpm db:generate
+pnpm db:migrate
+<!--@/code-->
+<ul>
+  <li><code>db:generate</code> compares your schema files with the previous state and writes a numbered SQL file into <code>server/db/migrations</code>, such as <code>0000_something_random.sql</code>, plus a <code>meta</code> folder that remembers the state. The random name part is chosen by the tool.</li>
+  <li><code>db:migrate</code> runs any migration files the database has not seen yet.</li>
+</ul>
+<tech>
+<p>Open the generated <code>.sql</code> file: it is ordinary <code>CREATE TABLE</code> statements, one per table, with the constraints from your TypeScript. The project you are copying has nine migration files because its tables grew over time (for example shows and seasons were added and later removed). Yours will have one, because you are creating the final shape in one go. The result is the same set of tables.</p>
+</tech>
+<check>
+<p>Look inside the database. This runs a command inside the Docker container and lists the tables:</p>
+<!--@code bash | terminal-->
+docker exec clautverse-pg psql -U postgres -d clautverse -c '\dt'
+<!--@/code-->
+<p>You should see <!--@tables--> tables. (Drizzle also keeps its own record of which migrations have run, in a separate place that this list does not show.)</p>
+</check>
+<warn>
+<p>After this point, <strong>never change a table by editing the database by hand</strong>. Edit the schema file, run <code>pnpm db:generate</code>, then <code>pnpm db:migrate</code>. That keeps your project and your database in agreement.</p>
+</warn>
+
+<h2>Starter data (the seed)</h2>
+<p>The tables are empty. Fans pick a category and favourite Stars during onboarding, so we need some to exist. Create <code>scripts/seed.mjs</code>:</p>
+<!--@file scripts/seed.mjs-->
+<ul>
+  <li>It inserts three categories (only <strong>Reality TV</strong> is <code>active</code>), three countries, and three placeholder Stars (Ada, Bisi, Chidi).</li>
+  <li><code>on conflict (slug) do nothing</code> makes the script <strong>idempotent</strong>: running it twice does not create duplicates.</li>
+  <li><code>sql.begin(async (tx) =&gt; ...)</code> wraps everything in a transaction, so either all rows go in or none.</li>
+</ul>
+<!--@code bash | terminal-->
+pnpm db:seed
+<!--@/code-->
+<check><p>The terminal prints <code>seeded</code>.</p></check>
+
+<h2>The health endpoint</h2>
+<p>A health check is a tiny endpoint that says "I am running, and my database answers". Hosting services and humans ping it. Create <code>server/api/health.get.ts</code>:</p>
+<!--@file server/api/health.get.ts-->
+<ul>
+  <li><code>setResponseHeader(event, 'Cache-Control', 'no-store')</code> tells browsers and proxies not to remember the answer.</li>
+  <li><code>select 1</code> is the cheapest possible question to the database. If it answers, the database is alive.</li>
+  <li>On failure the endpoint still replies (so monitors get a clear answer), but with status <code>503</code> (service unavailable).</li>
+</ul>
+<check>
+<p>Start the app with <code>pnpm dev</code>, then run <code>curl http://localhost:3000/api/health</code>. Expected, from reading the code: <code>{"status":"ok","db":"ok","version":"dev"}</code>. Now stop the database with <code>docker stop clautverse-pg</code> and call it again: you should get <code>status: "error"</code> with a 503. Start it again with <code>docker start clautverse-pg</code>.</p>
+</check>
+<p>Commit: <code>git add -A && git commit -m "Connect to Postgres, add migrations, seed and health check"</code>.</p>

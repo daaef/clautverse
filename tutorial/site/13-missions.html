@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Missions, XP and badges · Build Clautverse</title>
+<meta name="description" content="Tasks that earn points, a points ledger that can never be silently edited, and collectable badges.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="13-missions">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions" aria-current="page">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 4 · Features</p><h1>Missions, XP and badges</h1><p class="meta">About 4 min read</p><p class="lead">Missions give fans something to do. A Star posts a task, fans complete it, and points (XP) are awarded. The interesting engineering is in how points are stored: as a ledger, never as a number that gets overwritten.</p>
+
+<h2 id="the-rules-in-plain-words">The rules in plain words<a class="anchor" href="#the-rules-in-plain-words" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li>A mission belongs to one community and is created by its Star (or an admin). It has a title, an XP reward, an optional deadline, and a <strong>completion policy</strong>: <code>review</code> is <code>auto</code> (instant) or <code>owner</code> (the Star approves), and <code>proof</code> is <code>none</code>, <code>link</code> or <code>text</code>.</li>
+  <li>The XP reward must be inside a range set by admins (default 5 to 100; stored in the <code>app_setting</code> table).</li>
+  <li>Each fan can complete a mission <strong>once</strong>, and only if they joined the community.</li>
+  <li>Auto missions pay out immediately. Owner-reviewed missions wait as <code>submitted</code> until approved or rejected with a reason.</li>
+</ul>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Think of XP like a bank statement rather than a balance on a sticker. Each earning or correction is a new line. The balance is the sum of the lines. Nobody can quietly change last week's line, so there is always a trail.</p>
+</aside>
+
+<h2 id="the-missions-helper-file">The missions helper file<a class="anchor" href="#the-missions-helper-file" aria-label="Link to this section">#</a></h2>
+<p>Create <code>server/utils/missions.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/missions.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, inArray } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-k">type</span> Mission = <span class="t-k">typeof</span> schema.mission.$inferSelect
+<span class="t-k">type</span> Completion = <span class="t-k">typeof</span> schema.missionCompletion.$inferSelect
+<span class="t-k">type</span> UserLite = Parameters&lt;<span class="t-k">typeof</span> publicUser&gt;[<span class="t-n">0</span>]
+
+<span class="t-k">export</span> <span class="t-k">const</span> DEFAULT_XP_RULES = { missionXpMin: <span class="t-n">5</span>, missionXpMax: <span class="t-n">100</span> }
+
+<span class="t-k">export</span> <span class="t-k">const</span> getXpRules = <span class="t-k">async</span> (tx: DbOrTx = useDb()) =&gt; {
+  <span class="t-k">const</span> [r] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.appSetting).where(eq(schema.appSetting.key, <span class="t-s">'xp_rules'</span>)).limit(<span class="t-n">1</span>)
+  <span class="t-k">return</span> { ...DEFAULT_XP_RULES, ...(r?.value <span class="t-k">as</span> Partial&lt;<span class="t-k">typeof</span> DEFAULT_XP_RULES&gt; | <span class="t-k">undefined</span>) }
+}
+
+<span class="t-c">/** The only way XP changes. A repeated (user, source) grant returns the original row. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> grantXp(tx: DbOrTx, v: { userId: string, amount: number, sourceType: <span class="t-s">'mission_completion'</span> | <span class="t-s">'admin_adjustment'</span>, sourceId: string, actorId?: string | <span class="t-k">null</span>, reason?: string | <span class="t-k">null</span> }) {
+  <span class="t-k">const</span> x = schema.xpTransaction
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.insert(x).values({ ...v, actorId: v.actorId ?? <span class="t-k">null</span>, reason: v.reason ?? <span class="t-k">null</span> }).onConflictDoNothing().returning()
+  <span class="t-k">if</span> (row) <span class="t-k">return</span> row
+  <span class="t-k">const</span> [existing] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(x).where(and(eq(x.userId, v.userId), eq(x.sourceType, v.sourceType), eq(x.sourceId, v.sourceId))).limit(<span class="t-n">1</span>)
+  <span class="t-k">return</span> existing!
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> isExpired = (m: Mission) =&gt; m.status === <span class="t-s">'approved'</span> &amp;&amp; !!m.deadline &amp;&amp; m.deadline &lt;= <span class="t-k">new</span> Date()
+<span class="t-k">export</span> <span class="t-k">const</span> missionStatus = (m: Mission) =&gt; (isExpired(m) ? <span class="t-s">'expired'</span> : m.status)
+
+<span class="t-k">export</span> <span class="t-k">const</span> completionView = (c: Completion) =&gt; ({
+  id: c.id, missionId: c.missionId, userId: c.userId, status: c.status,
+  proof: c.proofLink || c.proofText ? { ...(c.proofLink ? { link: c.proofLink } : {}), ...(c.proofText ? { text: c.proofText } : {}) } : <span class="t-k">null</span>,
+  rejectionReason: c.rejectionReason, xpTransactionId: c.xpTransactionId,
+  createdAt: c.createdAt.toISOString(), reviewedAt: c.reviewedAt?.toISOString() ?? <span class="t-k">null</span>,
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> missionView = (m: Mission, creator: UserLite | <span class="t-k">null</span>, viewerCompletion: Completion | <span class="t-k">null</span> = <span class="t-k">null</span>) =&gt; ({
+  id: m.id, communityId: m.communityId, creator: creator ? publicUser(creator) : <span class="t-k">null</span>, title: m.title, description: m.description,
+  xpReward: m.xpReward, deadline: m.deadline?.toISOString() ?? <span class="t-k">null</span>, status: missionStatus(m),
+  completionPolicy: { review: m.review, proof: m.proof }, createdAt: m.createdAt.toISOString(),
+  viewerCompletion: viewerCompletion ? completionView(viewerCompletion) : <span class="t-k">null</span>,
+})
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> viewerCompletions(userId: string | <span class="t-k">undefined</span>, missionIds: string[]) {
+  <span class="t-k">if</span> (!userId || !missionIds.length) <span class="t-k">return</span> <span class="t-k">new</span> Map&lt;string, Completion&gt;()
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.missionCompletion)
+    .where(and(eq(schema.missionCompletion.userId, userId), inArray(schema.missionCompletion.missionId, missionIds)))
+  <span class="t-k">return</span> <span class="t-k">new</span> Map(rows.map(r =&gt; [r.missionId, r]))
+}
+
+<span class="t-c">/** Pending/rejected missions are visible only to staff (owner/admin) and their creator. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> loadMission(id: string, viewer: DbUser | <span class="t-k">null</span>, tx: DbOrTx = useDb()) {
+  <span class="t-k">const</span> [r] = <span class="t-k">await</span> tx.select({ mission: schema.mission, community: schema.community, talent: schema.talent, creator: schema.user }).<span class="t-k">from</span>(schema.mission)
+    .innerJoin(schema.community, eq(schema.community.id, schema.mission.communityId))
+    .leftJoin(schema.talent, eq(schema.talent.id, schema.community.ownerTalentId))
+    .leftJoin(schema.user, eq(schema.user.id, schema.mission.creatorId))
+    .where(eq(schema.mission.id, id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">const</span> admin = isAdmin(viewer)
+  <span class="t-k">if</span> (!r || (r.community.status === <span class="t-s">'vetoed'</span> &amp;&amp; !admin)) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Mission not found.'</span>)
+  <span class="t-k">const</span> isStaff = admin || (!!viewer &amp;&amp; r.talent?.userId === viewer.id)
+  <span class="t-k">if</span> (r.mission.status !== <span class="t-s">'approved'</span> &amp;&amp; r.mission.status !== <span class="t-s">'closed'</span> &amp;&amp; !isStaff &amp;&amp; r.mission.creatorId !== viewer?.id) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Mission not found.'</span>)
+  <span class="t-k">return</span> { ...r, isStaff }
+}
+
+<span class="t-c">/** Loads a completion with its mission; only the mission's staff may review. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> loadCompletionForReview(tx: DbOrTx, id: string, viewer: DbUser) {
+  <span class="t-k">const</span> [c] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.missionCompletion).where(eq(schema.missionCompletion.id, id)).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+  <span class="t-k">if</span> (!c) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Completion not found.'</span>)
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadMission(c.missionId, viewer, tx)
+  <span class="t-k">if</span> (!r.isStaff) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the community\'s talent can review completions.'</span>)
+  <span class="t-k">return</span> { completion: c, ...r }
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> xpView = (x: <span class="t-k">typeof</span> schema.xpTransaction.$inferSelect) =&gt; ({
+  id: x.id, amount: x.amount, sourceType: x.sourceType, sourceId: x.sourceId, actorId: x.actorId, reason: x.reason, createdAt: x.createdAt.toISOString(),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> badgeView = (b: <span class="t-k">typeof</span> schema.badge.$inferSelect) =&gt; ({
+  id: b.id, name: b.name, description: b.description, iconUrl: b.iconUrl, communityId: b.communityId, sortOrder: b.sortOrder, active: b.active,
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> badgePatch = z.object({
+  name: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">60</span>).optional(),
+  description: z.string().trim().max(<span class="t-n">300</span>).optional(),
+  iconUrl: z.url({ protocol: /^https$/ }).max(<span class="t-n">500</span>).nullable().optional(),
+  sortOrder: z.number().int().min(<span class="t-n">0</span>).max(<span class="t-n">10_000</span>).optional(),
+  active: z.boolean().optional(),
+}).strict()
+<span class="t-k">export</span> <span class="t-k">const</span> badgeBody = badgePatch.extend({ name: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">60</span>), communityId: z.uuid().optional() }).omit({ active: <span class="t-k">true</span> })</code></pre></figure>
+<ul>
+  <li><strong><code>grantXp</code> is the only way XP changes.</strong> It inserts a ledger row. The table has a unique rule on <code>(userId, sourceType, sourceId)</code>, so granting for the same completion twice hits <code>onConflictDoNothing</code> and returns the original row instead of paying twice.</li>
+  <li><code>getXpRules</code> reads the admin-configured range and falls back to <code>DEFAULT_XP_RULES</code>.</li>
+  <li><code>isExpired</code> / <code>missionStatus</code>: expiry is <em>computed</em> from the deadline, not stored, so nothing has to run at midnight to flip it.</li>
+  <li><code>loadMission</code>: pending and rejected missions are visible only to staff and the creator.</li>
+  <li><code>loadCompletionForReview</code>: locks the completion row and insists the caller is staff of that mission's community.</li>
+  <li><code>badgePatch</code> and <code>badgeBody</code>: Zod shapes for admin badge endpoints (chapter 17). <code>z.url({ protocol: /^https$/ })</code> accepts only <code>https</code> links.</li>
+</ul>
+
+<h2 id="missions">Missions<a class="anchor" href="#missions" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/missions/index.get.ts</code> lists missions. Active ones are ordered by deadline (soonest first, no deadline last); the other statuses by newest:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/missions/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, desc, eq, gt, isNull, lte, or, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// MIS-01: active = approved &amp; not expired (deadline asc nulls last); others createdAt desc.</span>
+<span class="t-k">const</span> query = z.object({ communityId: z.uuid().optional(), status: z.enum([<span class="t-s">'active'</span>, <span class="t-s">'expired'</span>, <span class="t-s">'pending'</span>, <span class="t-s">'rejected'</span>]).<span class="t-k">default</span>(<span class="t-s">'active'</span>), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> { communityId, status, limit, cursor } = readQuery(event, query)
+  <span class="t-k">let</span> staff = isAdmin(viewer)
+  <span class="t-k">if</span> (communityId) {
+    <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(communityId, viewer)
+    staff ||= !!viewer &amp;&amp; <span class="t-k">await</span> isCommunityOwner(comm, viewer.id)
+  }
+  <span class="t-k">const</span> scope = <span class="t-s">`missions-${communityId ?? 'all'}-${status}`</span>
+  <span class="t-k">const</span> ms = schema.mission
+  <span class="t-k">const</span> visible = and(communityId ? eq(ms.communityId, communityId) : <span class="t-k">undefined</span>, isAdmin(viewer) ? <span class="t-k">undefined</span> : eq(schema.community.status, <span class="t-s">'active'</span>))
+  <span class="t-k">let</span> where
+  <span class="t-k">let</span> order
+  <span class="t-k">let</span> key: (m: <span class="t-k">typeof</span> ms.$inferSelect) =&gt; Record&lt;string, unknown&gt;
+  <span class="t-k">if</span> (status === <span class="t-s">'active'</span>) {
+    <span class="t-k">const</span> cur = readCursor&lt;{ d: string | <span class="t-k">null</span>, id: string }&gt;(cursor, scope)
+    <span class="t-k">const</span> after = !cur ? <span class="t-k">undefined</span>
+      : cur.d === <span class="t-k">null</span> ? and(isNull(ms.deadline), sql<span class="t-s">`${ms.id} &gt; ${cur.id}::uuid`</span>)
+        : or(sql<span class="t-s">`(${ms.deadline}, ${ms.id}) &gt; (${cur.d}::timestamptz, ${cur.id}::uuid)`</span>, isNull(ms.deadline))
+    where = and(eq(ms.status, <span class="t-s">'approved'</span>), or(isNull(ms.deadline), gt(ms.deadline, sql<span class="t-s">`now()`</span>)), after)
+    order = [sql<span class="t-s">`${ms.deadline} asc nulls last`</span>, asc(ms.id)]
+    key = m =&gt; ({ d: m.deadline?.toISOString() ?? <span class="t-k">null</span>, id: m.id })
+  }
+  <span class="t-k">else</span> {
+    <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+    <span class="t-k">const</span> byStatus = status === <span class="t-s">'expired'</span>
+      ? and(eq(ms.status, <span class="t-s">'approved'</span>), lte(ms.deadline, sql<span class="t-s">`now()`</span>))
+      : and(eq(ms.status, status), staff ? <span class="t-k">undefined</span> : viewer ? eq(ms.creatorId, viewer.id) : sql<span class="t-s">`false`</span>)
+    where = and(byStatus, cur ? sql<span class="t-s">`(${ms.createdAt}, ${ms.id}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>)
+    order = [desc(ms.createdAt), desc(ms.id)]
+    key = m =&gt; ({ t: m.createdAt.toISOString(), id: m.id })
+  }
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ mission: ms, creator: schema.user }).<span class="t-k">from</span>(ms)
+    .innerJoin(schema.community, eq(schema.community.id, ms.communityId))
+    .leftJoin(schema.user, eq(schema.user.id, ms.creatorId))
+    .where(and(visible, where)).orderBy(...order).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">const</span> mine = <span class="t-k">await</span> viewerCompletions(viewer?.id, rows.map(r =&gt; r.mission.id))
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; key(r.mission), r =&gt; missionView(r.mission, r.creator, mine.get(r.mission.id) ?? <span class="t-k">null</span>))
+})</code></pre></figure>
+<p><code>server/api/missions/index.post.ts</code> creates one:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/missions/index.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { getXpRules } <span class="t-k">from</span> <span class="t-s">'../../utils/missions'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// MIS-03: community owner or admin; xpReward within admin range (ADM-15).</span>
+<span class="t-k">const</span> body = z.object({
+  communityId: z.uuid(),
+  title: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">120</span>),
+  description: z.string().trim().max(<span class="t-n">2000</span>).<span class="t-k">default</span>(<span class="t-s">''</span>),
+  xpReward: z.number().int(),
+  deadline: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional(),
+  completionPolicy: z.object({ review: z.enum([<span class="t-s">'auto'</span>, <span class="t-s">'owner'</span>]), proof: z.enum([<span class="t-s">'none'</span>, <span class="t-s">'link'</span>, <span class="t-s">'text'</span>]) }).strict(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> key = idempotencyHeader(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> replay = <span class="t-k">await</span> findIdempotent(u.id, <span class="t-s">'mission.create'</span>, key)
+  <span class="t-k">if</span> (replay) {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadMission(replay, u)
+    setResponseStatus(event, <span class="t-n">201</span>)
+    <span class="t-k">return</span> missionView(r.mission, r.creator)
+  }
+  <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(input.communityId, u)
+  <span class="t-k">if</span> (!isAdmin(u) &amp;&amp; !(<span class="t-k">await</span> isCommunityOwner(comm, u.id))) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the community\'s talent can create missions.'</span>)
+  <span class="t-k">const</span> rules = <span class="t-k">await</span> getXpRules()
+  <span class="t-k">if</span> (input.xpReward &lt; rules.missionXpMin || input.xpReward &gt; rules.missionXpMax)
+    <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">`XP reward must be between ${rules.missionXpMin} and ${rules.missionXpMax}.`</span>, { fields: { xpReward: <span class="t-s">'out_of_range'</span> } })
+  <span class="t-k">const</span> deadline = input.deadline ? <span class="t-k">new</span> Date(input.deadline) : <span class="t-k">null</span>
+  <span class="t-k">if</span> (deadline &amp;&amp; deadline &lt;= <span class="t-k">new</span> Date()) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Deadline must be in the future.'</span>, { fields: { deadline: <span class="t-s">'past'</span> } })
+  <span class="t-k">if</span> (input.completionPolicy.review === <span class="t-s">'owner'</span> &amp;&amp; input.completionPolicy.proof === <span class="t-s">'none'</span>)
+    <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Reviewed missions need proof (link or text).'</span>, { fields: { completionPolicy: <span class="t-s">'proof_required'</span> } })
+  <span class="t-k">const</span> m = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.insert(schema.mission).values({
+      communityId: comm.id, creatorId: u.id, title: input.title, description: input.description, xpReward: input.xpReward,
+      deadline, status: <span class="t-s">'approved'</span>, review: input.completionPolicy.review, proof: input.completionPolicy.proof,
+    }).returning()
+    <span class="t-k">await</span> saveIdempotent(tx, u.id, <span class="t-s">'mission.create'</span>, key, row!.id)
+    <span class="t-k">return</span> row!
+  })
+  setResponseStatus(event, <span class="t-n">201</span>)
+  <span class="t-k">return</span> missionView(m, u)
+})</code></pre></figure>
+<ul>
+  <li>Rejects a reward outside the admin range, a deadline in the past, and an owner-reviewed mission without any proof (there would be nothing to review).</li>
+  <li>Supports the <code>Idempotency-Key</code> header from chapter 12.</li>
+</ul>
+<p><code>server/api/missions/[id]/index.get.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/missions/[id]/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// MIS-02</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadMission(readIdParam(event), viewer)
+  <span class="t-k">const</span> mine = <span class="t-k">await</span> viewerCompletions(viewer?.id, [r.mission.id])
+  <span class="t-k">return</span> missionView(r.mission, r.creator, mine.get(r.mission.id) ?? <span class="t-k">null</span>)
+})</code></pre></figure>
+
+<h2 id="completing-a-mission">Completing a mission<a class="anchor" href="#completing-a-mission" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/missions/[id]/completions/index.post.ts</code> is where a fan submits:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/missions/[id]/completions/index.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// MIS-06: one completion per fan. Auto-review grants XP in the same transaction.</span>
+<span class="t-k">const</span> body = z.object({
+  proof: z.object({ link: z.url({ protocol: /^https$/ }).max(<span class="t-n">500</span>).optional(), text: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">500</span>).optional() }).strict().optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event, { onboarded: <span class="t-k">true</span> })
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { proof } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'mission-completion'</span>, u.id, <span class="t-n">10</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> mc = schema.missionCompletion
+  <span class="t-k">const</span> result = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadMission(id, u, tx)
+    <span class="t-k">const</span> status = missionStatus(r.mission)
+    <span class="t-k">if</span> (status !== <span class="t-s">'approved'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This mission is not open for completions.'</span>, { currentStatus: status })
+    <span class="t-k">const</span> [m] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.membership).where(and(eq(schema.membership.userId, u.id), eq(schema.membership.communityId, r.mission.communityId))).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (m?.status !== <span class="t-s">'active'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Join this community to complete its missions.'</span>, { reason: <span class="t-s">'not_member'</span> })
+    <span class="t-k">const</span> [existing] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(mc).where(and(eq(mc.missionId, id), eq(mc.userId, u.id))).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (existing) <span class="t-k">return</span> { row: existing, created: <span class="t-k">false</span> }
+    <span class="t-k">const</span> need = r.mission.proof
+    <span class="t-k">if</span> (need === <span class="t-s">'link'</span> &amp;&amp; !proof?.link) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Add an https link as proof.'</span>, { fields: { <span class="t-s">'proof.link'</span>: <span class="t-s">'required'</span> } })
+    <span class="t-k">if</span> (need === <span class="t-s">'text'</span> &amp;&amp; !proof?.text) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Add a short text as proof.'</span>, { fields: { <span class="t-s">'proof.text'</span>: <span class="t-s">'required'</span> } })
+    <span class="t-k">const</span> auto = r.mission.review === <span class="t-s">'auto'</span>
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.insert(mc).values({
+      missionId: id, userId: u.id, status: auto ? <span class="t-s">'approved'</span> : <span class="t-s">'submitted'</span>,
+      proofLink: need === <span class="t-s">'link'</span> ? proof!.link : <span class="t-k">null</span>, proofText: need === <span class="t-s">'text'</span> ? proof!.text : <span class="t-k">null</span>, reviewedAt: auto ? <span class="t-k">new</span> Date() : <span class="t-k">null</span>,
+    }).onConflictDoNothing().returning()
+    <span class="t-k">if</span> (!row) <span class="t-k">return</span> { row: (<span class="t-k">await</span> tx.select().<span class="t-k">from</span>(mc).where(and(eq(mc.missionId, id), eq(mc.userId, u.id))).limit(<span class="t-n">1</span>))[<span class="t-n">0</span>]!, created: <span class="t-k">false</span> }
+    <span class="t-k">if</span> (!auto) <span class="t-k">return</span> { row, created: <span class="t-k">true</span> }
+    <span class="t-k">const</span> xp = <span class="t-k">await</span> grantXp(tx, { userId: u.id, amount: r.mission.xpReward, sourceType: <span class="t-s">'mission_completion'</span>, sourceId: row.id })
+    <span class="t-k">const</span> [done] = <span class="t-k">await</span> tx.update(mc).set({ xpTransactionId: xp.id }).where(eq(mc.id, row.id)).returning()
+    <span class="t-k">return</span> { row: done!, created: <span class="t-k">true</span> }
+  })
+  setResponseStatus(event, result.created ? <span class="t-n">201</span> : <span class="t-n">200</span>)
+  <span class="t-k">return</span> completionView(result.row)
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>Everything happens in <strong>one transaction</strong>: check the mission is open, check the fan is an active member, return the existing completion if there is one, check the proof, insert the completion, and, for auto-review, <code>grantXp</code> then link the ledger row back with <code>xpTransactionId</code>. If any step throws, the whole thing rolls back, so you can never get a completion without its XP or XP without its completion.</p>
+</aside>
+<p>Staff see the queue of submissions and fans see their own:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/missions/[id]/completions/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// MIS-08: owner/admin review queue, oldest first.</span>
+<span class="t-k">const</span> query = z.object({ status: z.enum([<span class="t-s">'submitted'</span>, <span class="t-s">'approved'</span>, <span class="t-s">'rejected'</span>]).optional(), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadMission(readIdParam(event), u)
+  <span class="t-k">if</span> (!r.isStaff) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the community\'s talent can review completions.'</span>)
+  <span class="t-k">const</span> { status, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> scope = <span class="t-s">`completions-${r.mission.id}-${status ?? ''}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> mc = schema.missionCompletion
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ c: mc, user: schema.user }).<span class="t-k">from</span>(mc).leftJoin(schema.user, eq(schema.user.id, mc.userId))
+    .where(and(eq(mc.missionId, r.mission.id), status ? eq(mc.status, status) : <span class="t-k">undefined</span>,
+      cur ? sql<span class="t-s">`(${mc.createdAt}, ${mc.id}) &gt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(asc(mc.createdAt), asc(mc.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, scope, x =&gt; ({ t: x.c.createdAt.toISOString(), id: x.c.id }),
+    x =&gt; ({ ...completionView(x.c), user: x.user ? publicUser(x.user) : <span class="t-k">null</span> }))
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/missions/[id]/completions/me.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// MIS-07: one completion per fan at launch, so this is a 0–1 item list.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadMission(readIdParam(event), u)
+  <span class="t-k">const</span> mc = schema.missionCompletion
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(mc).where(and(eq(mc.missionId, r.mission.id), eq(mc.userId, u.id)))
+  <span class="t-k">return</span> { items: rows.map(completionView), nextCursor: <span class="t-k">null</span> }
+})</code></pre></figure>
+<p>The Star (or admin) approves or rejects. Approve grants XP once and notifies the fan; reject needs a reason and grants nothing:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/mission-completions/[id]/approve.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// MIS-09: grants XP once (ledger key) and notifies the fan. Repeat → 200 unchanged.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadCompletionForReview(tx, id, u)
+    <span class="t-k">const</span> c = r.completion
+    <span class="t-k">if</span> (c.status === <span class="t-s">'approved'</span>) <span class="t-k">return</span> c
+    <span class="t-k">if</span> (c.status === <span class="t-s">'rejected'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This completion was rejected.'</span>, { currentStatus: c.status })
+    <span class="t-k">const</span> xp = <span class="t-k">await</span> grantXp(tx, { userId: c.userId, amount: r.mission.xpReward, sourceType: <span class="t-s">'mission_completion'</span>, sourceId: c.id, actorId: u.id })
+    <span class="t-k">const</span> [done] = <span class="t-k">await</span> tx.update(schema.missionCompletion).set({ status: <span class="t-s">'approved'</span>, xpTransactionId: xp.id, reviewedBy: u.id, reviewedAt: <span class="t-k">new</span> Date() })
+      .where(eq(schema.missionCompletion.id, id)).returning()
+    <span class="t-k">await</span> notify(tx, c.userId, <span class="t-s">'mission.completion_approved'</span>, { missionId: c.missionId, completionId: id, xp: r.mission.xpReward })
+    <span class="t-k">if</span> (r.talent?.userId !== u.id) <span class="t-k">await</span> audit(tx, u.id, <span class="t-s">'completion.approved'</span>, <span class="t-s">'mission_completion'</span>, id)
+    <span class="t-k">return</span> done!
+  })
+  <span class="t-k">return</span> completionView(row)
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/mission-completions/[id]/reject.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// MIS-10: reason required; no XP; the fan cannot resubmit. Reject after approve → INVALID_STATE.</span>
+<span class="t-k">const</span> body = z.object({ reason: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">500</span>) }).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { reason } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadCompletionForReview(tx, id, u)
+    <span class="t-k">const</span> c = r.completion
+    <span class="t-k">if</span> (c.status === <span class="t-s">'rejected'</span>) <span class="t-k">return</span> c
+    <span class="t-k">if</span> (c.status === <span class="t-s">'approved'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'Approved completions cannot be rejected; use an XP correction.'</span>, { currentStatus: c.status })
+    <span class="t-k">const</span> [done] = <span class="t-k">await</span> tx.update(schema.missionCompletion).set({ status: <span class="t-s">'rejected'</span>, rejectionReason: reason, reviewedBy: u.id, reviewedAt: <span class="t-k">new</span> Date() })
+      .where(eq(schema.missionCompletion.id, id)).returning()
+    <span class="t-k">await</span> notify(tx, c.userId, <span class="t-s">'mission.completion_rejected'</span>, { missionId: c.missionId, completionId: id, reason })
+    <span class="t-k">if</span> (r.talent?.userId !== u.id) <span class="t-k">await</span> audit(tx, u.id, <span class="t-s">'completion.rejected'</span>, <span class="t-s">'mission_completion'</span>, id, { reason })
+    <span class="t-k">return</span> done!
+  })
+  <span class="t-k">return</span> completionView(row)
+})</code></pre></figure>
+<ul>
+  <li>Repeating an approve returns the same result (safe to retry). Rejecting an already-approved completion is refused (<code>INVALID_STATE</code>): corrections are made with an admin XP adjustment instead (chapter 17), never by editing history.</li>
+</ul>
+
+<h2 id="reading-my-xp">Reading my XP<a class="anchor" href="#reading-my-xp" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/xp/me.get.ts</code> adds up the ledger:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/xp/me.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// XP-01: XP is a score only at launch — no thresholds.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> x = schema.xpTransaction
+  <span class="t-k">const</span> [r] = <span class="t-k">await</span> useDb().select({
+    balance: sql&lt;number&gt;<span class="t-s">`coalesce(sum(${x.amount}), 0)::int`</span>,
+    lifetimeEarned: sql&lt;number&gt;<span class="t-s">`coalesce(sum(${x.amount}) filter (where ${x.amount} &gt; 0), 0)::int`</span>,
+  }).<span class="t-k">from</span>(x).where(eq(x.userId, u.id))
+  <span class="t-k">return</span> r!
+})</code></pre></figure>
+<p><code>server/api/xp/me/transactions.get.ts</code> lists every ledger line:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/xp/me/transactions.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// XP-02: every balance change is a ledger row.</span>
+<span class="t-k">const</span> query = z.object({ sourceType: z.enum([<span class="t-s">'mission_completion'</span>, <span class="t-s">'admin_adjustment'</span>]).optional(), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { sourceType, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> scope = <span class="t-s">`xp-${sourceType ?? 'all'}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> x = schema.xpTransaction
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(x).where(and(eq(x.userId, u.id), sourceType ? eq(x.sourceType, sourceType) : <span class="t-k">undefined</span>,
+    cur ? sql<span class="t-s">`(${x.createdAt}, ${x.id}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(desc(x.createdAt), desc(x.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ t: r.createdAt.toISOString(), id: r.id }), xpView)
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p><p><code>sum(amount)</code> with <code>coalesce(..., 0)</code> returns 0 for someone with no rows. <code>filter (where amount &gt; 0)</code> gives lifetime earnings separately from the balance, which can go down after a negative admin correction.</p></aside>
+
+<h2 id="badges">Badges<a class="anchor" href="#badges" aria-label="Link to this section">#</a></h2>
+<p>Admins create and award badges (chapter 17). Fans can read the public catalog and their own collection:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/badges/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// BDG-02: public catalog so the UI can show badges not yet earned.</span>
+<span class="t-k">const</span> query = z.object(pageQuery)
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> { limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> cur = readCursor&lt;{ o: number, id: string }&gt;(cursor, <span class="t-s">'badges'</span>)
+  <span class="t-k">const</span> b = schema.badge
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(b).where(and(eq(b.active, <span class="t-k">true</span>), cur ? sql<span class="t-s">`(${b.sortOrder}, ${b.id}) &gt; (${cur.o}, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(asc(b.sortOrder), asc(b.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, <span class="t-s">'badges'</span>, r =&gt; ({ o: r.sortOrder, id: r.id }), badgeView)
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/badges/me.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// BDG-01</span>
+<span class="t-k">const</span> query = z.object(pageQuery)
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, <span class="t-s">'badges-me'</span>)
+  <span class="t-k">const</span> a = schema.badgeAward
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ award: a, badge: schema.badge }).<span class="t-k">from</span>(a).innerJoin(schema.badge, eq(schema.badge.id, a.badgeId))
+    .where(and(eq(a.userId, u.id), cur ? sql<span class="t-s">`(${a.awardedAt}, ${a.badgeId}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(desc(a.awardedAt), desc(a.badgeId)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, <span class="t-s">'badges-me'</span>, r =&gt; ({ t: r.award.awardedAt.toISOString(), id: r.badge.id }),
+    r =&gt; ({ badge: badgeView(r.badge), awardedAt: r.award.awardedAt.toISOString() }))
+})</code></pre></figure>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>As the admin user from chapter 12, create an auto-approved mission, complete it, and look at your XP (use your real community id):</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/missions \
+  -H <span class="t-s">'Content-Type: application/json'</span> \
+  -d <span class="t-s">'{"communityId":"COMMUNITY_ID","title":"Say hi","xpReward":10,"completionPolicy":{"review":"auto","proof":"none"}}'</span>
+curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/missions/MISSION_ID/completions \
+  -H <span class="t-s">'Content-Type: application/json'</span> -d <span class="t-s">'{}'</span>
+curl -b jar.txt http://localhost:<span class="t-n">3000</span>/api/xp/me</code></pre></figure>
+<p>Expected: the completion has status <code>approved</code>, and <code>/api/xp/me</code> shows <code>"balance":10</code>. Send the completion call again: you get the same completion back and the balance stays 10. Try <code>"xpReward":5000</code> to see the range check fail. Commit: <code>git add -A && git commit -m "Missions, XP ledger and badges"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="12-drops.html"><small>Previous</small>Drops, replies, likes and the feed</a><a class="next" href="14-parties-notifications.html"><small>Next</small>Watch parties, notifications and background jobs</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#the-rules-in-plain-words">The rules in plain words</a></li><li><a href="#the-missions-helper-file">The missions helper file</a></li><li><a href="#missions">Missions</a></li><li><a href="#completing-a-mission">Completing a mission</a></li><li><a href="#reading-my-xp">Reading my XP</a></li><li><a href="#badges">Badges</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

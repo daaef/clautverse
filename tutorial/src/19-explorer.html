@@ -1,0 +1,105 @@
+<!--@meta
+part: Part 6 · Explorer and tests
+title: The API Explorer page (Vue)
+summary: The only web page in the project: it lists every route and lets you send real requests as yourself.
+-->
+<p class="lead">Up to now you tested with <code>curl</code>. Here you build the page that does the same thing with buttons and forms: the API Explorer. It is the only screen in the project, and a good first look at Vue inside Nuxt 4.</p>
+
+<h2>What it does</h2>
+<ul>
+  <li>Shows every operation from the OpenAPI contract, grouped by tag, with a search box.</li>
+  <li>Has a sign-in / sign-up strip at the top, so requests run as a real user through the same session cookie you used in <code>curl</code>.</li>
+  <li>Each operation is a card. Open it to see parameters and body fields as the right kind of input (dropdown for fixed choices, a picker of real records for IDs, number boxes that enforce limits), press <strong>Send request</strong> and see the status, timing and JSON answer.</li>
+</ul>
+
+<h2>Vue and Nuxt in five minutes</h2>
+<plain>
+<p>A web page is built from <strong>components</strong>: small reusable pieces (a button, a card, a top bar) that each own their appearance and behaviour. Vue is the library for writing components. Nuxt adds conventions so you write less setup.</p>
+</plain>
+<tech>
+<ul>
+<li>A <code>.vue</code> file has up to three blocks: <code>&lt;script setup lang="ts"&gt;</code> (logic), <code>&lt;template&gt;</code> (HTML with extras), and optional styles. Here styling lives in one shared CSS file.</li>
+<li><code>ref(x)</code> makes a reactive value: when it changes, the page updates. You read and write it with <code>.value</code> in script, but just by name in the template. <code>computed(() =&gt; …)</code> is a value derived from others. <code>reactive({})</code> is a reactive object. <code>watch(source, fn)</code> runs code when something changes.</li>
+<li>Template extras: <code>v-if</code> / <code>v-else</code> (show or hide), <code>v-for</code> (repeat), <code>v-model</code> (two-way link between an input and a value), <code>:prop="value"</code> (bind an attribute to JavaScript), <code>@click="fn"</code> (handle an event).</li>
+<li><strong>Nuxt conventions used here:</strong> a file in <code>app/pages/</code> is a route (<code>index.vue</code> is <code>/</code>); components in <code>app/components/</code> are used without importing, and a subfolder becomes a prefix (<code>components/docs/AuthPanel.vue</code> is <code>&lt;DocsAuthPanel&gt;</code>); exported functions in <code>app/composables/</code> are auto-imported; and Vue's <code>ref</code>, <code>computed</code>, <code>watch</code>, <code>onMounted</code> are auto-imported too.</li>
+</ul>
+</tech>
+
+<h2>Step 1: composables (the logic)</h2>
+<p>A <strong>composable</strong> is a plain function holding logic that components share. The first one fetches and understands the contract. Create <code>app/composables/useOpenApi.ts</code>:</p>
+<!--@file app/composables/useOpenApi.ts-->
+<ul>
+  <li>The <code>interface</code> blocks describe the shapes we read from the contract, so the editor can autocomplete them.</li>
+  <li><code>specOperations(spec)</code> flattens the nested <code>paths → methods</code> into one simple list of operations, pulling out our <code>x-route-id</code>, <code>x-status</code> and <code>x-services</code> fields.</li>
+  <li><code>describeSchema</code> writes a short rule such as <code>string · uuid</code> or <code>one of: a, b</code>; <code>bodyFields</code> flattens a request body into table rows; <code>groupByTag</code> builds the sidebar groups.</li>
+  <li><code>useOpenApi()</code> calls <code>/api/_docs/openapi</code> (chapter 18) with <code>useAsyncData</code>, which fetches on the server for the first paint and shares the result across components.</li>
+</ul>
+<p>The second composable fills dropdowns with <em>real records</em>, so you pick an existing community instead of pasting a made-up ID. Create <code>app/composables/useLookup.ts</code>:</p>
+<!--@file app/composables/useLookup.ts-->
+<ul>
+  <li><code>BY_FIELD</code> maps a field name (<code>communityId</code>) to the list endpoint that holds valid values (<code>/api/communities</code>). <code>BY_PATH</code> does the same for a path parameter called plain <code>id</code>, by looking at which route it belongs to.</li>
+  <li>Each list is fetched once and cached in a <code>Map</code>, so ten cards asking for communities cause one request. A failed request (for example, not signed in) gives an empty list.</li>
+  <li><code>reloadLookups()</code> refetches everything. The sign-in strip calls it after signing in or out, because some lists are private.</li>
+  <li><code>import.meta.client</code> guards the fetch so it only runs in the browser.</li>
+</ul>
+
+<h2>Step 2: small components</h2>
+<p>One input that picks its own type from the field's rule. Create <code>app/components/FieldInput.vue</code>:</p>
+<!--@file app/components/FieldInput.vue-->
+<ul>
+  <li><code>defineProps</code> declares what the parent passes in; <code>defineModel</code> makes <code>v-model</code> work on this component.</li>
+  <li>The template is a chain of <code>v-if / v-else-if</code>: fixed choices → dropdown; list of IDs → multi-select; known record list → dropdown; number → number box clamped to its min and max; date-time → date picker; otherwise plain text.</li>
+  <li>The <code>computed({ get, set })</code> blocks convert between what the user types and what the API needs (for example a local date-time becomes an ISO 8601 string with an offset, which chapter 12's Zod shapes demand).</li>
+</ul>
+<p>Now the three pieces of the page chrome. <code>app/components/docs/Topbar.vue</code>, with the light/dark switch:</p>
+<!--@file app/components/docs/Topbar.vue-->
+<p><code>app/components/docs/Sidebar.vue</code>, a link per tag:</p>
+<!--@file app/components/docs/Sidebar.vue-->
+<p><code>app/components/docs/AuthPanel.vue</code>, the sign-in strip. It calls the real Better Auth endpoints from chapter 8 (<code>/api/auth/sign-in/email</code>, <code>/sign-up/email</code>, <code>/sign-out</code>, <code>/get-session</code>):</p>
+<!--@file app/components/docs/AuthPanel.vue-->
+<tech>
+<p><code>credentials: 'same-origin'</code> tells the browser to attach the session cookie to requests to our own site. This is also why the page needs no tokens in code: the cookie is the login.</p>
+</tech>
+
+<h2>Step 3: the endpoint card</h2>
+<p>The biggest component. Create <code>app/components/ApiEndpoint.vue</code>:</p>
+<!--@file app/components/ApiEndpoint.vue-->
+<ul>
+  <li><strong>Looking itself up.</strong> It receives only a <code>method</code> and <code>path</code>, finds its operation in the contract, and splits its parameters into path, query and header groups.</li>
+  <li><strong>Two ways to edit the body.</strong> The form fields and the JSON box stay in sync: <code>setField</code> writes into the object and re-prints the JSON; a <code>watch</code> on the JSON text parses it back when it is valid.</li>
+  <li><strong><code>fillSamples()</code></strong> fills every input with the contract's examples, replacing made-up IDs with real ones where <code>useLookup</code> has some.</li>
+  <li><strong><code>send()</code></strong> builds the final address (<code>resolvedPath</code> swaps <code>{id}</code> and appends the query string), sends it with the browser's <code>fetch</code>, and shows status, time and the pretty-printed answer. A status colour comes from <code>statusClass</code> (2xx ok, 4xx client error, 5xx or 0 server error).</li>
+  <li>The <code>Idempotency-Key</code> header gets a <strong>Generate</strong> button (chapter 12).</li>
+</ul>
+<aside class="callout tip"><p class="callout-label">Leftover comment</p>
+<p>The first comment in this file mentions using the card inside markdown (<code>::api-endpoint</code>). That came from the documentation app the project removed; the component is only used by <code>index.vue</code> now.</p></aside>
+
+<h2>Step 4: the page and the app shell</h2>
+<p><code>app/pages/index.vue</code> assembles everything. Create the <code>pages</code> folder first:</p>
+<!--@file app/pages/index.vue-->
+<ul>
+  <li>It fetches the contract, groups it by tag, and applies the search box's text with a <code>computed</code> filter.</li>
+  <li><code>&lt;ApiEndpoint v-for="op in g.items" … /&gt;</code> renders one card per operation. The <code>:key</code> helps Vue keep cards stable when the filter changes.</li>
+  <li><code>useHead({ title })</code> sets the browser tab title.</li>
+</ul>
+<p>Replace <code>app/app.vue</code> (the starter showed <code>&lt;NuxtWelcome /&gt;</code>) so it shows the page and sets the theme before the first paint, which avoids a light-to-dark flash:</p>
+<!--@file app/app.vue-->
+
+<h2>Step 5: styles, images and config</h2>
+<p>The look is one hand-written stylesheet. It is long and purely visual, so copy it rather than type it: open <!--@ref app/assets/css/docs.css | app/assets/css/docs.css in the reference--> and use the Copy button, saving it as <code>app/assets/css/docs.css</code>. Two helper images are used: <code>public/clautverse-ghost.png</code> (the logo in the top bar) and <code>public/favicon.png</code> (the tab icon). Use any PNG files with those names, or change the paths in <code>Topbar.vue</code> and <code>app.vue</code>.</p>
+<p>Finally, finish <code>nuxt.config.ts</code>. After this step it matches the project's file exactly. Compare yours to:</p>
+<!--@file nuxt.config.ts-->
+<ul>
+  <li><code>css: ['~/assets/css/docs.css']</code> loads the stylesheet on every page.</li>
+  <li><code>routeRules: { '/docs/**': { redirect: '/' } }</code> sends old documentation links (from the removed docs app) to the Explorer.</li>
+</ul>
+
+<check>
+<p>Restart <code>pnpm dev</code> and open <code>http://localhost:3000/</code>. You should see the API Explorer with a list of groups on the left. Then:</p>
+<ol>
+  <li>Type <code>health</code> in the filter, open <code>GET /api/health</code> and press <strong>Send request</strong>. You should see a green <code>200</code> and the health JSON.</li>
+  <li>Sign in with the verified account from chapter 8 using the strip at the top, then open <code>GET /api/me</code> and send it. You should see your profile.</li>
+  <li>Open <code>POST /api/communities/{id}/join</code>, press <strong>Fill with sample data</strong>, and notice <code>id</code> becomes a dropdown of real communities and <code>lane</code> a dropdown of the six lanes.</li>
+</ol>
+<p>Commit: <code>git add -A && git commit -m "API Explorer page"</code>.</p>
+</check>

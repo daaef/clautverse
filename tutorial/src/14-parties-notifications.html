@@ -1,0 +1,91 @@
+<!--@meta
+part: Part 4 · Features
+title: Watch parties, notifications and background jobs
+summary: Scheduled events with RSVPs, an in-app notification inbox, and two protected jobs that run on a timer.
+-->
+<p class="lead">This chapter adds events fans can attend together, the bell that tells them things happened, and two jobs a scheduler calls to keep time-based things correct (reminders and account clean-up).</p>
+
+<h2>Watch parties</h2>
+<plain>
+<p>A watch party is an event listing: a title, a start time, a link to wherever people will actually watch (another website), and an "I'm going" button. Clautverse does not host the video; it only organises the gathering and counts who is coming.</p>
+</plain>
+<p>Create <code>server/utils/watchParties.ts</code>:</p>
+<!--@file server/utils/watchParties.ts-->
+<ul>
+  <li><code>isIanaTimeZone</code> accepts names like <code>Africa/Lagos</code> by asking JavaScript's built-in <code>Intl</code> to try to use the name. Times are stored in UTC; the zone is kept only so apps can show the local time properly.</li>
+  <li><code>partyCreateBody</code> and <code>partyPatchBody</code>: the Zod shapes. The patch shape is the create fields made <code>.partial()</code> (all optional), so the two cannot drift apart.</li>
+  <li><code>assertPartyTimes</code>: a new start time must be in the future and an end must come after the start.</li>
+  <li><code>loadParty</code>: loads a party with its community and host; "staff" means admin, community owner or host.</li>
+  <li><code>notifyRsvps</code>: one SQL statement that notifies everyone who RSVP'd.</li>
+</ul>
+<p>The endpoints. List upcoming or past parties:</p>
+<!--@file server/api/watch-parties/index.get.ts-->
+<p>Create one (the Star or an admin). Members with alerts on get a notification, and the idempotency key from chapter 12 is supported:</p>
+<!--@file server/api/watch-parties/index.post.ts-->
+<p>Read, edit and cancel:</p>
+<!--@file server/api/watch-parties/[id]/index.get.ts-->
+<!--@file server/api/watch-parties/[id]/index.patch.ts-->
+<!--@file server/api/watch-parties/[id]/cancel.post.ts-->
+<p>"I'm going" on and off. The two files are nearly identical on purpose (<code>const going = true</code> versus <code>false</code>):</p>
+<!--@file server/api/watch-parties/[id]/rsvp.put.ts-->
+<!--@file server/api/watch-parties/[id]/rsvp.delete.ts-->
+<tech>
+<p>The party row is locked (<code>loadParty(..., true)</code>) so two simultaneous RSVPs cannot both read <code>rsvpCount = 5</code> and both write 6. The count only changes when a row was really inserted or deleted (<code>changed.length</code>), making repeated calls harmless (<strong>idempotent</strong>). Wherever you see PUT or DELETE on a "me" address in this project, expect this style.</p>
+</tech>
+<aside class="callout tip"><p class="callout-label">Spot the duplication</p>
+<p>The two RSVP files repeat about 20 lines. A shared helper would be tidier, but the project keeps them separate. When you are learning, notice it and decide for yourself; "three similar lines are better than a premature abstraction" is a common rule of thumb.</p></aside>
+
+<h2>Notifications</h2>
+<p>Notifications are rows in the <code>notification</code> table: a <code>type</code> such as <code>drop.published</code> and a small JSON <code>data</code> bag. Create <code>server/utils/notifications.ts</code>:</p>
+<!--@file server/utils/notifications.ts-->
+<ul>
+  <li><code>SUMMARY</code> turns a machine type into a sentence for the bell. An unknown type falls back to "Update".</li>
+  <li><code>TARGETS</code> finds the first ID in <code>data</code> (<code>dropId</code>, <code>partyId</code>, …) to build a <code>target</code> telling the app where to jump when tapped.</li>
+</ul>
+<p>Four small endpoints:</p>
+<!--@file server/api/notifications/index.get.ts-->
+<!--@file server/api/notifications/unread-count.get.ts-->
+<!--@file server/api/notifications/[id]/read.post.ts-->
+<!--@file server/api/notifications/read-all.post.ts-->
+<ul>
+  <li>Every query includes <code>userId = me</code>, so nobody can read or mark anyone else's notifications. Marking someone else's returns <code>NOT_FOUND</code>.</li>
+  <li><code>coalesce(read_at, now())</code> in <code>read.post.ts</code> keeps the <em>first</em> read time if you mark it again.</li>
+</ul>
+
+<h2>Background jobs</h2>
+<plain>
+<p>Some things must happen "on their own": reminding people an hour before a party, switching a party from "scheduled" to "live", and finally erasing accounts whose 30-day deletion grace period ended. A <strong>scheduler</strong> (a cron service, or a timer on your host) calls two special addresses on a timetable.</p>
+</plain>
+<p>Those addresses must not be public, so they require a secret. Create <code>server/utils/cron.ts</code>:</p>
+<!--@file server/utils/cron.ts-->
+<ul>
+  <li>The caller sends <code>Authorization: Bearer &lt;cronSecret&gt;</code>.</li>
+  <li>Any mismatch, including no secret configured at all, answers <strong>404</strong>, not 403: an outsider cannot even tell the job exists.</li>
+  <li>The comparison uses <code>timingSafeEqual</code> (the same technique as the cursor) after checking lengths match.</li>
+</ul>
+<p>The notification job (meant to run every 5 to 15 minutes):</p>
+<!--@file server/api/internal/jobs/notifications.post.ts-->
+<p>The daily clean-up job:</p>
+<!--@file server/api/internal/jobs/purge.post.ts-->
+<tech>
+<p>Both jobs are written to be <strong>idempotent</strong>: running one twice does no harm. The reminder query marks <code>reminder_sent_at</code> in the same statement that inserts notifications (a "CTE", the <code>with due as (…)</code> part), so a party is never reminded twice. The purge job deletes at most 100 accounts per run; foreign keys set author columns to null, so posts and the XP ledger survive without a person attached.</p>
+</tech>
+
+<check>
+<p>As your admin user, create a party in a future time, RSVP, then cancel it to trigger a notification (use a date that is still in the future when you read this):</p>
+<!--@code bash | terminal-->
+curl -b jar.txt -X POST http://localhost:3000/api/watch-parties \
+  -H 'Content-Type: application/json' \
+  -d '{"communityId":"COMMUNITY_ID","title":"Finale night","startsAt":"2030-01-01T18:00:00+01:00","timeZone":"Africa/Lagos","link":"https://example.com/watch"}'
+curl -b jar.txt -X PUT http://localhost:3000/api/watch-parties/PARTY_ID/rsvp
+curl -b jar.txt -X POST http://localhost:3000/api/watch-parties/PARTY_ID/cancel
+curl -b jar.txt http://localhost:3000/api/notifications/unread-count
+<!--@/code-->
+<p>The RSVP answer shows <code>"going":true,"rsvpCount":1</code>; the final count call should show <code>{"count":1}</code> (the cancellation notice). Now try the job without and with the secret:</p>
+<!--@code bash | terminal-->
+curl -i -X POST http://localhost:3000/api/internal/jobs/notifications
+set -a; . ./.env; set +a
+curl -X POST http://localhost:3000/api/internal/jobs/notifications -H "Authorization: Bearer $NUXT_CRON_SECRET"
+<!--@/code-->
+<p>The first call is a <code>404</code>. The second returns counts such as <code>{"reminders":0,"live":0,"ended":0}</code>. (This needs <code>NUXT_CRON_SECRET</code> to be filled in your <code>.env</code> and the dev server restarted.) Commit: <code>git add -A && git commit -m "Watch parties, notifications and jobs"</code>.</p>
+</check>

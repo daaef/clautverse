@@ -1,0 +1,52 @@
+<!--@meta
+part: Part 3 · People
+title: My account: profile and deletion
+summary: Read and edit your own profile, and schedule account deletion with a 30-day safety net.
+-->
+<p class="lead">Now that people can sign in, they need to see and change their own details. These three endpoints all live under <code>/api/me</code>: "me" means "whoever the session cookie says is calling".</p>
+
+<h2>Read my profile</h2>
+<p>Create <code>server/api/me/index.get.ts</code>:</p>
+<!--@file server/api/me/index.get.ts-->
+<plain>
+<p>One line does the whole job: <code>requireUser</code> finds out who is calling, and <code>toMe</code> shapes the answer. The <code>{ verified: false }</code> option lets a person who has not yet confirmed their email still call this, so an app can show "check your inbox".</p>
+</plain>
+<tech>
+<p>Any endpoint file is just <code>export default defineEventHandler(async (event) =&gt; { … })</code>. The value returned from the function becomes the JSON response, so <code>toMe(...)</code> being the last expression is the response.</p>
+</tech>
+
+<h2>Change my username or display name</h2>
+<p>Create <code>server/api/me/index.patch.ts</code>:</p>
+<!--@file server/api/me/index.patch.ts-->
+<ul>
+  <li><strong>PATCH</strong> means "change some fields". The Zod shape has <code>.strict()</code> (no unknown fields) and a <code>.refine(...)</code> requiring at least one field.</li>
+  <li>The username must match the same rule used at sign-up (<code>USERNAME_RE</code> from chapter 8) and not be reserved.</li>
+  <li><strong>Once every 30 days:</strong> if <code>usernameChangedAt</code> is recent the answer is <code>INVALID_STATE</code> with the date when the next change is allowed.</li>
+  <li><strong>Taken usernames:</strong> we check first, but two people could still race for the same name at the same instant. So we also catch the database's own uniqueness error (<code>code === '23505'</code>) and turn it into the same friendly <code>CONFLICT</code>. Checking <em>and</em> relying on the database's rule is the safe pattern.</li>
+</ul>
+
+<h2>Delete my account (with a grace period)</h2>
+<p>Deleting someone's data is serious, so it is a two-step process: the request marks the account for deletion, and a daily background job (chapter 14) erases it 30 days later. Signing in during those 30 days cancels it (that hook was in <code>auth.ts</code>). Create <code>server/api/me/index.delete.ts</code>:</p>
+<!--@file server/api/me/index.delete.ts-->
+<ul>
+  <li>The caller must send their <strong>password</strong> again, so a stolen session alone cannot delete the account. It is checked with Better Auth's own verifier (<code>ctx.password.verify</code>), never by us.</li>
+  <li>Rate limited to 5 attempts per hour, because this endpoint accepts password guesses.</li>
+  <li>One transaction sets <code>status = 'pending_deletion'</code> and deletes all of the user's sessions (signing them out everywhere). A transaction means either both happen or neither.</li>
+  <li>It clears the cookie and answers <code>202 Accepted</code> ("we will do it later") with the date the purge will happen.</li>
+</ul>
+
+<check>
+<p>With your <code>jar.txt</code> from chapter 8 (sign in again if you deleted it):</p>
+<!--@code bash | terminal-->
+curl -b jar.txt http://localhost:3000/api/me
+curl -b jar.txt -X PATCH http://localhost:3000/api/me \
+  -H 'Content-Type: application/json' -d '{"displayName":"Ada A."}'
+curl -b jar.txt -X PATCH http://localhost:3000/api/me \
+  -H 'Content-Type: application/json' -d '{"nonsense":true}'
+curl http://localhost:3000/api/me
+<!--@/code-->
+<p>Expect: your profile; the profile with the new display name; a <code>VALIDATION_FAILED</code> error (its details point at the unrecognised key); and finally <code>UNAUTHENTICATED</code> because the last call sent no cookie. Do <strong>not</strong> try the delete call on the account you want to keep. Commit: <code>git add -A && git commit -m "My account endpoints"</code>.</p>
+</check>
+<tech>
+<p>You have now seen the usual order inside a write endpoint: <strong>1)</strong> authenticate, <strong>2)</strong> read and validate input, <strong>3)</strong> rate limit if abuse is plausible, <strong>4)</strong> check business rules, <strong>5)</strong> change the database inside a transaction, <strong>6)</strong> return a shaped response. Most of the next chapters repeat this order.</p>
+</tech>

@@ -1,0 +1,58 @@
+<!--@meta
+part: Part 5 · Stars, safety and admin
+title: Becoming a Star
+summary: How a fan applies to be a Star, what a Star sees on their dashboard, and the (soon to be removed) identity claims.
+-->
+<p class="lead">Communities exist because Stars exist. A fan applies; an admin reviews (chapter 17); an accepted Star gets the <code>talent</code> role, a profile and their own community. This chapter builds the applicant's and the Star's side.</p>
+
+<h2>Helpers (created in chapter 10)</h2>
+<p>You created <code>server/utils/talent-applications.ts</code> in chapter 10. Here is what its parts are for (the code is on that chapter's page and in the <!--@ref server/utils/talent-applications.ts | reference-->):</p>
+<ul>
+  <li><code>httpsLink</code>: a labelled link that must start with <code>https</code>. Links are only accepted as <code>https</code> so nobody can store a <code>javascript:</code> address that would run code when clicked.</li>
+  <li><code>rejectMediaIds</code>: file uploads are not built yet, so any attempt to send an uploaded-file ID answers <code>FEATURE_DISABLED</code> with a friendly message. This is a deliberate placeholder.</li>
+  <li><code>applicationView</code> vs <code>adminApplicationView</code>: the applicant never sees the admin's <code>internalNote</code> or who decided. The admin view adds them. Same data, two audiences.</li>
+  <li><code>REAPPLY_DAYS = 7</code>: after a decline, <code>reapplyAfter</code> tells the applicant when they may try again.</li>
+  <li><code>decisionBody</code>: the Zod shape for accept/decline (chapter 17).</li>
+  <li>The <code>claimView</code> functions belong to identity claims, below.</li>
+</ul>
+<p><code>server/utils/talentProfile.ts</code>, also from chapter 10, holds <code>talentView</code> (a Star's full profile) and <code>talentCard</code> (the short version used by discover).</p>
+
+<h2>Applying</h2>
+<p><code>server/api/talent-applications/index.post.ts</code> submits an application:</p>
+<!--@file server/api/talent-applications/index.post.ts-->
+<ul>
+  <li>A Star cannot apply again; the category must exist and be active; you may have only <strong>one pending</strong> application; after a decline you must wait out <code>reapplyAfter</code>.</li>
+  <li>The "one pending application" rule is enforced twice: by a check in code (for a friendly message) and by the partial unique index <code>talent_application_one_pending_uq</code> in the schema (so even two simultaneous requests cannot both succeed). The code handles that race by catching the empty <code>returning()</code> result.</li>
+  <li>Rate limited to 5 per hour.</li>
+</ul>
+<p>Look at your applications and edit a pending one:</p>
+<!--@file server/api/talent-applications/me.get.ts-->
+<!--@file server/api/talent-applications/[id].patch.ts-->
+
+<h2>The Star's own screens</h2>
+<p>Once accepted, a Star has a dashboard with headline numbers and can edit their profile. Both need the <code>talent</code> role.</p>
+<!--@file server/api/talent/dashboard.get.ts-->
+<tech>
+<p>The dashboard runs three counting queries at the same time with <code>Promise.all</code> instead of one after another, which makes the endpoint about as fast as its slowest query rather than the sum. The destructuring <code>[[nm], [pend], [wp]]</code> unpacks "the first row of each result".</p>
+</tech>
+<!--@file server/api/talent/profile.patch.ts-->
+<ul>
+  <li>There is no ID in the address: <code>PATCH /api/talent/profile</code> always edits <em>my own</em> profile. A fan cannot edit someone else's by guessing an ID, because the query is <code>where user_id = me</code>.</li>
+</ul>
+
+<h2>Identity claims (scheduled for removal)</h2>
+<aside class="callout warn"><p class="callout-label">Heads-up</p>
+<p>An <strong>identity claim</strong> lets someone say "this existing Star profile is me" and attach evidence links for an admin to verify. The project plan (<code>docs/plan.md</code>, task 3) removes this feature because the design document has no separate claim flow. The code still exists at this snapshot, so it is shown here so the guide matches it. If you are building your own version, you can safely skip these two files and the <code>identity_claim</code> table.</p></aside>
+<!--@file server/api/talents/[id]/claims.post.ts-->
+<!--@file server/api/identity-claims/me.get.ts-->
+
+<check>
+<p>Submit an application as your test user (use the Reality TV category id from chapter 10):</p>
+<!--@code bash | terminal-->
+curl -b jar.txt -X POST http://localhost:3000/api/talent-applications \
+  -H 'Content-Type: application/json' \
+  -d '{"categoryId":"CATEGORY_ID","displayName":"Ada Star","bio":"Hello","links":[{"label":"Site","url":"https://example.com"}]}'
+curl -b jar.txt http://localhost:3000/api/talent-applications/me
+<!--@/code-->
+<p>The first call returns status <code>pending</code> with HTTP 201. Send it again and you get <code>CONFLICT</code> ("You already have a pending application"). Try a link beginning <code>http://</code> and see it rejected. In chapter 17 you will accept this application as an admin. Commit: <code>git add -A && git commit -m "Star applications, dashboard and profile"</code>.</p>
+</check>

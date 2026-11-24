@@ -1,0 +1,76 @@
+<!--@meta
+part: Part 3 · People
+title: Categories, Stars and onboarding
+summary: The public catalog, and the step-by-step picks a new fan makes before joining communities.
+-->
+<p class="lead">A new fan's first job is to choose what they are into. This chapter adds the public lists (categories, countries, Stars) and the three onboarding endpoints that save the fan's choices as they go.</p>
+
+<h2>Shared helpers</h2>
+<p>Create <code>server/utils/catalog.ts</code>:</p>
+<!--@file server/utils/catalog.ts-->
+<ul>
+  <li><code>list(items)</code> wraps a short list in the same <code>{ items, nextCursor }</code> shape as paged lists, with <code>nextCursor: null</code>. It keeps all list answers looking alike.</li>
+  <li><code>validateSelections</code> checks that the picked category exists and is <code>active</code>, and that every picked Star exists and belongs to that category. If anything is wrong it throws one <code>VALIDATION_FAILED</code> whose <code>details.fields</code> names each problem, such as <code>talentIds[1]: not_in_category</code>.</li>
+</ul>
+<p>Create <code>server/utils/onboarding.ts</code>:</p>
+<!--@file server/utils/onboarding.ts-->
+<plain>
+<p>Onboarding is a short checklist: pick a category, pick favourite Stars, review. <code>nextStep</code> tells the app which step to show next, so a fan who closes the app halfway resumes where they stopped.</p>
+</plain>
+
+<h2>Public lists</h2>
+<p>These three endpoints need no sign-in. Create <code>server/api/categories.get.ts</code>:</p>
+<!--@file server/api/categories.get.ts-->
+<p><code>server/api/countries.get.ts</code>:</p>
+<!--@file server/api/countries.get.ts-->
+<p>And the Stars. <code>server/api/talents/index.get.ts</code> lists or searches them:</p>
+<!--@file server/api/talents/index.get.ts-->
+<ul>
+  <li>Optional filters: <code>categoryId</code> and a search text <code>q</code>.</li>
+  <li><code>ilike</code> is a case-insensitive "contains" search. The text is first cleaned with <code>q.replace(/[%_\\]/g, '\\$&amp;')</code> because <code>%</code> and <code>_</code> are wildcards in SQL; without this a visitor could type <code>%</code> and match everything.</li>
+  <li>Results are capped at 200 so one call can never return an unbounded list.</li>
+</ul>
+<p><code>server/api/talents/[id]/index.get.ts</code> shows one Star with their country:</p>
+<!--@file server/api/talents/[id]/index.get.ts-->
+
+<h2>The onboarding endpoints</h2>
+<p><code>server/api/onboarding/index.get.ts</code> returns where the fan is:</p>
+<!--@file server/api/onboarding/index.get.ts-->
+<p><code>server/api/onboarding/index.put.ts</code> saves partial progress:</p>
+<!--@file server/api/onboarding/index.put.ts-->
+<ul>
+  <li><strong>PUT</strong> here means "store this version of my picks". It merges what arrived with what was saved before, so sending only <code>categoryId</code> keeps earlier Star picks.</li>
+  <li><code>insert(...).onConflictDoUpdate(...)</code> is an <strong>upsert</strong>: create the row if it does not exist, otherwise update it. The <code>onboarding</code> table has one row per user, so this is safe to repeat.</li>
+</ul>
+<p><code>server/api/onboarding/complete.post.ts</code> finishes it:</p>
+<!--@file server/api/onboarding/complete.post.ts-->
+<ul>
+  <li>Needs a category and at least one Star (<code>.min(1, 'pick at least one Star')</code>).</li>
+  <li>Marks the user's <code>onboardingStatus</code> as <code>completed</code> and saves the picks <strong>in one transaction</strong>.</li>
+  <li>From now on, <code>requireUser(event, { onboarded: true })</code> (chapter 8) lets this fan into endpoints such as joining a community. Others answer <code>ONBOARDING_REQUIRED</code>.</li>
+</ul>
+
+<h2>Two helper files that later chapters rely on</h2>
+<p>Several endpoints you will write soon (community edits, drops, discover) call small helpers that belong to the "Star" side of the product. We create them now so nothing is missing later. Chapter 15 explains them in context.</p>
+<p>Create <code>server/utils/talent-applications.ts</code>:</p>
+<!--@file server/utils/talent-applications.ts-->
+<p>And <code>server/utils/talentProfile.ts</code>:</p>
+<!--@file server/utils/talentProfile.ts-->
+<p>For now, note two things: <code>rejectMediaIds</code> answers <code>FEATURE_DISABLED</code> whenever someone sends an uploaded-file ID (uploads are not built yet), and <code>talentView</code> / <code>talentCard</code> shape a Star for the API.</p>
+
+<check>
+<p>The public lists first (no cookie needed):</p>
+<!--@code bash | terminal-->
+curl http://localhost:3000/api/categories
+curl http://localhost:3000/api/talents
+<!--@/code-->
+<p>You should see Reality TV with <code>"active":true</code> and the three seeded Stars Ada, Bisi and Chidi. Copy the Reality TV <code>id</code> and the Star ids. Then, signed in (<code>jar.txt</code>), walk through onboarding; replace the placeholders:</p>
+<!--@code bash | terminal-->
+curl -b jar.txt http://localhost:3000/api/onboarding
+curl -b jar.txt -X PUT http://localhost:3000/api/onboarding \
+  -H 'Content-Type: application/json' -d '{"categoryId":"CATEGORY_ID"}'
+curl -b jar.txt -X POST http://localhost:3000/api/onboarding/complete \
+  -H 'Content-Type: application/json' -d '{"categoryId":"CATEGORY_ID","talentIds":["STAR_ID"]}'
+<!--@/code-->
+<p>The first call shows <code>"status":"not_started"</code> and <code>"nextStep":"category"</code>. After <code>PUT</code> the next step becomes <code>stars</code>. After <code>complete</code> the status is <code>completed</code> and <code>nextStep</code> is <code>null</code>. Try completing with a made-up Star id to see the per-field error details. Commit: <code>git add -A && git commit -m "Catalog and onboarding"</code>.</p>
+</check>

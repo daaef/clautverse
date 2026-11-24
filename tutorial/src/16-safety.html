@@ -1,0 +1,54 @@
+<!--@meta
+part: Part 5 · Stars, safety and admin
+title: Reports and blocks
+summary: How fans flag bad content and hide other people, and the removal rules that protect communities.
+-->
+<p class="lead">Any community product needs a way to deal with bad behaviour. Fans can <strong>report</strong> something to the admins, or <strong>block</strong> a person so they stop seeing that person's content. This chapter builds both, plus the helper admins use to remove a member.</p>
+
+<h2>Reports</h2>
+<plain>
+<p>A report is a flag on a drop, reply, user, community or mission with a reason (spam, harassment, hate, sexual, impersonation, other). It joins a queue that admins work through in chapter 17. The person reported is never told who reported them.</p>
+</plain>
+<p>Create <code>server/utils/reports.ts</code>:</p>
+<!--@file server/utils/reports.ts-->
+<ul>
+  <li><code>isUniqueViolation</code> recognises the database's "that already exists" error code (<code>23505</code>), even when wrapped inside another error.</li>
+  <li><code>assertReportTarget</code>: you may only report something you are able to see. It reuses <code>loadDrop</code>, <code>loadVisibleCommunity</code> and <code>loadMission</code>, so a hidden or non-existent target simply answers <code>NOT_FOUND</code>.</li>
+  <li><code>reportSubject</code>: for admins, finds the author and community behind whatever was reported.</li>
+  <li><code>removeMember</code>: the removal rule. A member removed from a community has their Originals number <strong>retired</strong> (the row keeps it; the counter never hands it out again). The <strong>first removal blocks rejoining for 30 days</strong>; a <strong>second</strong> removal is permanent. The member is notified, the action is audited, and the member count goes down, all inside the caller's transaction.</li>
+</ul>
+<p><code>server/api/reports/index.post.ts</code>:</p>
+<!--@file server/api/reports/index.post.ts-->
+<ul>
+  <li><strong>One open report per reporter and target.</strong> A repeat returns the existing report instead of creating spam. The check runs before the rate limit, so repeating is free.</li>
+  <li>The reported item must be visible to the reporter.</li>
+  <li>If two identical reports race, the database's unique index rejects the second; the <code>catch</code> block then loads and returns the first. Handling the race this way is common: let the database be the final judge, and turn its error into a normal answer.</li>
+</ul>
+
+<h2>Blocks</h2>
+<plain>
+<p>A block is private and one-directional: if I block you, I stop seeing your drops and replies. You are not told, and nothing else changes for you. It is about what <em>I</em> see.</p>
+</plain>
+<p><code>server/api/users/[id]/block.post.ts</code> and <code>block.delete.ts</code>:</p>
+<!--@file server/api/users/[id]/block.post.ts-->
+<!--@file server/api/users/[id]/block.delete.ts-->
+<ul>
+  <li>You cannot block yourself (<code>VALIDATION_FAILED</code>), and the target must exist.</li>
+  <li>Blocking twice returns the existing block; unblocking something that is not blocked still succeeds. Both are idempotent, so apps can retry freely.</li>
+  <li>The blocking itself is only a row. The effect happens elsewhere: the feed, community timeline, single-drop and reply endpoints from chapter 12 all call <code>blockedAuthorIds</code> and <code>notAuthoredByBlocked</code>. That is why those helpers live in <code>drops.ts</code>.</li>
+  <li>This is the first place user IDs are used as a path parameter, so it uses <code>readUserIdParam</code> from chapter 7 (Better Auth IDs are not UUIDs).</li>
+</ul>
+
+<check>
+<p>As your test user, report the drop from chapter 12, repeat the report, and try to block yourself (use your own user id from <code>/api/me</code>):</p>
+<!--@code bash | terminal-->
+curl -b jar.txt -X POST http://localhost:3000/api/reports \
+  -H 'Content-Type: application/json' \
+  -d '{"targetType":"drop","targetId":"DROP_ID","reason":"spam"}'
+curl -b jar.txt -X POST http://localhost:3000/api/reports \
+  -H 'Content-Type: application/json' \
+  -d '{"targetType":"drop","targetId":"DROP_ID","reason":"spam"}'
+curl -b jar.txt -X POST http://localhost:3000/api/users/YOUR_USER_ID/block
+<!--@/code-->
+<p>Expected: the first call returns status <code>open</code> with HTTP 201; the second returns the same report with HTTP 200; the block call returns <code>VALIDATION_FAILED</code> with <code>fields.id = "self"</code>. Commit: <code>git add -A && git commit -m "Reports and blocks"</code>.</p>
+</check>

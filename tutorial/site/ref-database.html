@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Database files · Build Clautverse</title>
+<meta name="description" content="">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="ref-database">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html" aria-current="page">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <h1>Reference: Database files</h1><p class="lead">Every file in this group, exactly as it is in the repository (commit <code>227fbaa</code>). Each file says which chapter explains it.</p>
+<details class="ref" id="f-server-db-schema-app-ts"><summary><code>server/db/schema/app.ts</code> <small>explained in <a href="04-database-tables.html">Run PostgreSQL and design the tables</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/db/schema/app.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid, unique, uniqueIndex } <span class="t-k">from</span> <span class="t-s">'drizzle-orm/pg-core'</span>
+<span class="t-k">import</span> { user } <span class="t-k">from</span> <span class="t-s">'./auth'</span>
+
+<span class="t-c">// Fixed-window counters for Clautverse's own routes (decision: rate limits in Postgres).</span>
+<span class="t-k">export</span> <span class="t-k">const</span> apiRateLimit = pgTable(<span class="t-s">'api_rate_limit'</span>, {
+  key: text(<span class="t-s">'key'</span>).primaryKey(),
+  windowStart: timestamp(<span class="t-s">'window_start'</span>, { withTimezone: <span class="t-k">true</span> }).notNull(),
+  count: integer(<span class="t-s">'count'</span>).notNull(),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> category = pgTable(<span class="t-s">'category'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  slug: text(<span class="t-s">'slug'</span>).notNull().unique(),
+  name: text(<span class="t-s">'name'</span>).notNull(),
+  active: boolean(<span class="t-s">'active'</span>).notNull().<span class="t-k">default</span>(<span class="t-k">false</span>),
+  sortOrder: integer(<span class="t-s">'sort_order'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> country = pgTable(<span class="t-s">'country'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  code: text(<span class="t-s">'code'</span>).notNull().unique(), <span class="t-c">// ISO 3166-1 alpha-2</span>
+  name: text(<span class="t-s">'name'</span>).notNull(),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> talent = pgTable(<span class="t-s">'talent'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  slug: text(<span class="t-s">'slug'</span>).notNull().unique(),
+  name: text(<span class="t-s">'name'</span>).notNull(),
+  <span class="t-c">// Which category the Star belongs to (Reality TV at launch) and where they're from.</span>
+  categoryId: uuid(<span class="t-s">'category_id'</span>).notNull().references(() =&gt; category.id),
+  countryId: uuid(<span class="t-s">'country_id'</span>).references(() =&gt; country.id),
+  <span class="t-c">// Short line that tells same-name Stars apart, e.g. "Housemate, Season 2 · 2025".</span>
+  knownFor: text(<span class="t-s">'known_for'</span>),
+  bio: text(<span class="t-s">'bio'</span>),
+  links: jsonb(<span class="t-s">'links'</span>).$<span class="t-k">type</span>&lt;{ label: string, url: string }[]&gt;().notNull().<span class="t-k">default</span>([]),
+  imageUrl: text(<span class="t-s">'image_url'</span>),
+  userId: text(<span class="t-s">'user_id'</span>).unique().references(() =&gt; user.id, { onDelete: <span class="t-s">'set null'</span> }),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+})
+
+<span class="t-c">// One row per user; holds resumable onboarding picks (ONB-01..03).</span>
+<span class="t-k">export</span> <span class="t-k">const</span> onboarding = pgTable(<span class="t-s">'onboarding'</span>, {
+  userId: text(<span class="t-s">'user_id'</span>).primaryKey().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  categoryId: uuid(<span class="t-s">'category_id'</span>).references(() =&gt; category.id),
+  talentIds: uuid(<span class="t-s">'talent_ids'</span>).array().notNull().<span class="t-k">default</span>([]),
+  completedAt: timestamp(<span class="t-s">'completed_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  updatedAt: timestamp(<span class="t-s">'updated_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+})
+
+<span class="t-k">export</span> <span class="t-k">type</span> Link = { label: string, url: string }
+
+<span class="t-c">// Decision 14: one talent owns one community (unique owner_talent_id).</span>
+<span class="t-k">export</span> <span class="t-k">const</span> community = pgTable(<span class="t-s">'community'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  ownerTalentId: uuid(<span class="t-s">'owner_talent_id'</span>).unique().references(() =&gt; talent.id),
+  slug: text(<span class="t-s">'slug'</span>).notNull().unique(),
+  name: text(<span class="t-s">'name'</span>).notNull(),
+  description: text(<span class="t-s">'description'</span>),
+  rules: text(<span class="t-s">'rules'</span>),
+  imageUrl: text(<span class="t-s">'image_url'</span>),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'active'</span>, <span class="t-s">'vetoed'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'active'</span>),
+  memberCount: integer(<span class="t-s">'member_count'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+  <span class="t-c">// Row-locked counter: positions 1..100 are handed out once and never reused (decision 6).</span>
+  originalsAssigned: integer(<span class="t-s">'originals_assigned'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [index(<span class="t-s">'community_popular_idx'</span>).on(t.memberCount, t.id)])
+
+<span class="t-k">export</span> <span class="t-k">const</span> membership = pgTable(<span class="t-s">'membership'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  communityId: uuid(<span class="t-s">'community_id'</span>).notNull().references(() =&gt; community.id),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'active'</span>, <span class="t-s">'left'</span>, <span class="t-s">'removed'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'active'</span>),
+  alertsEnabled: boolean(<span class="t-s">'alerts_enabled'</span>).notNull().<span class="t-k">default</span>(<span class="t-k">true</span>),
+  lane: text(<span class="t-s">'lane'</span>), <span class="t-c">// Canonical lane codes are validated by the join route (TASK-0004).</span>
+  originalPosition: integer(<span class="t-s">'original_position'</span>),
+  joinedAt: timestamp(<span class="t-s">'joined_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  leftAt: timestamp(<span class="t-s">'left_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  <span class="t-c">// DEC-03: per-(user, community) admin-removal counter; first removal sets blockedUntil = removedAt + 30d.</span>
+  removalCount: integer(<span class="t-s">'removal_count'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+  blockedUntil: timestamp(<span class="t-s">'blocked_until'</span>, { withTimezone: <span class="t-k">true</span> }),
+}, t =&gt; [
+  unique(<span class="t-s">'membership_user_community_uq'</span>).on(t.userId, t.communityId),
+  unique(<span class="t-s">'membership_original_position_uq'</span>).on(t.communityId, t.originalPosition),
+])
+
+<span class="t-k">export</span> <span class="t-k">const</span> talentApplication = pgTable(<span class="t-s">'talent_application'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  categoryId: uuid(<span class="t-s">'category_id'</span>).notNull().references(() =&gt; category.id),
+  displayName: text(<span class="t-s">'display_name'</span>).notNull(),
+  bio: text(<span class="t-s">'bio'</span>).notNull().<span class="t-k">default</span>(<span class="t-s">''</span>),
+  links: jsonb(<span class="t-s">'links'</span>).$<span class="t-k">type</span>&lt;Link[]&gt;().notNull().<span class="t-k">default</span>([]),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'pending'</span>, <span class="t-s">'accepted'</span>, <span class="t-s">'declined'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'pending'</span>),
+  decisionReason: text(<span class="t-s">'decision_reason'</span>),
+  internalNote: text(<span class="t-s">'internal_note'</span>),
+  talentId: uuid(<span class="t-s">'talent_id'</span>).references(() =&gt; talent.id),
+  decidedBy: text(<span class="t-s">'decided_by'</span>),
+  submittedAt: timestamp(<span class="t-s">'submitted_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  decidedAt: timestamp(<span class="t-s">'decided_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+}, t =&gt; [
+  uniqueIndex(<span class="t-s">'talent_application_one_pending_uq'</span>).on(t.userId).where(sql<span class="t-s">`status = 'pending'`</span>),
+  index(<span class="t-s">'talent_application_queue_idx'</span>).on(t.status, t.submittedAt, t.id),
+])
+
+<span class="t-k">export</span> <span class="t-k">const</span> identityClaim = pgTable(<span class="t-s">'identity_claim'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  talentId: uuid(<span class="t-s">'talent_id'</span>).notNull().references(() =&gt; talent.id),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  evidenceLinks: text(<span class="t-s">'evidence_links'</span>).array().notNull().<span class="t-k">default</span>([]),
+  message: text(<span class="t-s">'message'</span>),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'pending'</span>, <span class="t-s">'verified'</span>, <span class="t-s">'rejected'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'pending'</span>),
+  decisionReason: text(<span class="t-s">'decision_reason'</span>),
+  internalNote: text(<span class="t-s">'internal_note'</span>),
+  decidedBy: text(<span class="t-s">'decided_by'</span>),
+  submittedAt: timestamp(<span class="t-s">'submitted_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  decidedAt: timestamp(<span class="t-s">'decided_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+}, t =&gt; [
+  uniqueIndex(<span class="t-s">'identity_claim_one_pending_uq'</span>).on(t.userId, t.talentId).where(sql<span class="t-s">`status = 'pending'`</span>),
+  index(<span class="t-s">'identity_claim_queue_idx'</span>).on(t.status, t.submittedAt, t.id),
+])
+
+<span class="t-c">// Append-only: the app never updates or deletes audit rows. actor_id is kept as plain text so</span>
+<span class="t-c">// rows survive account erasure (decision 17).</span>
+<span class="t-k">export</span> <span class="t-k">const</span> adminAudit = pgTable(<span class="t-s">'admin_audit'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  actorId: text(<span class="t-s">'actor_id'</span>).notNull(),
+  action: text(<span class="t-s">'action'</span>).notNull(),
+  targetType: text(<span class="t-s">'target_type'</span>).notNull(),
+  targetId: text(<span class="t-s">'target_id'</span>).notNull(),
+  metadata: jsonb(<span class="t-s">'metadata'</span>).$<span class="t-k">type</span>&lt;Record&lt;string, unknown&gt;&gt;().notNull().<span class="t-k">default</span>({}),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [index(<span class="t-s">'admin_audit_created_idx'</span>).on(t.createdAt, t.id), index(<span class="t-s">'admin_audit_target_idx'</span>).on(t.targetType, t.targetId)])
+
+<span class="t-k">export</span> <span class="t-k">const</span> notification = pgTable(<span class="t-s">'notification'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  <span class="t-k">type</span>: text(<span class="t-s">'type'</span>).notNull(),
+  data: jsonb(<span class="t-s">'data'</span>).$<span class="t-k">type</span>&lt;Record&lt;string, unknown&gt;&gt;().notNull().<span class="t-k">default</span>({}),
+  readAt: timestamp(<span class="t-s">'read_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [index(<span class="t-s">'notification_user_idx'</span>).on(t.userId, t.createdAt, t.id)])
+
+<span class="t-c">// Decisions 7–9: talents post; audience public | members (default) | originals_only.</span>
+<span class="t-c">// A drop is live when status is published/scheduled and publish_at &lt;= now() (no job needed).</span>
+<span class="t-k">export</span> <span class="t-k">const</span> drop = pgTable(<span class="t-s">'drop'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  communityId: uuid(<span class="t-s">'community_id'</span>).notNull().references(() =&gt; community.id),
+  authorId: text(<span class="t-s">'author_id'</span>).references(() =&gt; user.id, { onDelete: <span class="t-s">'set null'</span> }),
+  <span class="t-k">type</span>: text(<span class="t-s">'type'</span>, { enum: [<span class="t-s">'text'</span>, <span class="t-s">'voice'</span>, <span class="t-s">'image'</span>] }).notNull(),
+  body: text(<span class="t-s">'body'</span>),
+  teaser: text(<span class="t-s">'teaser'</span>),
+  audience: text(<span class="t-s">'audience'</span>, { enum: [<span class="t-s">'public'</span>, <span class="t-s">'members'</span>, <span class="t-s">'originals_only'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'members'</span>),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'draft'</span>, <span class="t-s">'scheduled'</span>, <span class="t-s">'published'</span>, <span class="t-s">'archived'</span>, <span class="t-s">'removed'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'draft'</span>),
+  publishAt: timestamp(<span class="t-s">'publish_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  likeCount: integer(<span class="t-s">'like_count'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+  replyCount: integer(<span class="t-s">'reply_count'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  editedAt: timestamp(<span class="t-s">'edited_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+}, t =&gt; [index(<span class="t-s">'drop_timeline_idx'</span>).on(t.communityId, t.publishAt, t.id)])
+
+<span class="t-k">export</span> <span class="t-k">const</span> dropReaction = pgTable(<span class="t-s">'drop_reaction'</span>, {
+  dropId: uuid(<span class="t-s">'drop_id'</span>).notNull().references(() =&gt; drop.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  <span class="t-k">type</span>: text(<span class="t-s">'type'</span>, { enum: [<span class="t-s">'like'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'like'</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [primaryKey({ columns: [t.dropId, t.userId] })])
+
+<span class="t-k">export</span> <span class="t-k">const</span> reply = pgTable(<span class="t-s">'reply'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  dropId: uuid(<span class="t-s">'drop_id'</span>).notNull().references(() =&gt; drop.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  authorId: text(<span class="t-s">'author_id'</span>).references(() =&gt; user.id, { onDelete: <span class="t-s">'set null'</span> }),
+  parentReplyId: uuid(<span class="t-s">'parent_reply_id'</span>),
+  body: text(<span class="t-s">'body'</span>).notNull(),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'active'</span>, <span class="t-s">'deleted'</span>, <span class="t-s">'removed'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'active'</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  editedAt: timestamp(<span class="t-s">'edited_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+}, t =&gt; [index(<span class="t-s">'reply_drop_idx'</span>).on(t.dropId, t.createdAt, t.id)])
+
+<span class="t-c">// Optional Idempotency-Key header: replaying the same key returns the original resource.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> idempotencyKey = pgTable(<span class="t-s">'idempotency_key'</span>, {
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  scope: text(<span class="t-s">'scope'</span>).notNull(),
+  key: text(<span class="t-s">'key'</span>).notNull(),
+  resourceId: text(<span class="t-s">'resource_id'</span>).notNull(),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [primaryKey({ columns: [t.userId, t.scope, t.key] })])
+
+<span class="t-c">// RPT-01 / ADM-12..13: reporters are never revealed to the reported user.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> report = pgTable(<span class="t-s">'report'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  reporterId: text(<span class="t-s">'reporter_id'</span>).references(() =&gt; user.id, { onDelete: <span class="t-s">'set null'</span> }),
+  targetType: text(<span class="t-s">'target_type'</span>, { enum: [<span class="t-s">'drop'</span>, <span class="t-s">'reply'</span>, <span class="t-s">'user'</span>, <span class="t-s">'community'</span>, <span class="t-s">'mission'</span>] }).notNull(),
+  targetId: text(<span class="t-s">'target_id'</span>).notNull(),
+  reason: text(<span class="t-s">'reason'</span>, { enum: [<span class="t-s">'spam'</span>, <span class="t-s">'harassment'</span>, <span class="t-s">'hate'</span>, <span class="t-s">'sexual'</span>, <span class="t-s">'impersonation'</span>, <span class="t-s">'other'</span>] }).notNull(),
+  details: text(<span class="t-s">'details'</span>),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'open'</span>, <span class="t-s">'actioned'</span>, <span class="t-s">'dismissed'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'open'</span>),
+  action: text(<span class="t-s">'action'</span>),
+  internalNote: text(<span class="t-s">'internal_note'</span>),
+  decidedBy: text(<span class="t-s">'decided_by'</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  decidedAt: timestamp(<span class="t-s">'decided_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+}, t =&gt; [
+  uniqueIndex(<span class="t-s">'report_one_open_uq'</span>).on(t.reporterId, t.targetType, t.targetId).where(sql<span class="t-s">`status = 'open'`</span>),
+  index(<span class="t-s">'report_queue_idx'</span>).on(t.status, t.createdAt, t.id),
+])
+
+<span class="t-c">// PRD §12 "Block unwanted accounts": one-directional, visibility-only. A block exists or it</span>
+<span class="t-c">// does not — unblocking deletes the row. Self-blocks are rejected at the route level.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> block = pgTable(<span class="t-s">'block'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  blockerId: text(<span class="t-s">'blocker_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  blockedId: text(<span class="t-s">'blocked_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [unique(<span class="t-s">'block_blocker_blocked_uq'</span>).on(t.blockerId, t.blockedId)])
+
+<span class="t-c">// Admin-configurable settings, e.g. xp_rules = { missionXpMin, missionXpMax } (decision 11).</span>
+<span class="t-k">export</span> <span class="t-k">const</span> appSetting = pgTable(<span class="t-s">'app_setting'</span>, {
+  key: text(<span class="t-s">'key'</span>).primaryKey(),
+  value: jsonb(<span class="t-s">'value'</span>).$<span class="t-k">type</span>&lt;Record&lt;string, unknown&gt;&gt;().notNull(),
+  updatedBy: text(<span class="t-s">'updated_by'</span>),
+  updatedAt: timestamp(<span class="t-s">'updated_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+})
+
+<span class="t-c">// Decision 10: talent picks auto-approve or owner review per mission; one completion per fan.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> mission = pgTable(<span class="t-s">'mission'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  communityId: uuid(<span class="t-s">'community_id'</span>).notNull().references(() =&gt; community.id),
+  creatorId: text(<span class="t-s">'creator_id'</span>).references(() =&gt; user.id, { onDelete: <span class="t-s">'set null'</span> }),
+  title: text(<span class="t-s">'title'</span>).notNull(),
+  description: text(<span class="t-s">'description'</span>).notNull().<span class="t-k">default</span>(<span class="t-s">''</span>),
+  xpReward: integer(<span class="t-s">'xp_reward'</span>).notNull(),
+  deadline: timestamp(<span class="t-s">'deadline'</span>, { withTimezone: <span class="t-k">true</span> }),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'pending'</span>, <span class="t-s">'approved'</span>, <span class="t-s">'rejected'</span>, <span class="t-s">'closed'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'approved'</span>),
+  review: text(<span class="t-s">'review'</span>, { enum: [<span class="t-s">'auto'</span>, <span class="t-s">'owner'</span>] }).notNull(),
+  proof: text(<span class="t-s">'proof'</span>, { enum: [<span class="t-s">'none'</span>, <span class="t-s">'link'</span>, <span class="t-s">'text'</span>] }).notNull(),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [index(<span class="t-s">'mission_community_idx'</span>).on(t.communityId, t.deadline, t.id)])
+
+<span class="t-k">export</span> <span class="t-k">const</span> missionCompletion = pgTable(<span class="t-s">'mission_completion'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  missionId: uuid(<span class="t-s">'mission_id'</span>).notNull().references(() =&gt; mission.id),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'submitted'</span>, <span class="t-s">'approved'</span>, <span class="t-s">'rejected'</span>] }).notNull(),
+  proofLink: text(<span class="t-s">'proof_link'</span>),
+  proofText: text(<span class="t-s">'proof_text'</span>),
+  rejectionReason: text(<span class="t-s">'rejection_reason'</span>),
+  xpTransactionId: uuid(<span class="t-s">'xp_transaction_id'</span>),
+  reviewedBy: text(<span class="t-s">'reviewed_by'</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  reviewedAt: timestamp(<span class="t-s">'reviewed_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+}, t =&gt; [
+  unique(<span class="t-s">'mission_completion_once_uq'</span>).on(t.missionId, t.userId),
+  index(<span class="t-s">'mission_completion_queue_idx'</span>).on(t.missionId, t.status, t.createdAt, t.id),
+])
+
+<span class="t-c">// Append-only XP ledger. Balance = SUM(amount). The unique key makes grants idempotent.</span>
+<span class="t-c">// user_id is nulled (anonymised) on account erasure; rows are never edited or deleted.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> xpTransaction = pgTable(<span class="t-s">'xp_transaction'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  userId: text(<span class="t-s">'user_id'</span>).references(() =&gt; user.id, { onDelete: <span class="t-s">'set null'</span> }),
+  amount: integer(<span class="t-s">'amount'</span>).notNull(),
+  sourceType: text(<span class="t-s">'source_type'</span>, { enum: [<span class="t-s">'mission_completion'</span>, <span class="t-s">'admin_adjustment'</span>] }).notNull(),
+  sourceId: text(<span class="t-s">'source_id'</span>).notNull(),
+  actorId: text(<span class="t-s">'actor_id'</span>),
+  reason: text(<span class="t-s">'reason'</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [
+  unique(<span class="t-s">'xp_transaction_source_uq'</span>).on(t.userId, t.sourceType, t.sourceId),
+  index(<span class="t-s">'xp_transaction_user_idx'</span>).on(t.userId, t.createdAt, t.id),
+])
+
+<span class="t-k">export</span> <span class="t-k">const</span> badge = pgTable(<span class="t-s">'badge'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  name: text(<span class="t-s">'name'</span>).notNull(),
+  description: text(<span class="t-s">'description'</span>).notNull().<span class="t-k">default</span>(<span class="t-s">''</span>),
+  iconUrl: text(<span class="t-s">'icon_url'</span>),
+  communityId: uuid(<span class="t-s">'community_id'</span>).references(() =&gt; community.id),
+  sortOrder: integer(<span class="t-s">'sort_order'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+  active: boolean(<span class="t-s">'active'</span>).notNull().<span class="t-k">default</span>(<span class="t-k">true</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> badgeAward = pgTable(<span class="t-s">'badge_award'</span>, {
+  badgeId: uuid(<span class="t-s">'badge_id'</span>).notNull().references(() =&gt; badge.id),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  awardedBy: text(<span class="t-s">'awarded_by'</span>),
+  awardedAt: timestamp(<span class="t-s">'awarded_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [primaryKey({ columns: [t.badgeId, t.userId] }), index(<span class="t-s">'badge_award_user_idx'</span>).on(t.userId, t.awardedAt)])
+
+<span class="t-c">// Decision 12: event listing + external link + "I'm going". Times stored UTC; timeZone is for display.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> watchParty = pgTable(<span class="t-s">'watch_party'</span>, {
+  id: uuid(<span class="t-s">'id'</span>).primaryKey().defaultRandom(),
+  communityId: uuid(<span class="t-s">'community_id'</span>).notNull().references(() =&gt; community.id),
+  hostId: text(<span class="t-s">'host_id'</span>).references(() =&gt; user.id, { onDelete: <span class="t-s">'set null'</span> }),
+  title: text(<span class="t-s">'title'</span>).notNull(),
+  description: text(<span class="t-s">'description'</span>),
+  startsAt: timestamp(<span class="t-s">'starts_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull(),
+  endsAt: timestamp(<span class="t-s">'ends_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  timeZone: text(<span class="t-s">'time_zone'</span>).notNull(),
+  link: text(<span class="t-s">'link'</span>),
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'scheduled'</span>, <span class="t-s">'live'</span>, <span class="t-s">'ended'</span>, <span class="t-s">'cancelled'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'scheduled'</span>),
+  rsvpCount: integer(<span class="t-s">'rsvp_count'</span>).notNull().<span class="t-k">default</span>(<span class="t-n">0</span>),
+  reminderSentAt: timestamp(<span class="t-s">'reminder_sent_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [index(<span class="t-s">'watch_party_start_idx'</span>).on(t.startsAt, t.id), index(<span class="t-s">'watch_party_community_idx'</span>).on(t.communityId, t.startsAt)])
+
+<span class="t-k">export</span> <span class="t-k">const</span> watchPartyRsvp = pgTable(<span class="t-s">'watch_party_rsvp'</span>, {
+  partyId: uuid(<span class="t-s">'party_id'</span>).notNull().references(() =&gt; watchParty.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [primaryKey({ columns: [t.partyId, t.userId] })])</code></pre></figure></details>
+<details class="ref" id="f-server-db-schema-auth-ts"><summary><code>server/db/schema/auth.ts</code> <small>explained in <a href="04-database-tables.html">Run PostgreSQL and design the tables</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/db/schema/auth.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { boolean, date, index, integer, pgTable, text, timestamp, bigint } <span class="t-k">from</span> <span class="t-s">'drizzle-orm/pg-core'</span>
+
+<span class="t-c">// Better Auth core tables. JS keys must match Better Auth field names.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> user = pgTable(<span class="t-s">'user'</span>, {
+  id: text(<span class="t-s">'id'</span>).primaryKey(),
+  name: text(<span class="t-s">'name'</span>).notNull(),
+  email: text(<span class="t-s">'email'</span>).notNull().unique(),
+  emailVerified: boolean(<span class="t-s">'email_verified'</span>).notNull().<span class="t-k">default</span>(<span class="t-k">false</span>),
+  image: text(<span class="t-s">'image'</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  updatedAt: timestamp(<span class="t-s">'updated_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  <span class="t-c">// Clautverse fields</span>
+  username: text(<span class="t-s">'username'</span>).notNull().unique(),
+  displayName: text(<span class="t-s">'display_name'</span>),
+  dateOfBirth: date(<span class="t-s">'date_of_birth'</span>).notNull(),
+  roles: text(<span class="t-s">'roles'</span>).notNull().<span class="t-k">default</span>(<span class="t-s">'fan'</span>), <span class="t-c">// comma-separated: fan,talent,admin</span>
+  status: text(<span class="t-s">'status'</span>, { enum: [<span class="t-s">'active'</span>, <span class="t-s">'suspended'</span>, <span class="t-s">'pending_deletion'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'active'</span>),
+  onboardingStatus: text(<span class="t-s">'onboarding_status'</span>, { enum: [<span class="t-s">'not_started'</span>, <span class="t-s">'in_progress'</span>, <span class="t-s">'completed'</span>] }).notNull().<span class="t-k">default</span>(<span class="t-s">'not_started'</span>),
+  usernameChangedAt: timestamp(<span class="t-s">'username_changed_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  deletionRequestedAt: timestamp(<span class="t-s">'deletion_requested_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+})
+
+<span class="t-k">export</span> <span class="t-k">const</span> session = pgTable(<span class="t-s">'session'</span>, {
+  id: text(<span class="t-s">'id'</span>).primaryKey(),
+  expiresAt: timestamp(<span class="t-s">'expires_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull(),
+  token: text(<span class="t-s">'token'</span>).notNull().unique(),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  updatedAt: timestamp(<span class="t-s">'updated_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  ipAddress: text(<span class="t-s">'ip_address'</span>),
+  userAgent: text(<span class="t-s">'user_agent'</span>),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+}, t =&gt; [index(<span class="t-s">'session_user_idx'</span>).on(t.userId)])
+
+<span class="t-k">export</span> <span class="t-k">const</span> account = pgTable(<span class="t-s">'account'</span>, {
+  id: text(<span class="t-s">'id'</span>).primaryKey(),
+  accountId: text(<span class="t-s">'account_id'</span>).notNull(),
+  providerId: text(<span class="t-s">'provider_id'</span>).notNull(),
+  userId: text(<span class="t-s">'user_id'</span>).notNull().references(() =&gt; user.id, { onDelete: <span class="t-s">'cascade'</span> }),
+  accessToken: text(<span class="t-s">'access_token'</span>),
+  refreshToken: text(<span class="t-s">'refresh_token'</span>),
+  idToken: text(<span class="t-s">'id_token'</span>),
+  accessTokenExpiresAt: timestamp(<span class="t-s">'access_token_expires_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  refreshTokenExpiresAt: timestamp(<span class="t-s">'refresh_token_expires_at'</span>, { withTimezone: <span class="t-k">true</span> }),
+  scope: text(<span class="t-s">'scope'</span>),
+  password: text(<span class="t-s">'password'</span>),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  updatedAt: timestamp(<span class="t-s">'updated_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [index(<span class="t-s">'account_user_idx'</span>).on(t.userId)])
+
+<span class="t-k">export</span> <span class="t-k">const</span> verification = pgTable(<span class="t-s">'verification'</span>, {
+  id: text(<span class="t-s">'id'</span>).primaryKey(),
+  identifier: text(<span class="t-s">'identifier'</span>).notNull(),
+  value: text(<span class="t-s">'value'</span>).notNull(),
+  expiresAt: timestamp(<span class="t-s">'expires_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull(),
+  createdAt: timestamp(<span class="t-s">'created_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+  updatedAt: timestamp(<span class="t-s">'updated_at'</span>, { withTimezone: <span class="t-k">true</span> }).notNull().defaultNow(),
+}, t =&gt; [index(<span class="t-s">'verification_identifier_idx'</span>).on(t.identifier)])
+
+<span class="t-c">// Used by Better Auth's built-in limiter (storage: "database").</span>
+<span class="t-k">export</span> <span class="t-k">const</span> rateLimit = pgTable(<span class="t-s">'rate_limit'</span>, {
+  id: text(<span class="t-s">'id'</span>).primaryKey(),
+  key: text(<span class="t-s">'key'</span>).notNull().unique(),
+  count: integer(<span class="t-s">'count'</span>).notNull(),
+  lastRequest: bigint(<span class="t-s">'last_request'</span>, { mode: <span class="t-s">'number'</span> }).notNull(),
+})</code></pre></figure></details>
+<details class="ref" id="f-server-db-schema-index-ts"><summary><code>server/db/schema/index.ts</code> <small>explained in <a href="04-database-tables.html">Run PostgreSQL and design the tables</a></small></summary><figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/db/schema/index.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">export</span> * <span class="t-k">from</span> <span class="t-s">'./auth'</span>
+<span class="t-k">export</span> * <span class="t-k">from</span> <span class="t-s">'./app'</span></code></pre></figure></details>
+      
+      
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>227fbaa</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

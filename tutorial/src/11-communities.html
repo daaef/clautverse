@@ -1,0 +1,113 @@
+<!--@meta
+part: Part 4 · Features
+title: Communities, joining and Originals
+summary: The core of the product, with the rules that need transactions and row locks to stay correct.
+-->
+<p class="lead">A community is the home of one Star's fans. This is the heart of Clautverse, and it contains the trickiest rule: the first 100 members get permanent "Originals" numbers, even when hundreds of people join at the same instant.</p>
+
+<h2>The shared toolbox: <code>admin.ts</code></h2>
+<p>Before communities, we add the helper file that many chapters use. Despite its name it holds more than admin code. Create <code>server/utils/admin.ts</code>:</p>
+<!--@file server/utils/admin.ts-->
+<div class="tablewrap"><table>
+<thead><tr><th>Helper</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>Tx</code>, <code>DbOrTx</code></td><td>Types for "a database transaction" and "either the database or a transaction", so a helper can work inside or outside one.</td></tr>
+<tr><td><code>requireAdmin(event)</code></td><td><code>requireUser</code> plus a check for the <code>super_admin</code> role. Non-admins get <code>FORBIDDEN</code>.</td></tr>
+<tr><td><code>audit(tx, actorId, action, …)</code></td><td>Writes one row to the append-only <code>admin_audit</code> table: who did what to what.</td></tr>
+<tr><td><code>notify(tx, userId, type, data)</code></td><td>Adds an in-app notification (chapter 14).</td></tr>
+<tr><td><code>grantRole</code></td><td>Adds a role to the comma-separated list without duplicating it.</td></tr>
+<tr><td><code>slugify</code>, <code>uniqueSlug</code></td><td>Turn "Ada O." into <code>ada-o</code> and find a free variant (<code>ada-o-2</code>…).</td></tr>
+<tr><td><code>ensureTalentCommunity</code></td><td>Creates a Star's one community if it does not exist yet.</td></tr>
+<tr><td><code>publicUser</code></td><td>The safe subset of a user (id, username, display name, avatar) that may be shown to others. No email, no birth date.</td></tr>
+<tr><td><code>suspendUser</code></td><td>Suspends an account and signs it out everywhere (used in chapters 16 and 17).</td></tr>
+</tbody></table></div>
+<plain>
+<p>A <strong>view</strong> function such as <code>publicUser</code> is a deliberate filter between the database row and the outside world. Rows contain private things; views decide what is allowed to leave the building. Almost every <code>…View</code> function in this project exists for that reason.</p>
+</plain>
+
+<h2>Community helpers</h2>
+<p>Create <code>server/utils/community.ts</code>:</p>
+<!--@file server/utils/community.ts-->
+<ul>
+  <li><code>optionalUser(event)</code>: for pages anyone can see, but which look different when signed in. It returns the user or <code>null</code> and never throws.</li>
+  <li><code>isAdmin</code>, <code>isCommunityOwner</code>: the two "who is staff here?" checks.</li>
+  <li><code>loadVisibleCommunity(id, viewer, tx, lock)</code>: loads a community, or throws <code>NOT_FOUND</code>. A <strong>vetoed</strong> community (hidden by an admin) looks non-existent to everyone except admins. With <code>lock = true</code> it adds <code>FOR UPDATE</code>, explained below.</li>
+  <li><code>communityCard</code>, <code>communityDetail</code>, <code>membershipView</code>: the shapes returned to callers. Notice <code>originalPosition</code> is hidden (null) for a removed member.</li>
+  <li><code>ORIGINALS_CAP = 100</code>: the one place the number lives.</li>
+</ul>
+
+<h2>Reading communities</h2>
+<p><code>server/api/communities/index.get.ts</code> lists communities, searchable and sortable:</p>
+<!--@file server/api/communities/index.get.ts-->
+<tech>
+<p>This file shows keyset pagination (chapter 7) for three different sorts. For "popular" the cursor holds <code>(memberCount, id)</code> and the filter is the SQL row comparison <code>(member_count, id) &lt; (a, b)</code>. The <code>scope</code> string includes the sort name, so a popular-cursor cannot be used on the newest list. Note <code>limit + 1</code> from chapter 7 and <code>toPage</code> at the end.</p>
+</tech>
+<p><code>server/api/communities/[id]/index.get.ts</code> is a good example of a tiny public endpoint:</p>
+<!--@file server/api/communities/[id]/index.get.ts-->
+<p><code>server/api/communities/[id]/index.patch.ts</code> lets the Star (or an admin) edit name, description and rules:</p>
+<!--@file server/api/communities/[id]/index.patch.ts-->
+<ul>
+  <li>The Zod shape has no <code>status</code> field on purpose, so this endpoint cannot hide a community. That is a separate admin action (chapter 17).</li>
+  <li><code>imageMediaId</code> is accepted but rejected with <code>FEATURE_DISABLED</code> through <code>rejectMediaIds</code> (a helper from chapter 10), because uploads are not built yet.</li>
+  <li>When an admin (not the owner) edits, the change is recorded with <code>audit</code>.</li>
+</ul>
+
+<h2>Joining: the hard part</h2>
+<plain>
+<p>Picture a signing-up desk giving out numbered badges 1 to 100. If two assistants each look at the list, both see "next number: 57", and both hand out 57, you have a problem. The fix is to let only <em>one</em> assistant work at the desk at a time. In the database that is a <strong>row lock</strong>.</p>
+</plain>
+<p>Create <code>server/api/communities/[id]/join.post.ts</code>:</p>
+<!--@file server/api/communities/[id]/join.post.ts-->
+<p>Read it in this order:</p>
+<ol class="flow">
+  <li><strong>Guards.</strong> <code>requireUser(event, { onboarded: true })</code> (finish onboarding first), the ID, a rate limit (60 per hour), and a Zod body. A <code>lane</code> is <strong>required</strong>, one of six codes.</li>
+  <li><strong>Open a transaction</strong> and lock the community row with <code>loadVisibleCommunity(id, null, tx, true)</code>. Anyone else joining the same community waits here until this transaction finishes.</li>
+  <li><strong>Already an active member?</strong> Return the existing membership (status 200). Joining twice is harmless.</li>
+  <li><strong>Previously removed?</strong> The first removal blocks rejoining for 30 days (<code>blockedUntil</code>); a second removal is permanent. Either returns <code>FORBIDDEN</code>.</li>
+  <li><strong>Previously left?</strong> Reactivate the same row with the newly chosen lane. Their Originals number stays retired.</li>
+  <li><strong>Brand new?</strong> If fewer than 100 numbers have been handed out, take the next one (<code>originalsAssigned + 1</code>); otherwise <code>originalPosition</code> is <code>null</code> (a normal member). Insert the membership and bump the counters.</li>
+  <li><strong>Respond</strong> with 201 if a new row was created, 200 otherwise.</li>
+</ol>
+<tech>
+<ul>
+<li><code>.for('update')</code> is SQL's <code>SELECT … FOR UPDATE</code>. Because the community row is locked, the "read counter, then write counter + 1" sequence cannot interleave with another join. There is also a database-level safety net: <code>unique(communityId, originalPosition)</code> in the schema.</li>
+<li><code>onConflictDoNothing()</code> plus the fallback <code>select</code> handles the duplicate-sign-up race without crashing.</li>
+<li><code>originalsAssigned</code> is a counter that only increases. When a member leaves, <code>originalPosition</code> is set to null but the counter does not go down, so numbers are <strong>never reused</strong>.</li>
+<li><code>sql`${c.memberCount} + 1`</code> makes the database do the addition, so two updates cannot overwrite each other with stale numbers.</li>
+</ul>
+</tech>
+
+<h2>Leaving, listing members, the Originals wall</h2>
+<p><code>server/api/communities/[id]/leave.post.ts</code>:</p>
+<!--@file server/api/communities/[id]/leave.post.ts-->
+<ul>
+  <li>The Star cannot leave their own community (<code>INVALID_STATE</code>).</li>
+  <li>Leaving clears the lane and the Originals number in the same transaction as the status change. The counter <code>memberCount</code> goes down with <code>greatest(x - 1, 0)</code> so it can never go negative.</li>
+</ul>
+<p><code>server/api/communities/[id]/members.get.ts</code> (only members, the Star and admins may see the list):</p>
+<!--@file server/api/communities/[id]/members.get.ts-->
+<p><code>server/api/communities/[id]/originals.get.ts</code> is the public "wall" of the first 100; removed or deleted people appear as a retired slot with no user:</p>
+<!--@file server/api/communities/[id]/originals.get.ts-->
+
+<h2>My memberships</h2>
+<p><code>server/api/me/memberships.get.ts</code> lists the communities I joined (or left):</p>
+<!--@file server/api/me/memberships.get.ts-->
+<p><code>server/api/memberships/[id].patch.ts</code> turns alerts on or off for one membership:</p>
+<!--@file server/api/memberships/[id].patch.ts-->
+<ul>
+  <li>The lookup is <code>where id = … AND user_id = me</code>, so someone else's membership simply "does not exist" for you. Always scope data by the caller's own ID when it is theirs.</li>
+</ul>
+
+<check>
+<p>Communities are normally created when an admin approves a Star (chapter 17). To test now, create one by hand for the seeded Star Ada:</p>
+<!--@code bash | terminal-->
+docker exec clautverse-pg psql -U postgres -d clautverse -c "insert into community (owner_talent_id, slug, name) select id, slug, name from talent where slug = 'ada'"
+curl http://localhost:3000/api/communities
+<!--@/code-->
+<p>Copy the community <code>id</code>, then join as the onboarded fan from chapter 10:</p>
+<!--@code bash | terminal-->
+curl -b jar.txt -X POST http://localhost:3000/api/communities/COMMUNITY_ID/join \
+  -H 'Content-Type: application/json' -d '{"lane":"rider"}'
+<!--@/code-->
+<p>Expect status 201 and <code>"originalPosition":1</code>. Repeat the same call: status 200, same membership. Open <code>/api/communities/COMMUNITY_ID/originals</code> to see slot 1. Call <code>/leave</code>, then join again with another lane: <code>originalPosition</code> is now <code>null</code> because number 1 is retired for good. Commit: <code>git add -A && git commit -m "Communities, joining and Originals"</code>.</p>
+</check>
