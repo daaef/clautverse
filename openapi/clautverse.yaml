@@ -1,5 +1,5 @@
 # Clautverse API contract (machine-readable source of truth).
-# guide/content/99.api-reference must agree with this file; guide/tests/unit/openapi-sync.test.ts enforces it.
+# The API Explorer (app/pages/index.vue) reads this file through /api/_docs/openapi.
 openapi: 3.1.0
 info:
   title: Clautverse API

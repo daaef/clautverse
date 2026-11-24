@@ -44,8 +44,6 @@ paths:
 <p>You do not have to write 110 entries to continue. Start with a few and add more whenever you like. Each new route needs an entry that follows the join example above.</p>
 </plain>
 <p>Create <code>openapi/clautverse.yaml</code> with the header above, the <code>/api/health</code> block under <code>paths:</code>, and the <code>components:</code> section. To get the complete contract, copy the file from the project repository; it is the exact one the Explorer in this guide shows.</p>
-<aside class="callout warn"><p class="callout-label">Known leftover</p>
-<p>The first comment lines of the real file still mention <code>guide/content/99.api-reference</code> and a test in <code>guide/</code>. Those belonged to a documentation app that the project has since removed (plan task 2). The sentence is out of date but harmless.</p></aside>
 
 <h2>The route that serves the contract</h2>
 <p>The browser cannot read a YAML file from the project folder, so we add an endpoint that reads it, converts it to JSON and sends it. It also adds one extra feature: for every operation it works out which parts of the system the route uses and attaches them as <code>x-services</code> labels (the little chips on each Explorer card). Create <code>server/api/_docs/openapi.get.ts</code>:</p>
@@ -55,7 +53,6 @@ paths:
   <li><strong><code>routeKey</code></strong> converts a route file name to a contract path (<code>[id]</code> becomes <code>{id}</code>, <code>index</code> disappears), the reverse of chapter 3's rule.</li>
   <li><strong><code>utilExports</code> and <code>servicesPerRoute</code></strong> read every util file, collect the names it exports, then search each route file's text for those names. A route that mentions <code>requireUser</code> gets the "Session guard" chip. It is a simple text scan, not magic: it can only be as accurate as the names are distinctive.</li>
   <li>If anything fails, it answers <code>500 OpenAPI spec unavailable</code>.</li>
-  <li>One label is stale: <code>UTIL_LABELS['email.ts']</code> says "Resend email" but the project sends mail through Mailtrap (chapter 8). It only affects a chip's wording.</li>
 </ul>
 <tech>
 <p>The folder name <code>_docs</code> has no special meaning to Nitro; the leading underscore is just a naming habit. The address is <code>/api/_docs/openapi</code>.</p>

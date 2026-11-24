@@ -71,8 +71,6 @@ summary: The only web page in the project: it lists every route and lets you sen
   <li><strong><code>send()</code></strong> builds the final address (<code>resolvedPath</code> swaps <code>{id}</code> and appends the query string), sends it with the browser's <code>fetch</code>, and shows status, time and the pretty-printed answer. A status colour comes from <code>statusClass</code> (2xx ok, 4xx client error, 5xx or 0 server error).</li>
   <li>The <code>Idempotency-Key</code> header gets a <strong>Generate</strong> button (chapter 12).</li>
 </ul>
-<aside class="callout tip"><p class="callout-label">Leftover comment</p>
-<p>The first comment in this file mentions using the card inside markdown (<code>::api-endpoint</code>). That came from the documentation app the project removed; the component is only used by <code>index.vue</code> now.</p></aside>
 
 <h2>Step 4: the page and the app shell</h2>
 <p><code>app/pages/index.vue</code> assembles everything. Create the <code>pages</code> folder first:</p>

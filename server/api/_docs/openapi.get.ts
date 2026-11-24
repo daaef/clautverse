@@ -18,7 +18,7 @@ const UTIL_LABELS: Record<string, string> = {
   'validate.ts': 'Zod validation',
   'cursor.ts': 'Cursor pagination',
   'paginate.ts': 'Cursor pagination',
-  'email.ts': 'Resend email',
+  'email.ts': 'Mailtrap email',
   'notifications.ts': 'Notifications',
   'api-error.ts': 'Error envelope',
   'cron.ts': 'Cron auth',

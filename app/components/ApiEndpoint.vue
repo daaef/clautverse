@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// Interactive endpoint card — usable in markdown (::api-endpoint{method="GET"
-// path="/api/communities"}) and directly on the API Explorer page. Looks the
+// Interactive endpoint card used by the API Explorer page. Looks the
 // operation up in the OpenAPI spec, renders inputs, and sends a real
 // same-origin request (session cookie included).
 const props = defineProps<{ method: string, path: string }>()
