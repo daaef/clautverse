@@ -83,6 +83,7 @@ summary: Posts by Stars, who can see them, scheduling, replies, and the safe-to-
 </tech>
 
 <check>
+<p><em>(Local PostgreSQL without Docker? Use the <code>psql "$NUXT_DATABASE_URL"</code> form from <a href="90-postgres-without-docker.html#4-replace-the-docker-commands">the appendix</a> instead of <code>docker exec</code>.)</em></p>
 <p>Make your test user an admin (admins can post in any community), then publish a drop and read the feed:</p>
 <!--@code bash | terminal-->
 docker exec clautverse-pg psql -U postgres -d clautverse -c "update \"user\" set roles = 'fan,super_admin' where email = 'ada@example.com'"

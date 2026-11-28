@@ -99,6 +99,7 @@ summary: The core of the product, with the rules that need transactions and row 
 </ul>
 
 <check>
+<p><em>(Local PostgreSQL without Docker? Use the <code>psql "$NUXT_DATABASE_URL"</code> form from <a href="90-postgres-without-docker.html#4-replace-the-docker-commands">the appendix</a> instead of <code>docker exec</code>.)</em></p>
 <p>Communities are normally created when an admin approves a Star (chapter 17). To test now, create one by hand for the seeded Star Ada:</p>
 <!--@code bash | terminal-->
 docker exec clautverse-pg psql -U postgres -d clautverse -c "insert into community (owner_talent_id, slug, name) select id, slug, name from talent where slug = 'ada'"

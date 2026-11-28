@@ -76,6 +76,7 @@ curl -i -X POST http://localhost:3000/api/auth/sign-up/email \
   -d '{"email":"ada@example.com","password":"correct-horse-9","name":"Ada","username":"ada_fan","dateOfBirth":"1995-05-05"}'
 <!--@/code-->
 <p>Expect status <code>200</code>. In the <strong>server</strong> terminal you will see a line starting <code>[email] to=ada@example.com</code> with a confirmation link.</p>
+<p><em>(Local PostgreSQL without Docker? Use the <code>psql "$NUXT_DATABASE_URL"</code> form from <a href="90-postgres-without-docker.html#4-replace-the-docker-commands">the appendix</a> instead of <code>docker exec</code>.)</em></p>
 <p><strong>2. Mark the email verified</strong> (the shortcut for local development: the same thing the link would do):</p>
 <!--@code bash | terminal-->
 docker exec clautverse-pg psql -U postgres -d clautverse -c "update \"user\" set email_verified = true where email = 'ada@example.com'"

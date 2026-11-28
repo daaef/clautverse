@@ -30,6 +30,7 @@ summary: Unit tests for small functions, and end-to-end tests that start the who
   <li>It drops and recreates a database called <code>clautverse_test</code>, so every run starts clean and your real development data is never touched.</li>
   <li>It runs the same migrations (<code>drizzle-kit migrate</code>) and the same seed you ran by hand in chapter 5.</li>
 </ul>
+<tip><p>Using a local PostgreSQL instead of Docker? See <a href="90-postgres-without-docker.html#5-tests-with-a-local-database">the appendix</a> for the one setting the tests may need.</p></tip>
 <warn><p>Docker and the <code>clautverse-pg</code> container from chapter 4 must be running. Tests connect to <code>localhost:5432</code> with the <code>postgres</code> user.</p></warn>
 
 <h2>Helpers shared by every e2e file</h2>
