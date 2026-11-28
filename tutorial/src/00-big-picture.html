@@ -1,0 +1,94 @@
+<!--@meta
+part: Start here
+title: The big picture
+summary: What Clautverse is, the words you need, and how one request travels through the app.
+-->
+<p class="lead">Before typing anything, get the map. This chapter has no code to write. It explains what we are building and gives names to the pieces so the later chapters feel familiar.</p>
+
+<h2>What Clautverse is</h2>
+<plain>
+<p>Clautverse is a place for fans of public figures. Think of a reality-TV housemate. Their fans can join a <strong>community</strong> for that person, read what the person posts, do small <strong>missions</strong> to earn points, RSVP to watch-together events, and get notified when something happens. Staff (<strong>admins</strong>) approve who counts as a real "Star", handle reports about bad behaviour, and can hide a community.</p>
+</plain>
+<p>We are building the <strong>backend</strong>: the part that stores everything and enforces the rules. It has no pretty screens. Instead it has an <strong>API</strong>, which is a list of web addresses that other programs (a phone app, a website) can ask for things. The only web page we build is the <em>API Explorer</em>, a tool for trying those addresses by hand.</p>
+
+<h2>The words you will see everywhere</h2>
+<p>Skim this list now and come back whenever a word feels fuzzy. The <a href="99-glossary.html">glossary</a> has more.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>In plain words</th><th>In programming terms</th></tr></thead>
+<tbody>
+<tr><td>Client / server</td><td>The client asks (a browser, an app). The server answers.</td><td>A client sends an HTTP request; the server program returns an HTTP response.</td></tr>
+<tr><td>API</td><td>A menu of things a program can ask our server to do.</td><td>A set of HTTP endpoints, here returning JSON.</td></tr>
+<tr><td>Endpoint / route</td><td>One item on that menu, such as "list communities".</td><td>A method plus a path, e.g. <code>GET /api/communities</code>.</td></tr>
+<tr><td>GET, POST, PUT, PATCH, DELETE</td><td>Read, create, replace, change a little, remove.</td><td>HTTP methods (verbs). GET never changes data.</td></tr>
+<tr><td>Status code</td><td>A number saying how it went: 200 fine, 404 not found, 403 not allowed.</td><td>The three-digit HTTP response code. 2xx success, 4xx the caller's fault, 5xx ours.</td></tr>
+<tr><td>JSON</td><td>A tidy way to write data as text: <code>{"name": "Ada"}</code>.</td><td>JavaScript Object Notation, the format our API speaks.</td></tr>
+<tr><td>Database, table, row</td><td>A giant organised filing cabinet. A table is one drawer, a row is one card.</td><td>PostgreSQL stores data in tables made of rows and columns.</td></tr>
+<tr><td>SQL</td><td>The language for asking the database things.</td><td>Structured Query Language. We write it through Drizzle instead of by hand most of the time.</td></tr>
+<tr><td>Migration</td><td>A saved, numbered instruction for changing the database layout.</td><td>A SQL file generated from schema changes and applied in order.</td></tr>
+<tr><td>Session / cookie</td><td>A wristband you get at sign-in so you are recognised next time.</td><td>A random token stored server-side, sent back by the browser in a cookie.</td></tr>
+<tr><td>Environment variable</td><td>A setting kept outside the code, such as a password.</td><td>A key/value the process reads at startup (<code>process.env</code>, <code>.env</code> file).</td></tr>
+<tr><td>Transaction</td><td>"Do all these steps or none of them."</td><td>A database transaction: atomic changes that commit together or roll back.</td></tr>
+</tbody></table></div>
+
+<h2>The words specific to Clautverse</h2>
+<ul>
+  <li><strong>Fan</strong>: a normal signed-in user.</li>
+  <li><strong>Star</strong>: a public figure. The code calls this a <code>talent</code> (table <code>talent</code>, routes under <code>/api/talents</code>). Same thing, two names.</li>
+  <li><strong>Category</strong>: a kind of fandom, such as Reality TV. Only active categories can be chosen.</li>
+  <li><strong>Community</strong> (fandom): the home of one Star's fans. One Star owns exactly one community.</li>
+  <li><strong>Originals</strong>: the first 100 people to join a community get a permanent numbered spot, 1 to 100. Leave or get removed and your number is retired forever.</li>
+  <li><strong>Lane</strong>: one of six labels a fan picks when joining (<code>rider</code>, <code>fandom_builder</code>, <code>builder</code>, <code>analyst</code>, <code>creator</code>, <code>mutual</code>).</li>
+  <li><strong>Drop</strong>: a post by the Star. It can be public, members-only, or Originals-only.</li>
+  <li><strong>Mission</strong> and <strong>XP</strong>: a task a Star sets, and the points a fan earns by completing it. XP is recorded in a ledger (a list of every change), never edited.</li>
+  <li><strong>Badge</strong>: a collectable award given by admins.</li>
+  <li><strong>Watch party</strong>: a scheduled event with an external link and an "I'm going" button.</li>
+  <li><strong>Report</strong> and <strong>block</strong>: how fans flag content and hide other users.</li>
+</ul>
+
+<h2>The tools, and why each one</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Tool</th><th>Job</th><th>Why this one</th></tr></thead>
+<tbody>
+<tr><td><strong>Nuxt 4</strong></td><td>The framework. It runs our server code and our one web page.</td><td>Its server engine (Nitro) turns each file in <code>server/api</code> into an endpoint with no setup. Vue powers the web page.</td></tr>
+<tr><td><strong>TypeScript</strong></td><td>JavaScript with types, so mistakes show up while typing.</td><td>Types double as documentation and catch typos.</td></tr>
+<tr><td><strong>PostgreSQL</strong></td><td>The database.</td><td>Reliable, and supports the row locks and transactions the rules need.</td></tr>
+<tr><td><strong>Drizzle ORM</strong></td><td>Lets us describe tables and write queries in TypeScript.</td><td>Stays close to SQL and is fully typed.</td></tr>
+<tr><td><strong>Better Auth</strong></td><td>Sign-up, sign-in, sessions, email verification, password reset.</td><td>Security-sensitive code you should not write yourself.</td></tr>
+<tr><td><strong>Zod</strong></td><td>Checks that incoming data has the right shape.</td><td>One description gives both validation and types.</td></tr>
+<tr><td><strong>Vitest</strong></td><td>Runs the automated tests.</td><td>Fast, TypeScript-friendly.</td></tr>
+<tr><td><strong>Docker</strong></td><td>Runs PostgreSQL on your machine in a box.</td><td>One command instead of a manual database install.</td></tr>
+</tbody></table></div>
+
+<h2>One request, start to finish</h2>
+<p>This is the journey every call to the API takes. Later chapters build each stop.</p>
+<ol class="flow">
+  <li><strong>The request arrives</strong> (for example <code>POST /api/communities/abc/join</code>).</li>
+  <li><strong>Middleware</strong> stamps it with a request ID so we can trace problems (chapter 6).</li>
+  <li><strong>Nitro finds the file</strong> that matches the address (chapter 3).</li>
+  <li><strong>The handler checks who you are</strong> using your session cookie (chapter 8).</li>
+  <li><strong>It validates the input</strong> with Zod and applies rate limits (chapter 7).</li>
+  <li><strong>It talks to the database</strong>, often inside a transaction (chapters 4 and 5).</li>
+  <li><strong>It returns JSON.</strong> If anything went wrong, one error handler turns it into the same error shape every time (chapter 6).</li>
+</ol>
+
+<h2>The project map</h2>
+<p>By the end the folders look like this. Do not create them now; each chapter tells you when.</p>
+<!--@code text | project layout-->
+app/            the one web page (API Explorer): page, components, composables, styles
+server/
+  api/          one file per endpoint (about 100 files)
+  db/           database tables (schema) and migrations
+  middleware/   code that runs on every request
+  utils/        shared helpers, auto-available in every endpoint
+  error-handler.ts   formats every error the same way
+openapi/        the written contract of the API (a YAML file)
+scripts/        one-off scripts (the database seed)
+tests/          unit tests and end-to-end tests
+public/         images served as-is
+docs/           the project plan and specs
+nuxt.config.ts, package.json, drizzle.config.ts, vitest.config.ts, .env
+<!--@/code-->
+
+<check>
+<p>You can now say, in one sentence each: what an API is, what a database table is, and why a login uses a session. If not, reread the table above, then continue. Nobody memorises this; you will meet each word again with code attached.</p>
+</check>

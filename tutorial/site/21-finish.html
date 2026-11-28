@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check everything and what comes next · Build Clautverse</title>
+<meta name="description" content="A final checklist, how to type-check, common problems, and the project's own roadmap.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="21-finish">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish" aria-current="page">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Finish</p><h1>Check everything and what comes next</h1><p class="meta">About 4 min read</p><p class="lead">You built the whole thing. This last chapter is a checklist to prove it all works together, a troubleshooting table, and a look at what the project plans next.</p>
+
+<h2 id="type-check-the-whole-project">Type check the whole project<a class="anchor" href="#type-check-the-whole-project" aria-label="Link to this section">#</a></h2>
+<p>TypeScript can check every file without running anything:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>pnpm typecheck</code></pre></figure>
+<p>It runs <code>nuxt typecheck</code>, which uses <code>vue-tsc</code> to check both server and page code against the files Nuxt generates. A clean run prints no errors.</p>
+<aside class="callout tip"><p class="callout-label">If it fails</p>
+<p>Read the first error only. Most later errors are fallout from it. The file name and line number are given; open that line and compare with the code in the chapter.</p></aside>
+
+<h2 id="the-final-checklist">The final checklist<a class="anchor" href="#the-final-checklist" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li><code>pnpm dev</code> starts without errors; <code>/api/health</code> says <code>ok</code>.</li>
+  <li><code>/api/nope</code> answers a JSON <code>NOT_FOUND</code> with a request ID.</li>
+  <li>You can sign up, verify, sign in and call <code>/api/me</code>.</li>
+  <li>Onboarding completes; you can join a community and get Originals number 1.</li>
+  <li>An admin can publish a drop, you can like it and see it in the feed.</li>
+  <li>A mission completion adds XP once, never twice.</li>
+  <li>A reported drop appears in the admin report queue; an accepted application creates a community.</li>
+  <li>The API Explorer at <code>/</code> lists the operations and sends requests as you.</li>
+  <li><code>pnpm test:unit</code> and <code>pnpm test:e2e</code> pass.</li>
+  <li><code>.env</code> is not in git (<code>git status</code> never lists it).</li>
+</ul>
+
+<h2 id="when-something-goes-wrong">When something goes wrong<a class="anchor" href="#when-something-goes-wrong" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table>
+<thead><tr><th>You see</th><th>Likely cause</th><th>Try</th></tr></thead>
+<tbody>
+<tr><td><code>NUXT_DATABASE_URL is not set</code></td><td><code>.env</code> missing or the dev server was started before you created it.</td><td>Check <code>.env</code> has the line; restart <code>pnpm dev</code>.</td></tr>
+<tr><td>Health shows <code>"db":"error"</code> and status 503</td><td>The database container is stopped, or the URL is wrong.</td><td><code>docker ps</code>; <code>docker start clautverse-pg</code>.</td></tr>
+<tr><td><code>relation "user" does not exist</code></td><td>Migrations were not applied.</td><td><code>set -a; . ./.env; set +a</code> then <code>pnpm db:migrate</code>.</td></tr>
+<tr><td><code>pnpm db:migrate</code> complains about the URL</td><td>The shell did not load <code>.env</code> (drizzle-kit does not read it by itself).</td><td>Run the <code>set -a; . ./.env; set +a</code> line in the same terminal window.</td></tr>
+<tr><td>Sign-up works but sign-in says email not verified (403)</td><td>This is correct behaviour.</td><td>Click the link printed in the server terminal, or run the SQL shortcut from chapter 8.</td></tr>
+<tr><td><code>ONBOARDING_REQUIRED</code> when joining</td><td>The fan has not completed onboarding.</td><td>Finish chapter 10's <code>complete</code> call.</td></tr>
+<tr><td><code>FORBIDDEN</code> on <code>/api/admin/*</code></td><td>The account is not an admin.</td><td>Run the chapter 17 SQL to grant <code>super_admin</code>.</td></tr>
+<tr><td>Cursor errors (<code>Invalid cursor</code>)</td><td><code>NUXT_CURSOR_SECRET</code> changed, or the cursor came from a different list.</td><td>Start again from page one.</td></tr>
+<tr><td>Changed <code>nuxt.config.ts</code> but nothing happened</td><td>The dev server needs a restart for config changes.</td><td>Stop and rerun <code>pnpm dev</code>.</td></tr>
+<tr><td>Port 5432 already in use</td><td>Another PostgreSQL is running on your machine.</td><td>Stop it, or map Docker to another port and update <code>NUXT_DATABASE_URL</code>.</td></tr>
+<tr><td>Explorer dropdowns are empty</td><td>You are signed out (some lists are private), or the list is empty.</td><td>Sign in at the top of the page; create data.</td></tr>
+</tbody></table></div>
+
+<h2 id="what-is-deliberately-missing">What is deliberately missing<a class="anchor" href="#what-is-deliberately-missing" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li><strong>Uploads</strong> (images, voice): routes that need them answer <code>FEATURE_DISABLED</code>.</li>
+  <li><strong>Deployment</strong>: this guide runs everything on your machine. The project is designed for a hosted Postgres (it mentions Neon) and a scheduler to call the two job routes from chapter 14, but deployment steps are outside this guide.</li>
+  <li><strong>A real front end for fans:</strong> only the API Explorer exists.</li>
+</ul>
+
+<h2 id="the-project-s-roadmap">The project's roadmap<a class="anchor" href="#the-project-s-roadmap" aria-label="Link to this section">#</a></h2>
+<p>The project keeps its plan in <code>docs/plan.md</code>. At this snapshot the table of tasks lists these as still to do: small fixes (task 2c), removing identity claims (3), seeding fictional pilot data (5), a 64 KB request-size limit (6), following Rising Stars (7), XP per fandom with tiers (8), a second lane at the Supporter tier (9), and a small analytics event log (10). When one lands, rebuild this guide with <code>node tutorial/build.mjs</code> and re-read the affected chapters.</p>
+
+<h2 id="where-to-go-from-here">Where to go from here<a class="anchor" href="#where-to-go-from-here" aria-label="Link to this section">#</a></h2>
+<ol>
+  <li>Build a feature of your own end to end: a table in the schema, a migration, an endpoint with Zod and <code>requireUser</code>, an entry in the contract, a test. That one exercise uses every chapter.</li>
+  <li>Read <code>docs/specs/ecosystem-prd.md</code> in the repository to see the product the code is aiming at.</li>
+  <li>Pick one skill to deepen: SQL and transactions, Vue components, or TypeScript types. This project exercises all three.</li>
+</ol>
+<aside class="callout check"><p class="callout-label">Checkpoint</p><p>If you can explain, in your own words, how a request to join a community travels from the address bar to the database and back, you understand this project. Chapter 0's journey list and chapter 11 are the two places to reread.</p></aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="20-tests.html"><small>Previous</small>Automated tests</a><a class="next" href="90-postgres-without-docker.html"><small>Next</small>PostgreSQL without Docker</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#type-check-the-whole-project">Type check the whole project</a></li><li><a href="#the-final-checklist">The final checklist</a></li><li><a href="#when-something-goes-wrong">When something goes wrong</a></li><li><a href="#what-is-deliberately-missing">What is deliberately missing</a></li><li><a href="#the-project-s-roadmap">The project's roadmap</a></li><li><a href="#where-to-go-from-here">Where to go from here</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

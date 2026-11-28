@@ -1,0 +1,91 @@
+<!--@meta
+part: Part 2 · Foundations
+title: Run PostgreSQL and design the tables
+summary: Start a database in Docker, then describe every table in TypeScript with Drizzle.
+-->
+<p class="lead">Almost everything in Clautverse is remembered: people, communities, posts, points. In this chapter you start a database and describe its tables. The next chapter connects the app to it.</p>
+
+<h2>Start PostgreSQL with Docker</h2>
+<tip>
+<p><strong>No Docker?</strong> You can install PostgreSQL directly instead. See <a href="90-postgres-without-docker.html">PostgreSQL without Docker</a> for installs and drop-in replacements for every Docker command. The guide uses <strong>PostgreSQL 17</strong>.</p>
+</tip>
+<plain>
+<p>A database is a program that stores data safely and answers questions about it quickly. Docker lets you run that program in an isolated "container" so you do not have to install and configure it yourself. If you delete the container you delete the database, which is perfect for learning.</p>
+</plain>
+<p>With Docker Desktop open, run this one command (it is the same one the project's README uses):</p>
+<!--@code bash | terminal-->
+docker run -d --name clautverse-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=clautverse -p 5432:5432 postgres:17
+<!--@/code-->
+<ul>
+  <li><code>-d</code>: run in the background.</li>
+  <li><code>--name clautverse-pg</code>: a name so you can find it later.</li>
+  <li><code>-e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=clautverse</code>: set the password to <code>postgres</code> and create a database called <code>clautverse</code>. (Fine for a throwaway local database; never use this password anywhere real.)</li>
+  <li><code>-p 5432:5432</code>: make the database reachable at port 5432 on your computer.</li>
+  <li><code>postgres:17</code>: the program and version to run.</li>
+</ul>
+<check>
+<p><code>docker ps</code> lists <code>clautverse-pg</code> with status "Up". If you restart your computer, start it again with <code>docker start clautverse-pg</code>.</p>
+</check>
+<p>Your <code>.env</code> already points at it. The line is <code>NUXT_DATABASE_URL=postgres://postgres:postgres@localhost:5432/clautverse</code>, which reads as <code>postgres://<em>user</em>:<em>password</em>@<em>host</em>:<em>port</em>/<em>database</em></code>.</p>
+
+<h2>What an ORM does</h2>
+<plain>
+<p>A table has columns (like a spreadsheet's headings) and rows (the entries). Drizzle lets us <em>describe</em> each table in TypeScript, once. From that one description we get the real table, and also a typed way to ask for rows, so the editor warns us if we mistype a column name.</p>
+</plain>
+<tech>
+<p>Drizzle is a "schema-as-code" ORM. A table is a <code>pgTable('name', { columns })</code> call. Its helpers <code>$inferSelect</code> and <code>$inferInsert</code> give you the TypeScript type of a row you read or write. Column names in the database are <code>snake_case</code> (<code>created_at</code>); the TypeScript keys are <code>camelCase</code> (<code>createdAt</code>).</p>
+</tech>
+
+<h2>The Drizzle settings file</h2>
+<p>Create <code>drizzle.config.ts</code> in the project root. It tells <code>drizzle-kit</code> where the table descriptions are and where to write migration files:</p>
+<!--@file drizzle.config.ts-->
+
+<h2>Tables from the login library</h2>
+<p>Better Auth (chapter 8) needs five tables of its own: <code>user</code>, <code>session</code>, <code>account</code>, <code>verification</code> and <code>rate_limit</code>. We define them ourselves so we also control extra columns on <code>user</code> (a username, a date of birth, roles). Create <code>server/db/schema/auth.ts</code>:</p>
+<!--@file server/db/schema/auth.ts-->
+<p>Things worth noticing:</p>
+<ul>
+  <li><strong><code>user.username</code>, <code>dateOfBirth</code>, <code>roles</code>, <code>status</code>, <code>onboardingStatus</code></strong> are Clautverse's own columns. <code>roles</code> is a comma-separated text such as <code>fan,talent</code>.</li>
+  <li><strong><code>status</code></strong> can only be <code>active</code>, <code>suspended</code> or <code>pending_deletion</code>. The <code>{ enum: [...] }</code> option gives TypeScript that restriction.</li>
+  <li><strong><code>references(() =&gt; user.id, { onDelete: 'cascade' })</code></strong> means "this column points at a user; if the user is deleted, delete this row too". That is how a session disappears with its user.</li>
+  <li><strong><code>timestamp(..., { withTimezone: true })</code></strong> stores moments in time with their time zone, which avoids a whole class of date bugs.</li>
+</ul>
+
+<h2>Tables for the app itself</h2>
+<p>Here is every table in <code>server/db/schema/app.ts</code> at a glance. You do not need to memorise it; later chapters introduce each table right before the code that uses it.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Table</th><th>Holds</th><th>Chapter</th></tr></thead>
+<tbody>
+<tr><td><code>api_rate_limit</code></td><td>Counters for "too many requests" limits</td><td>7</td></tr>
+<tr><td><code>category</code>, <code>country</code></td><td>Fandom categories; countries</td><td>10</td></tr>
+<tr><td><code>talent</code></td><td>The Stars</td><td>10</td></tr>
+<tr><td><code>onboarding</code></td><td>A new fan's picks (category, favourite Stars)</td><td>10</td></tr>
+<tr><td><code>community</code>, <code>membership</code></td><td>A Star's community; who joined it, their lane and Originals number</td><td>11</td></tr>
+<tr><td><code>drop</code>, <code>drop_reaction</code>, <code>reply</code>, <code>idempotency_key</code></td><td>Posts, likes, replies, and a table that makes "send twice" safe</td><td>12</td></tr>
+<tr><td><code>mission</code>, <code>mission_completion</code>, <code>xp_transaction</code>, <code>app_setting</code></td><td>Missions, who completed them, the XP ledger, admin-set rules</td><td>13</td></tr>
+<tr><td><code>badge</code>, <code>badge_award</code></td><td>Badges and who earned them</td><td>13</td></tr>
+<tr><td><code>watch_party</code>, <code>watch_party_rsvp</code>, <code>notification</code></td><td>Events, "I'm going", and in-app notifications</td><td>14</td></tr>
+<tr><td><code>talent_application</code>, <code>identity_claim</code></td><td>Applying to become a Star; claiming an existing Star profile</td><td>15</td></tr>
+<tr><td><code>report</code>, <code>block</code></td><td>Flagged content; user blocks</td><td>16</td></tr>
+<tr><td><code>admin_audit</code></td><td>An append-only record of what admins did</td><td>17</td></tr>
+</tbody></table></div>
+<aside class="callout warn"><p class="callout-label">Heads-up</p>
+<p><code>identity_claim</code> still exists in the code at this snapshot, but the project plan (<code>docs/plan.md</code>, task 3) removes it. It is included so this guide matches the code exactly.</p></aside>
+<p>Create <code>server/db/schema/app.ts</code>. It is long; copy it as is and read the comments, which explain the reasons behind many choices:</p>
+<!--@file server/db/schema/app.ts-->
+<tech>
+<p>Patterns repeated in this file, so you recognise them later:</p>
+<ul>
+<li><code>uuid('id').primaryKey().defaultRandom()</code>: every row gets a random unique ID.</li>
+<li><code>unique(...)</code> and <code>uniqueIndex(...).where(...)</code>: rules like "one membership per user per community" or "only one <em>pending</em> application per user". The database itself enforces them, so no bug in our code can break them.</li>
+<li><code>index(...)</code>: makes lookups and sorted lists fast. The index on <code>(communityId, publishAt, id)</code> exists because the feed asks for exactly that order.</li>
+<li>Counters such as <code>memberCount</code> and <code>likeCount</code> are stored on the row (denormalised) so lists do not need to count thousands of rows each time.</li>
+<li>Append-only tables (<code>xp_transaction</code>, <code>admin_audit</code>): the app only ever inserts. History is never rewritten.</li>
+</ul>
+</tech>
+<p>Finally, a one-line file that gathers both groups so the rest of the code can import one thing. Create <code>server/db/schema/index.ts</code>:</p>
+<!--@file server/db/schema/index.ts-->
+
+<check>
+<p>Nothing runs yet, but <code>docker ps</code> should still show the database as "Up", and your three schema files should exist under <code>server/db/schema/</code>. In the next chapter they become real tables. Commit: <code>git add -A && git commit -m "Describe the database tables"</code>.</p>
+</check>

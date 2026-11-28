@@ -1,0 +1,53 @@
+<!--@meta
+part: Appendix
+title: Glossary
+summary: Every term in this guide, in plain words and in programming terms.
+-->
+<p class="lead">Use the search box above or scan the list. Terms are alphabetical.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Term</th><th>In plain words</th><th>In programming terms</th></tr></thead>
+<tbody>
+<tr><td>API</td><td>A menu of things another program can ask our server to do.</td><td>A set of HTTP endpoints returning JSON.</td></tr>
+<tr><td>Audit log</td><td>A diary of what admins did, which nobody may edit.</td><td>The append-only <code>admin_audit</code> table written by <code>audit()</code>.</td></tr>
+<tr><td>Auto-import</td><td>Functions you can use without writing an "import" line.</td><td>Nitro and Nuxt generate imports for <code>server/utils</code>, <code>app/composables</code> and components.</td></tr>
+<tr><td>Block</td><td>Hiding another user's content from yourself.</td><td>A row in <code>block</code>; feed queries exclude those authors.</td></tr>
+<tr><td>Catch-all route</td><td>A file that answers every address nothing else matched.</td><td><code>[...].ts</code> in <code>server/api</code>.</td></tr>
+<tr><td>Community</td><td>The home of one Star's fans.</td><td>A <code>community</code> row owned by one <code>talent</code>.</td></tr>
+<tr><td>Component</td><td>A reusable piece of a web page.</td><td>A Vue <code>.vue</code> file.</td></tr>
+<tr><td>Composable</td><td>A shared piece of page logic.</td><td>A function in <code>app/composables</code> using Vue reactivity.</td></tr>
+<tr><td>Cookie</td><td>A small note your browser keeps and shows the site each visit.</td><td>The session token travels in a cookie header.</td></tr>
+<tr><td>Cron / scheduler</td><td>An alarm clock that calls our job addresses on a timetable.</td><td>An external timer calling <code>/api/internal/jobs/*</code> with a bearer secret.</td></tr>
+<tr><td>Cursor</td><td>A bookmark saying where the next page of a list starts.</td><td>A signed, opaque keyset pagination token.</td></tr>
+<tr><td>Drizzle</td><td>The tool that lets us describe tables and ask for rows in TypeScript.</td><td>A typed SQL ORM and query builder (<code>drizzle-orm</code>, <code>drizzle-kit</code>).</td></tr>
+<tr><td>Drop</td><td>A post by a Star.</td><td>A <code>drop</code> row with an audience and a status.</td></tr>
+<tr><td>End-to-end test</td><td>A test that runs the whole app like a real user would.</td><td>A Vitest test using <code>@nuxt/test-utils</code> against a real database.</td></tr>
+<tr><td>Endpoint / route</td><td>One thing you can ask the server for.</td><td>HTTP method plus path, backed by one file in <code>server/api</code>.</td></tr>
+<tr><td>Environment variable</td><td>A setting kept outside the code.</td><td>Read via <code>process.env</code> or <code>useRuntimeConfig()</code>.</td></tr>
+<tr><td>Idempotent</td><td>Safe to do twice; the second time changes nothing.</td><td>Repeating the request leaves the same state (e.g. PUT like, Idempotency-Key).</td></tr>
+<tr><td>JSON</td><td>Data written as text in a tidy format.</td><td>JavaScript Object Notation.</td></tr>
+<tr><td>Keyset pagination</td><td>Paging by "after this item" rather than "page number".</td><td>A <code>WHERE (a, id) &lt; (…)</code> filter plus <code>ORDER BY</code> and <code>LIMIT</code>.</td></tr>
+<tr><td>Lane</td><td>One of six labels a fan picks when joining.</td><td>A text column on <code>membership</code> validated by a Zod enum.</td></tr>
+<tr><td>Ledger</td><td>A list of every change, never edited.</td><td>An append-only table; balance is <code>SUM(amount)</code>.</td></tr>
+<tr><td>Middleware</td><td>Code that runs before every request is handled.</td><td>Files in <code>server/middleware</code>, run in filename order.</td></tr>
+<tr><td>Migration</td><td>A saved instruction for changing the database layout.</td><td>A generated SQL file applied in order by <code>drizzle-kit migrate</code>.</td></tr>
+<tr><td>Mission / XP</td><td>A task, and the points it earns.</td><td><code>mission</code>, <code>mission_completion</code> and <code>xp_transaction</code> tables.</td></tr>
+<tr><td>Nitro</td><td>Nuxt's server engine.</td><td>Turns <code>server/</code> files into routes and handles requests.</td></tr>
+<tr><td>Nuxt</td><td>The framework that runs both our server and our one page.</td><td>A Vue meta-framework (version 4 here).</td></tr>
+<tr><td>OpenAPI</td><td>A written menu of an API that tools can read.</td><td>A YAML spec (<code>openapi/clautverse.yaml</code>).</td></tr>
+<tr><td>Originals</td><td>The first 100 members, with permanent numbers.</td><td><code>originalPosition</code> allocated under a row lock from a never-decreasing counter.</td></tr>
+<tr><td>pnpm</td><td>The tool that downloads the libraries we use.</td><td>A Node package manager.</td></tr>
+<tr><td>Rate limit</td><td>A cap on how often someone can call.</td><td>A fixed-window counter in <code>api_rate_limit</code>.</td></tr>
+<tr><td>Reactive</td><td>Updates the page automatically when data changes.</td><td>Vue <code>ref</code>, <code>reactive</code>, <code>computed</code>.</td></tr>
+<tr><td>Request ID</td><td>A label for one request, to trace problems.</td><td><code>req_…</code> set by middleware and returned in <code>X-Request-Id</code>.</td></tr>
+<tr><td>Row lock</td><td>"Only one person edits this row at a time."</td><td><code>SELECT … FOR UPDATE</code> (<code>.for('update')</code>).</td></tr>
+<tr><td>Schema</td><td>The description of the tables.</td><td>Drizzle <code>pgTable</code> definitions in <code>server/db/schema</code>.</td></tr>
+<tr><td>Seed</td><td>Starter data to fill empty tables.</td><td><code>scripts/seed.mjs</code>.</td></tr>
+<tr><td>Session</td><td>Proof you signed in, remembered by the server.</td><td>A row in <code>session</code>, referenced by a cookie.</td></tr>
+<tr><td>Star / talent</td><td>A public figure with a community.</td><td>A <code>talent</code> row (code uses "talent").</td></tr>
+<tr><td>Transaction</td><td>"All of these steps, or none."</td><td>A database transaction (<code>db.transaction(async tx =&gt; …)</code>).</td></tr>
+<tr><td>TypeScript</td><td>JavaScript that checks your types while you write.</td><td>A typed superset of JavaScript compiled away at build.</td></tr>
+<tr><td>Unit test</td><td>A quick test of one small function.</td><td>A Vitest test in <code>tests/unit</code>.</td></tr>
+<tr><td>Upsert</td><td>Create it, or update it if it exists.</td><td><code>insert … on conflict do update</code>.</td></tr>
+<tr><td>View (function)</td><td>A filter deciding what leaves the server.</td><td>Functions like <code>publicUser</code>, <code>dropView</code>.</td></tr>
+<tr><td>Zod</td><td>The tool that checks incoming data matches a shape.</td><td>A schema validation library with TypeScript inference.</td></tr>
+</tbody></table></div>

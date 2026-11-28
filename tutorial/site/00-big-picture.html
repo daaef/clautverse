@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The big picture · Build Clautverse</title>
+<meta name="description" content="What Clautverse is, the words you need, and how one request travels through the app.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="00-big-picture">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture" aria-current="page">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Start here</p><h1>The big picture</h1><p class="meta">About 6 min read</p><p class="lead">Before typing anything, get the map. This chapter has no code to write. It explains what we are building and gives names to the pieces so the later chapters feel familiar.</p>
+
+<h2 id="what-clautverse-is">What Clautverse is<a class="anchor" href="#what-clautverse-is" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Clautverse is a place for fans of public figures. Think of a reality-TV housemate. Their fans can join a <strong>community</strong> for that person, read what the person posts, do small <strong>missions</strong> to earn points, RSVP to watch-together events, and get notified when something happens. Staff (<strong>admins</strong>) approve who counts as a real "Star", handle reports about bad behaviour, and can hide a community.</p>
+</aside>
+<p>We are building the <strong>backend</strong>: the part that stores everything and enforces the rules. It has no pretty screens. Instead it has an <strong>API</strong>, which is a list of web addresses that other programs (a phone app, a website) can ask for things. The only web page we build is the <em>API Explorer</em>, a tool for trying those addresses by hand.</p>
+
+<h2 id="the-words-you-will-see-everywhere">The words you will see everywhere<a class="anchor" href="#the-words-you-will-see-everywhere" aria-label="Link to this section">#</a></h2>
+<p>Skim this list now and come back whenever a word feels fuzzy. The <a href="99-glossary.html">glossary</a> has more.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Word</th><th>In plain words</th><th>In programming terms</th></tr></thead>
+<tbody>
+<tr><td>Client / server</td><td>The client asks (a browser, an app). The server answers.</td><td>A client sends an HTTP request; the server program returns an HTTP response.</td></tr>
+<tr><td>API</td><td>A menu of things a program can ask our server to do.</td><td>A set of HTTP endpoints, here returning JSON.</td></tr>
+<tr><td>Endpoint / route</td><td>One item on that menu, such as "list communities".</td><td>A method plus a path, e.g. <code>GET /api/communities</code>.</td></tr>
+<tr><td>GET, POST, PUT, PATCH, DELETE</td><td>Read, create, replace, change a little, remove.</td><td>HTTP methods (verbs). GET never changes data.</td></tr>
+<tr><td>Status code</td><td>A number saying how it went: 200 fine, 404 not found, 403 not allowed.</td><td>The three-digit HTTP response code. 2xx success, 4xx the caller's fault, 5xx ours.</td></tr>
+<tr><td>JSON</td><td>A tidy way to write data as text: <code>{"name": "Ada"}</code>.</td><td>JavaScript Object Notation, the format our API speaks.</td></tr>
+<tr><td>Database, table, row</td><td>A giant organised filing cabinet. A table is one drawer, a row is one card.</td><td>PostgreSQL stores data in tables made of rows and columns.</td></tr>
+<tr><td>SQL</td><td>The language for asking the database things.</td><td>Structured Query Language. We write it through Drizzle instead of by hand most of the time.</td></tr>
+<tr><td>Migration</td><td>A saved, numbered instruction for changing the database layout.</td><td>A SQL file generated from schema changes and applied in order.</td></tr>
+<tr><td>Session / cookie</td><td>A wristband you get at sign-in so you are recognised next time.</td><td>A random token stored server-side, sent back by the browser in a cookie.</td></tr>
+<tr><td>Environment variable</td><td>A setting kept outside the code, such as a password.</td><td>A key/value the process reads at startup (<code>process.env</code>, <code>.env</code> file).</td></tr>
+<tr><td>Transaction</td><td>"Do all these steps or none of them."</td><td>A database transaction: atomic changes that commit together or roll back.</td></tr>
+</tbody></table></div>
+
+<h2 id="the-words-specific-to-clautverse">The words specific to Clautverse<a class="anchor" href="#the-words-specific-to-clautverse" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li><strong>Fan</strong>: a normal signed-in user.</li>
+  <li><strong>Star</strong>: a public figure. The code calls this a <code>talent</code> (table <code>talent</code>, routes under <code>/api/talents</code>). Same thing, two names.</li>
+  <li><strong>Category</strong>: a kind of fandom, such as Reality TV. Only active categories can be chosen.</li>
+  <li><strong>Community</strong> (fandom): the home of one Star's fans. One Star owns exactly one community.</li>
+  <li><strong>Originals</strong>: the first 100 people to join a community get a permanent numbered spot, 1 to 100. Leave or get removed and your number is retired forever.</li>
+  <li><strong>Lane</strong>: one of six labels a fan picks when joining (<code>rider</code>, <code>fandom_builder</code>, <code>builder</code>, <code>analyst</code>, <code>creator</code>, <code>mutual</code>).</li>
+  <li><strong>Drop</strong>: a post by the Star. It can be public, members-only, or Originals-only.</li>
+  <li><strong>Mission</strong> and <strong>XP</strong>: a task a Star sets, and the points a fan earns by completing it. XP is recorded in a ledger (a list of every change), never edited.</li>
+  <li><strong>Badge</strong>: a collectable award given by admins.</li>
+  <li><strong>Watch party</strong>: a scheduled event with an external link and an "I'm going" button.</li>
+  <li><strong>Report</strong> and <strong>block</strong>: how fans flag content and hide other users.</li>
+</ul>
+
+<h2 id="the-tools-and-why-each-one">The tools, and why each one<a class="anchor" href="#the-tools-and-why-each-one" aria-label="Link to this section">#</a></h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Tool</th><th>Job</th><th>Why this one</th></tr></thead>
+<tbody>
+<tr><td><strong>Nuxt 4</strong></td><td>The framework. It runs our server code and our one web page.</td><td>Its server engine (Nitro) turns each file in <code>server/api</code> into an endpoint with no setup. Vue powers the web page.</td></tr>
+<tr><td><strong>TypeScript</strong></td><td>JavaScript with types, so mistakes show up while typing.</td><td>Types double as documentation and catch typos.</td></tr>
+<tr><td><strong>PostgreSQL</strong></td><td>The database.</td><td>Reliable, and supports the row locks and transactions the rules need.</td></tr>
+<tr><td><strong>Drizzle ORM</strong></td><td>Lets us describe tables and write queries in TypeScript.</td><td>Stays close to SQL and is fully typed.</td></tr>
+<tr><td><strong>Better Auth</strong></td><td>Sign-up, sign-in, sessions, email verification, password reset.</td><td>Security-sensitive code you should not write yourself.</td></tr>
+<tr><td><strong>Zod</strong></td><td>Checks that incoming data has the right shape.</td><td>One description gives both validation and types.</td></tr>
+<tr><td><strong>Vitest</strong></td><td>Runs the automated tests.</td><td>Fast, TypeScript-friendly.</td></tr>
+<tr><td><strong>Docker</strong></td><td>Runs PostgreSQL on your machine in a box.</td><td>One command instead of a manual database install.</td></tr>
+</tbody></table></div>
+
+<h2 id="one-request-start-to-finish">One request, start to finish<a class="anchor" href="#one-request-start-to-finish" aria-label="Link to this section">#</a></h2>
+<p>This is the journey every call to the API takes. Later chapters build each stop.</p>
+<ol class="flow">
+  <li><strong>The request arrives</strong> (for example <code>POST /api/communities/abc/join</code>).</li>
+  <li><strong>Middleware</strong> stamps it with a request ID so we can trace problems (chapter 6).</li>
+  <li><strong>Nitro finds the file</strong> that matches the address (chapter 3).</li>
+  <li><strong>The handler checks who you are</strong> using your session cookie (chapter 8).</li>
+  <li><strong>It validates the input</strong> with Zod and applies rate limits (chapter 7).</li>
+  <li><strong>It talks to the database</strong>, often inside a transaction (chapters 4 and 5).</li>
+  <li><strong>It returns JSON.</strong> If anything went wrong, one error handler turns it into the same error shape every time (chapter 6).</li>
+</ol>
+
+<h2 id="the-project-map">The project map<a class="anchor" href="#the-project-map" aria-label="Link to this section">#</a></h2>
+<p>By the end the folders look like this. Do not create them now; each chapter tells you when.</p>
+<figure class="code" data-lang="text"><div class="code-head"><span class="code-file">project layout</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>app/            the one web page (API Explorer): page, components, composables, styles
+server/
+  api/          one file per endpoint (about <span class="t-n">100</span> files)
+  db/           database tables (schema) and migrations
+  middleware/   code that runs on every request
+  utils/        shared helpers, auto-available <span class="t-k">in</span> every endpoint
+  error-handler.ts   formats every error the same way
+openapi/        the written contract <span class="t-k">of</span> the API (a YAML file)
+scripts/        one-off scripts (the database seed)
+tests/          unit tests and end-to-end tests
+public/         images served <span class="t-k">as</span>-is
+docs/           the project plan and specs
+nuxt.config.ts, package.json, drizzle.config.ts, vitest.config.ts, .env</code></pre></figure>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>You can now say, in one sentence each: what an API is, what a database table is, and why a login uses a session. If not, reread the table above, then continue. Nobody memorises this; you will meet each word again with code attached.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="index.html"><small>Previous</small>Start page</a><a class="next" href="01-setup.html"><small>Next</small>Install tools and create the project</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#what-clautverse-is">What Clautverse is</a></li><li><a href="#the-words-you-will-see-everywhere">The words you will see everywhere</a></li><li><a href="#the-words-specific-to-clautverse">The words specific to Clautverse</a></li><li><a href="#the-tools-and-why-each-one">The tools, and why each one</a></li><li><a href="#one-request-start-to-finish">One request, start to finish</a></li><li><a href="#the-project-map">The project map</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

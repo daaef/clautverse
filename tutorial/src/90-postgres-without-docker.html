@@ -1,0 +1,99 @@
+<!--@meta
+part: Appendix
+title: PostgreSQL without Docker
+summary: Install PostgreSQL directly on your computer and swap the Docker commands in the guide for these.
+-->
+<p class="lead">The guide uses Docker so the database is one command. If you would rather install PostgreSQL directly on your computer (or already have it), this page gives you the replacements. Everything else in the guide stays the same.</p>
+
+<h2>Which version</h2>
+<plain>
+<p>PostgreSQL is the program that stores all the data. Docker was only a convenient box to run it in. You can run the same program directly on your computer instead, and the app will not notice the difference.</p>
+</plain>
+<p>The guide uses <strong>PostgreSQL 17</strong> (the Docker image is <code>postgres:17</code>, from the project's README). Install 17 if you can. The project's tests drop a database with <code>with (force)</code>, which needs PostgreSQL 13 or newer, so any recent version should work, but 17 is the one the guide was written against. Check yours with:</p>
+<!--@code bash | terminal-->
+psql --version
+<!--@/code-->
+
+<h2>1. Install and start it</h2>
+<plain>
+<p>Installing gives you the database program plus a background "service" that keeps it running, like a shop that stays open while you work.</p>
+</plain>
+<div class="tablewrap"><table>
+<thead><tr><th>System</th><th>Install</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>macOS (Homebrew)</td><td><code>brew install postgresql@17</code> then <code>brew services start postgresql@17</code></td><td>Homebrew does not put <code>psql</code> on your path for versioned installs. Add <code>/opt/homebrew/opt/postgresql@17/bin</code> to your <code>PATH</code> (on Intel Macs the folder starts <code>/usr/local/opt</code>). Your login is a database superuser with <strong>no password</strong>.</td></tr>
+<tr><td>Ubuntu / Debian</td><td><code>sudo apt install postgresql</code></td><td>The version depends on your release; check with <code>psql --version</code>. The service starts automatically. The superuser is the system user <code>postgres</code>, reached with <code>sudo -u postgres psql</code>.</td></tr>
+<tr><td>Windows</td><td>The installer from <a href="https://www.postgresql.org/download/windows/">postgresql.org/download/windows</a></td><td>The installer asks for a password for the <code>postgres</code> user and a port (keep 5432). Use "SQL Shell (psql)" from the Start menu, or add the <code>bin</code> folder to your <code>PATH</code>.</td></tr>
+</tbody></table></div>
+<tech><p>These commands come from each system's usual package route and are not tested by this guide. If one differs on your machine, the PostgreSQL download page for your system is the authority.</p></tech>
+
+<h2>2. Create the database and a login</h2>
+<plain>
+<p>The Docker command created a database called <code>clautverse</code> with the user <code>postgres</code> and the password <code>postgres</code> in one go. Locally you do the same two things by hand.</p>
+</plain>
+<p>Open <code>psql</code> as the superuser (macOS: <code>psql postgres</code>; Ubuntu: <code>sudo -u postgres psql</code>; Windows: SQL Shell) and run:</p>
+<!--@code sql | inside psql-->
+create database clautverse;
+alter user postgres with password 'postgres';
+<!--@/code-->
+<check>
+<p>Still inside <code>psql</code>, type <code>\l</code>. The list of databases should include <code>clautverse</code>.</p>
+</check>
+<p>The second line is optional on macOS Homebrew, where you can use your own login without a password. It is a throwaway local password; never use it anywhere real. Type <code>\q</code> to leave.</p>
+
+<h2>3. Point the app at it</h2>
+<p>In <code>.env</code>, set <code>NUXT_DATABASE_URL</code> to match what you created. The pattern is <code>postgres://<em>user</em>:<em>password</em>@<em>host</em>:<em>port</em>/<em>database</em></code>:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Your setup</th><th><code>NUXT_DATABASE_URL</code></th></tr></thead>
+<tbody>
+<tr><td>You ran step 2 exactly</td><td><code>postgres://postgres:postgres@localhost:5432/clautverse</code> (the same as the guide)</td></tr>
+<tr><td>macOS Homebrew, your own login</td><td><code>postgres://YOUR_MAC_USERNAME@localhost:5432/clautverse</code></td></tr>
+<tr><td>A different password or port</td><td>Put your values in the same pattern</td></tr>
+</tbody></table></div>
+<check>
+<p>Run <code>set -a; . ./.env; set +a</code> then <code>psql "$NUXT_DATABASE_URL" -c "select 1"</code>. A table with a <code>1</code> means the address, login and database are right. If you changed <code>.env</code> while <code>pnpm dev</code> was running, restart it.</p>
+</check>
+
+<h2>4. Replace the Docker commands</h2>
+<p>Whenever the guide shows a <code>docker</code> command, use the right-hand column. They all assume you ran <code>set -a; . ./.env; set +a</code> in that terminal window first, so <code>$NUXT_DATABASE_URL</code> is set.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Where</th><th>Guide says</th><th>Use instead</th></tr></thead>
+<tbody>
+<tr><td>Chapter 1</td><td>Install Docker Desktop, <code>docker -v</code></td><td>Skip. Do steps 1 to 3 on this page.</td></tr>
+<tr><td>Chapter 4</td><td><code>docker run … postgres:17</code></td><td>Skip. Steps 1 and 2 above replace it.</td></tr>
+<tr><td>Chapter 4</td><td><code>docker ps</code> shows "Up"; <code>docker start clautverse-pg</code></td><td>macOS: <code>brew services list</code>; <code>brew services start postgresql@17</code>. Ubuntu: <code>sudo systemctl status postgresql</code>. Windows: the "postgresql" service in Services.</td></tr>
+<tr><td>Chapter 5</td><td><code>docker exec clautverse-pg psql -U postgres -d clautverse -c '\dt'</code></td><td><code>psql "$NUXT_DATABASE_URL" -c '\dt'</code></td></tr>
+<tr><td>Chapter 5</td><td><code>docker stop clautverse-pg</code> / <code>docker start clautverse-pg</code> (the health-check test)</td><td>The service stop and start commands from the row above (for example <code>brew services stop postgresql@17</code>).</td></tr>
+<tr><td>Chapter 8</td><td><code>docker exec … -c "update \"user\" set email_verified = true …"</code></td><td><code>psql "$NUXT_DATABASE_URL" -c "update \"user\" set email_verified = true where email = 'ada@example.com'"</code></td></tr>
+<tr><td>Chapter 11</td><td><code>docker exec … -c "insert into community …"</code></td><td><code>psql "$NUXT_DATABASE_URL" -c "insert into community (owner_talent_id, slug, name) select id, slug, name from talent where slug = 'ada'"</code></td></tr>
+<tr><td>Chapter 12 and 17</td><td><code>docker exec … -c "update \"user\" set roles = 'fan,super_admin' …"</code></td><td><code>psql "$NUXT_DATABASE_URL" -c "update \"user\" set roles = 'fan,super_admin' where email = 'ada@example.com'"</code></td></tr>
+<tr><td>Chapter 20</td><td>Docker container must be running</td><td>The PostgreSQL service must be running, and see the next section.</td></tr>
+<tr><td>Chapter 21</td><td>Port 5432 already in use</td><td>Not an issue if the installed PostgreSQL is the one using it. Just do not also run the Docker container.</td></tr>
+</tbody></table></div>
+<tech>
+<p>The app and Drizzle only ever read the address in <code>NUXT_DATABASE_URL</code>; <code>postgres.js</code> (chapter 5) opens a normal TCP connection to it. Docker or a local install is invisible to the code, which is why only the setup commands change.</p>
+</tech>
+<p>Everything else (<code>pnpm db:generate</code>, <code>pnpm db:migrate</code>, <code>pnpm db:seed</code>, the health check) is identical, because the app only ever sees the address in <code>NUXT_DATABASE_URL</code>.</p>
+
+<h2>5. Tests with a local database</h2>
+<p>The end-to-end tests (chapter 20) create and delete a separate database called <code>clautverse_test</code>. They connect first to a maintenance address that defaults to <code>postgres://postgres:postgres@localhost:5432/postgres</code> (in <code>tests/e2e/global-setup.ts</code> and <code>tests/e2e/helpers.ts</code>). That default matches the user and password from step 2. If yours differ, or you use the macOS login without a password, set <code>TEST_DATABASE_ADMIN_URL</code> before running them:</p>
+<!--@code bash | terminal-->
+export TEST_DATABASE_ADMIN_URL=postgres://YOUR_USER:YOUR_PASSWORD@localhost:5432/postgres
+pnpm test:e2e
+<!--@/code-->
+<ul>
+  <li>The user must be allowed to create and drop databases (a superuser, as in the steps above, is).</li>
+  <li>The test database name is built by replacing the last part of that address with <code>clautverse_test</code>, so keep the <code>/postgres</code> ending.</li>
+  <li>Your real <code>clautverse</code> data is never touched by the tests.</li>
+</ul>
+
+<check>
+<p>With the local database running, chapters 5 onward work unchanged: <code>pnpm db:migrate</code>, <code>pnpm db:seed</code>, then <code>curl http://localhost:3000/api/health</code> should return <code>{"status":"ok","db":"ok","version":"dev"}</code>. Commit as usual.</p>
+</check>
+
+<h2>Docker or local: which should I use?</h2>
+<ul>
+  <li><strong>Docker:</strong> one command, identical for everyone, easy to throw away and recreate. Needs Docker Desktop running.</li>
+  <li><strong>Local install:</strong> no Docker to run, starts with your computer, and you can use any PostgreSQL tool you already know. You manage the version and login yourself.</li>
+</ul>
+<p>The app and the tests behave the same with either.</p>

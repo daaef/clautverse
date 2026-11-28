@@ -43,6 +43,7 @@ Earlier rulings still stand. Lane codes: `rider`, `fandom_builder`, `builder`, `
 | 1 | Safety baseline: lane join, blocks, removal rules, reinstate | Done, `6aec313` (e2e 71/71) |
 | 2 | Remove the guide app and the guide pages. Keep the API Explorer. | Done |
 | 2b | API Explorer shows sample data for every parameter, header and body field | Done |
+| 2c | Small fixes (owner yes, 2026-11-22): remove the two contract-only badge routes (`PATCH /api/admin/badges`, `POST /api/admin/badges/{id}`); renumber member-reinstate to ADM-19; add a "Raw" free-text switch to Explorer cards; optional `countryId` on Star applications, copied to the Star on accept | To do |
 | 3 | Remove identity claims (decision 4) | To do |
 | 4 | Remove shows and seasons. Onboarding becomes categories plus favourite Stars. Stars get a category. (Decisions 2, 3) | Done |
 | 5 | Seed fictional pilot data (no real people or brands) | To do |

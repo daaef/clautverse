@@ -1,0 +1,82 @@
+<!--@meta
+part: Part 2 · Foundations
+title: Checking input, paging and rate limits
+summary: Reject bad data early, serve long lists page by page with tamper-proof cursors, and slow down abusers.
+-->
+<p class="lead">Three helpers that almost every endpoint uses: one that checks incoming data, one that splits long lists into pages, and one that limits how often someone can call. We also write our first automated test.</p>
+
+<h2>Checking incoming data with Zod</h2>
+<plain>
+<p>Never trust what arrives from outside. A request might have a missing field, a number where text should be, or something hostile. So each endpoint first describes the shape it expects, and anything that does not fit is rejected with a clear message <em>before</em> it can touch the database.</p>
+</plain>
+<p>Zod lets us describe that shape in code. A tiny example, which is not part of the project:</p>
+<!--@code ts | a Zod shape-->
+const body = z.object({
+  lane: z.enum(['rider', 'creator']),
+  alertsEnabled: z.boolean().optional(),
+}).strict()
+<!--@/code-->
+<p>This says: the body must be an object with a <code>lane</code> that is one of two words, optionally an <code>alertsEnabled</code> true/false, and <strong>nothing else</strong> (<code>.strict()</code> rejects unknown fields; most real endpoints use it, so a typo in a field name is an error rather than silently ignored).</p>
+<p>Create <code>server/utils/validate.ts</code>, the helpers every endpoint uses to apply such a shape:</p>
+<!--@file server/utils/validate.ts-->
+<ul>
+  <li><code>toFields</code> turns Zod's list of problems into <code>{ "lane": "Invalid option…" }</code>, which is what the error's <code>details.fields</code> shows. Array positions are written like <code>links[0].url</code>.</li>
+  <li><code>readJsonBody(event, schema)</code> reads the request body, refuses invalid JSON, then validates it. <code>readQuery</code> does the same for <code>?a=1&amp;b=2</code> parts of the address.</li>
+  <li><code>readIdParam(event)</code> reads <code>[id]</code> from the path and insists it is a UUID. A malformed ID is answered with <code>NOT_FOUND</code> (not a validation error), so a made-up ID looks the same as an ID that simply does not exist.</li>
+  <li><code>readUserIdParam</code> exists because user IDs from Better Auth are opaque text, not UUIDs.</li>
+</ul>
+<tech>
+<p>Every failure is thrown as <code>apiError('VALIDATION_FAILED', …)</code> from chapter 6, so a bad request automatically gets the standard error shape. <code>z.infer&lt;T&gt;</code> gives you the TypeScript type of validated data, so after <code>readJsonBody</code> returns you are working with correctly typed values.</p>
+</tech>
+
+<h2>Long lists: pages and cursors</h2>
+<plain>
+<p>A list of 50,000 communities cannot be sent in one go. We send a page (say 20), plus a bookmark ("cursor") saying where the next page starts. The caller sends the bookmark back to get the next page.</p>
+</plain>
+<tech>
+<p>The classic way is <code>page=2</code> (offset pagination), but it breaks when rows are added while someone is scrolling: items shift and you see duplicates or skip some. We use <strong>keyset pagination</strong>: the bookmark records the last item's sort values (such as its timestamp and ID), and the next query says "give me rows after this one". That stays stable and is fast with an index.</p>
+</tech>
+<p>The bookmark must be <strong>tamper-proof</strong>; otherwise someone could invent one. So it is signed. Create <code>server/utils/cursor.ts</code>:</p>
+<!--@file server/utils/cursor.ts-->
+<ul>
+  <li>The cursor is <code>base64url(json) + "." + base64url(signature)</code>. The signature is an HMAC (a fingerprint made with a secret, here <code>cursorSecret</code> from chapter 2).</li>
+  <li>When decoding, we recompute the fingerprint and compare with <code>timingSafeEqual</code>, which takes the same time whether or not the first bytes match. That prevents guessing a signature by timing. A forged or garbled cursor decodes to <code>null</code>.</li>
+</ul>
+<p>Now the helper that endpoints use. Create <code>server/utils/paginate.ts</code>:</p>
+<!--@file server/utils/paginate.ts-->
+<ul>
+  <li><code>pageQuery</code> is the shared <code>?limit=&amp;cursor=</code> shape: <code>limit</code> from 1 to 100 (default 20). <code>z.coerce.number()</code> turns the text <code>"20"</code> from the address into a number.</li>
+  <li><code>readCursor(cursor, scope)</code> verifies the signature <em>and</em> that the cursor was made for the same <code>scope</code>. The scope is a label such as <code>com-popular</code>; it stops a cursor from the "popular" list being reused on the "newest" list.</li>
+  <li><code>toPage(rows, limit, …)</code> expects you to ask the database for <strong><code>limit + 1</code></strong> rows. If you got more than <code>limit</code>, there is a next page, and the last kept row becomes the new cursor. Fetching one extra row avoids a separate "is there more?" query.</li>
+  <li>The result is always <code>{ items, nextCursor }</code>; <code>nextCursor</code> is <code>null</code> on the last page.</li>
+</ul>
+
+<h2>Rate limiting</h2>
+<plain>
+<p>Without limits, one person (or a script) could hammer the server or try thousands of passwords. A rate limit says "at most N calls per minute".</p>
+</plain>
+<p>Create <code>server/utils/rate-limit.ts</code>:</p>
+<!--@file server/utils/rate-limit.ts-->
+<ul>
+  <li>Usage reads like <code>await rateLimit(event, 'drop', user.id, 30, 60)</code>: "at most 30 <code>drop</code> calls per user per 60 seconds".</li>
+  <li>It uses the <code>api_rate_limit</code> table from chapter 4. One SQL statement either inserts the first hit, resets an expired window, or adds one to the count, and returns the new count. Doing it in one statement makes it safe when many requests arrive at the same instant.</li>
+  <li>When the limit is passed it sets a <code>Retry-After</code> header and throws <code>RATE_LIMITED</code> (HTTP 429).</li>
+  <li><code>clientIp</code> finds the caller's address for endpoints used by signed-out visitors.</li>
+</ul>
+<tech><p>This is a <strong>fixed-window</strong> limiter stored in Postgres, which avoids running a separate Redis service. The trade-off is that a burst straddling two windows can briefly exceed the average rate. That is acceptable here.</p></tech>
+
+<h2>Your first automated test</h2>
+<p>The cursor code is security-sensitive, so it deserves a test. Create the test runner's settings file, <code>vitest.config.ts</code>. It defines two groups of tests: fast <em>unit</em> tests, and <em>end-to-end</em> tests that start the whole app (chapter 20):</p>
+<!--@file vitest.config.ts-->
+<p>Then <code>tests/unit/cursor.test.ts</code>:</p>
+<!--@file tests/unit/cursor.test.ts-->
+<ul>
+  <li>Each <code>it('…', () =&gt; { … })</code> is one test. <code>expect(a).toEqual(b)</code> says "these must match".</li>
+  <li>The three tests prove: a cursor decodes back to what went in; a cursor with its content swapped but the old signature is rejected; a different secret or garbage text is rejected.</li>
+</ul>
+<!--@code bash | terminal-->
+pnpm test:unit
+<!--@/code-->
+<check>
+<p>Vitest prints one test file with 3 passing tests. Commit: <code>git add -A && git commit -m "Validation, cursor paging, rate limit and first test"</code>.</p>
+</check>

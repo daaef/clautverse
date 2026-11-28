@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install tools and create the project · Build Clautverse</title>
+<meta name="description" content="Install Node, pnpm and Docker, then scaffold a plain Nuxt 4 project.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="01-setup">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup" aria-current="page">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 1 · Set up</p><h1>Install tools and create the project</h1><p class="meta">About 3 min read</p><p class="lead">In this chapter you install the tools and create an empty Nuxt 4 project. By the end you will see Nuxt's welcome page in your browser.</p>
+
+<h2 id="install-the-tools">Install the tools<a class="anchor" href="#install-the-tools" aria-label="Link to this section">#</a></h2>
+<aside class="callout tip"><p class="callout-label">Tip</p>
+<p><strong>No Docker?</strong> You can install PostgreSQL directly instead. See <a href="90-postgres-without-docker.html">PostgreSQL without Docker</a> for installs and drop-in replacements for every Docker command. The guide uses <strong>PostgreSQL 17</strong>.</p>
+</aside>
+<div class="tablewrap"><table>
+<thead><tr><th>Tool</th><th>What it is</th><th>Check it</th></tr></thead>
+<tbody>
+<tr><td>Node.js 24 or newer</td><td>Runs JavaScript outside a browser. Our server is a Node program.</td><td><code>node -v</code></td></tr>
+<tr><td>pnpm</td><td>Downloads and manages the libraries (packages) our project uses.</td><td><code>pnpm -v</code></td></tr>
+<tr><td>Docker Desktop</td><td>Runs the PostgreSQL database in a sealed box on your machine.</td><td><code>docker -v</code></td></tr>
+<tr><td>Git</td><td>Saves the history of your work.</td><td><code>git --version</code></td></tr>
+</tbody></table></div>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>A <strong>terminal</strong> is a window where you type instructions instead of clicking. On a Mac open "Terminal"; on Windows open "PowerShell" (or use WSL). Every line in a grey command box below is something you type there, then press Enter.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The project's <code>package.json</code> declares <code>"engines": {"node": ">=24"}</code>. That means "this project is built and tested on Node 24 or newer". Nuxt itself documents a lower minimum, but follow the project's number so everything in this guide behaves the same for you.</p>
+</aside>
+<p>Install Node from <a href="https://nodejs.org">nodejs.org</a> (pick the current or LTS version that is 24 or higher) and Docker from <a href="https://www.docker.com/products/docker-desktop/">docker.com</a>. Then install pnpm:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>npm install -g pnpm</code></pre></figure>
+<p>Open Docker Desktop once so it is running in the background. You will need it in chapter 4.</p>
+
+<h2 id="create-the-nuxt-4-project">Create the Nuxt 4 project<a class="anchor" href="#create-the-nuxt-4-project" aria-label="Link to this section">#</a></h2>
+<p>Nuxt's official command asks a few questions and then downloads a starter. This is the command from the <a href="https://nuxt.com/docs/4.x/getting-started/installation">Nuxt 4 installation page</a>:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>npm create nuxt@latest clautverse</code></pre></figure>
+<p>Answer the questions like this:</p>
+<ul>
+  <li><strong>Template:</strong> <code>minimal</code>. It is the emptiest starting point.</li>
+  <li><strong>Package manager:</strong> <code>pnpm</code>.</li>
+  <li><strong>Modules:</strong> choose none. Do not add Docus, Nuxt UI or anything else. We add exactly what we need by hand, so you understand every piece.</li>
+  <li><strong>Git:</strong> yes, initialise a repository.</li>
+</ul>
+<aside class="callout tip"><p class="callout-label">Tip</p>
+<p>Prefer no questions? Use the flagged form from Nuxt's docs: <code>npm create nuxt@latest clautverse -- --template minimal --packageManager pnpm --no-modules</code>. When this guide was prepared that command produced the exact project described below.</p>
+</aside>
+<p>Now move into the folder and start the development server:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>cd clautverse
+pnpm dev</code></pre></figure>
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Open <code>http://localhost:3000</code>. You should see the Nuxt welcome page. In the terminal you will see a line saying the server is listening on that address. Press <code>Ctrl+C</code> in the terminal to stop the server whenever you want.</p>
+</aside>
+
+<h2 id="what-the-starter-gave-you">What the starter gave you<a class="anchor" href="#what-the-starter-gave-you" aria-label="Link to this section">#</a></h2>
+<p>The minimal Nuxt 4 starter contains these files (we checked by generating one):</p>
+<figure class="code" data-lang="text"><div class="code-head"><span class="code-file">the starter project</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>app/app.vue          the root <span class="t-k">of</span> the web page (shows &lt;NuxtWelcome /&gt;)
+public/              files served <span class="t-k">as</span>-is (favicon, robots.txt)
+nuxt.config.ts       Nuxt settings
+package.json         the project's name, scripts and libraries
+tsconfig.json        TypeScript settings (points at generated files)
+.gitignore           files git should not save
+README.md            starter notes</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p><strong>Nuxt 4 uses an <code>app/</code> folder</strong> for everything the browser runs (pages, components, composables). Server code lives in <code>server/</code> at the project root, next to it. Nuxt 3 projects kept both at the root; this guide uses the Nuxt 4 layout. Nuxt also generates a hidden <code>.nuxt/</code> folder with types; you never edit it, and <code>.gitignore</code> keeps it out of git.</p>
+</aside>
+<p>The starter's <code>package.json</code> scripts are what you will use all the time:</p>
+<ul>
+  <li><code>pnpm dev</code>: run the server with live reload while you work.</li>
+  <li><code>pnpm build</code> / <code>pnpm preview</code>: make and test a production build.</li>
+</ul>
+
+<h2 id="save-your-first-commit">Save your first commit<a class="anchor" href="#save-your-first-commit" aria-label="Link to this section">#</a></h2>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>git add -A
+git commit -m <span class="t-s">"Scaffold Nuxt 4 minimal project"</span></code></pre></figure>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>A commit is a save point you can always return to. Make one at the end of every chapter. If something breaks later, you can compare against your last good save.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="00-big-picture.html"><small>Previous</small>The big picture</a><a class="next" href="02-config.html"><small>Next</small>Packages, settings and secrets</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#install-the-tools">Install the tools</a></li><li><a href="#create-the-nuxt-4-project">Create the Nuxt 4 project</a></li><li><a href="#what-the-starter-gave-you">What the starter gave you</a></li><li><a href="#save-your-first-commit">Save your first commit</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

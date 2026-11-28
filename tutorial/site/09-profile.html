@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My account: profile and deletion · Build Clautverse</title>
+<meta name="description" content="Read and edit your own profile, and schedule account deletion with a 30-day safety net.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="09-profile">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile" aria-current="page">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 3 · People</p><h1>My account: profile and deletion</h1><p class="meta">About 3 min read</p><p class="lead">Now that people can sign in, they need to see and change their own details. These three endpoints all live under <code>/api/me</code>: "me" means "whoever the session cookie says is calling".</p>
+
+<h2 id="read-my-profile">Read my profile<a class="anchor" href="#read-my-profile" aria-label="Link to this section">#</a></h2>
+<p>Create <code>server/api/me/index.get.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/me/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// AUTH-06: works before email verification so the app can show "check your inbox".</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> event =&gt; toMe(<span class="t-k">await</span> requireUser(event, { verified: <span class="t-k">false</span> })))</code></pre></figure>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>One line does the whole job: <code>requireUser</code> finds out who is calling, and <code>toMe</code> shapes the answer. The <code>{ verified: false }</code> option lets a person who has not yet confirmed their email still call this, so an app can show "check your inbox".</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>Any endpoint file is just <code>export default defineEventHandler(async (event) =&gt; { … })</code>. The value returned from the function becomes the JSON response, so <code>toMe(...)</code> being the last expression is the response.</p>
+</aside>
+
+<h2 id="change-my-username-or-display-name">Change my username or display name<a class="anchor" href="#change-my-username-or-display-name" aria-label="Link to this section">#</a></h2>
+<p>Create <code>server/api/me/index.patch.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/me/index.patch.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, ne } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// AUTH-07</span>
+<span class="t-k">const</span> body = z.object({
+  username: z.string().trim().toLowerCase().regex(USERNAME_RE, <span class="t-s">'must be 3-30 characters: a-z, 0-9 or _'</span>).optional(),
+  displayName: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">50</span>).nullable().optional(),
+}).strict().refine(b =&gt; Object.keys(b).length &gt; <span class="t-n">0</span>, <span class="t-s">'provide at least one field'</span>)
+
+<span class="t-k">const</span> USERNAME_CHANGE_DAYS = <span class="t-n">30</span>
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> me = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> patch: Partial&lt;<span class="t-k">typeof</span> schema.user.$inferInsert&gt; = { updatedAt: <span class="t-k">new</span> Date() }
+
+  <span class="t-k">if</span> (input.username &amp;&amp; input.username !== me.username) {
+    <span class="t-k">if</span> (RESERVED_USERNAMES.has(input.username)) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Some fields are invalid.'</span>, { fields: { username: <span class="t-s">'reserved'</span> } })
+    <span class="t-k">if</span> (me.usernameChangedAt) {
+      <span class="t-k">const</span> next = <span class="t-k">new</span> Date(me.usernameChangedAt.getTime() + USERNAME_CHANGE_DAYS * <span class="t-n">86_400_000</span>)
+      <span class="t-k">if</span> (next &gt; <span class="t-k">new</span> Date()) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'You can change your username once every 30 days.'</span>, { nextChangeAt: next.toISOString() })
+    }
+    <span class="t-k">const</span> [taken] = <span class="t-k">await</span> db.select({ id: schema.user.id }).<span class="t-k">from</span>(schema.user)
+      .where(and(eq(schema.user.username, input.username), ne(schema.user.id, me.id))).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (taken) <span class="t-k">throw</span> apiError(<span class="t-s">'CONFLICT'</span>, <span class="t-s">'That username is taken.'</span>, { field: <span class="t-s">'username'</span> })
+    patch.username = input.username
+    patch.usernameChangedAt = <span class="t-k">new</span> Date()
+  }
+  <span class="t-k">if</span> (input.displayName !== <span class="t-k">undefined</span>) patch.displayName = input.displayName
+
+  <span class="t-k">try</span> {
+    <span class="t-k">const</span> [updated] = <span class="t-k">await</span> db.update(schema.user).set(patch).where(eq(schema.user.id, me.id)).returning()
+    <span class="t-k">return</span> toMe(updated!)
+  }
+  <span class="t-k">catch</span> (e: any) {
+    <span class="t-k">if</span> (e?.code === <span class="t-s">'23505'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'CONFLICT'</span>, <span class="t-s">'That username is taken.'</span>, { field: <span class="t-s">'username'</span> })
+    <span class="t-k">throw</span> e
+  }
+})</code></pre></figure>
+<ul>
+  <li><strong>PATCH</strong> means "change some fields". The Zod shape has <code>.strict()</code> (no unknown fields) and a <code>.refine(...)</code> requiring at least one field.</li>
+  <li>The username must match the same rule used at sign-up (<code>USERNAME_RE</code> from chapter 8) and not be reserved.</li>
+  <li><strong>Once every 30 days:</strong> if <code>usernameChangedAt</code> is recent the answer is <code>INVALID_STATE</code> with the date when the next change is allowed.</li>
+  <li><strong>Taken usernames:</strong> we check first, but two people could still race for the same name at the same instant. So we also catch the database's own uniqueness error (<code>code === '23505'</code>) and turn it into the same friendly <code>CONFLICT</code>. Checking <em>and</em> relying on the database's rule is the safe pattern.</li>
+</ul>
+
+<h2 id="delete-my-account-with-a-grace-period">Delete my account (with a grace period)<a class="anchor" href="#delete-my-account-with-a-grace-period" aria-label="Link to this section">#</a></h2>
+<p>Deleting someone's data is serious, so it is a two-step process: the request marks the account for deletion, and a daily background job (chapter 14) erases it 30 days later. Signing in during those 30 days cancels it (that hook was in <code>auth.ts</code>). Create <code>server/api/me/index.delete.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/me/index.delete.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// AUTH-08: schedule deletion with a 30-day grace period (decision 17).</span>
+<span class="t-k">const</span> body = z.object({ password: z.string().min(<span class="t-n">1</span>) }).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> me = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { password } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'delete-me'</span>, me.id, <span class="t-n">5</span>, <span class="t-n">3600</span>)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> [cred] = <span class="t-k">await</span> db.select({ password: schema.account.password }).<span class="t-k">from</span>(schema.account)
+    .where(and(eq(schema.account.userId, me.id), eq(schema.account.providerId, <span class="t-s">'credential'</span>))).limit(<span class="t-n">1</span>)
+  <span class="t-k">const</span> ctx = <span class="t-k">await</span> useAuth().$context
+  <span class="t-k">if</span> (!cred?.password || !(<span class="t-k">await</span> ctx.password.verify({ hash: cred.password, password })))
+    <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Password is incorrect.'</span>)
+
+  <span class="t-k">const</span> requestedAt = <span class="t-k">new</span> Date()
+  <span class="t-k">await</span> db.transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">await</span> tx.update(schema.user).set({ status: <span class="t-s">'pending_deletion'</span>, deletionRequestedAt: requestedAt }).where(eq(schema.user.id, me.id))
+    <span class="t-k">await</span> tx.delete(schema.session).where(eq(schema.session.userId, me.id))
+  })
+  deleteCookie(event, <span class="t-s">'better-auth.session_token'</span>)
+  deleteCookie(event, <span class="t-s">'__Secure-better-auth.session_token'</span>)
+  setResponseStatus(event, <span class="t-n">202</span>)
+  <span class="t-k">return</span> { status: <span class="t-s">'pending_deletion'</span>, purgeAt: <span class="t-k">new</span> Date(requestedAt.getTime() + DELETION_GRACE_DAYS * <span class="t-n">86_400_000</span>).toISOString() }
+})</code></pre></figure>
+<ul>
+  <li>The caller must send their <strong>password</strong> again, so a stolen session alone cannot delete the account. It is checked with Better Auth's own verifier (<code>ctx.password.verify</code>), never by us.</li>
+  <li>Rate limited to 5 attempts per hour, because this endpoint accepts password guesses.</li>
+  <li>One transaction sets <code>status = 'pending_deletion'</code> and deletes all of the user's sessions (signing them out everywhere). A transaction means either both happen or neither.</li>
+  <li>It clears the cookie and answers <code>202 Accepted</code> ("we will do it later") with the date the purge will happen.</li>
+</ul>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>With your <code>jar.txt</code> from chapter 8 (sign in again if you deleted it):</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -b jar.txt http://localhost:<span class="t-n">3000</span>/api/me
+curl -b jar.txt -X PATCH http://localhost:<span class="t-n">3000</span>/api/me \
+  -H <span class="t-s">'Content-Type: application/json'</span> -d <span class="t-s">'{"displayName":"Ada A."}'</span>
+curl -b jar.txt -X PATCH http://localhost:<span class="t-n">3000</span>/api/me \
+  -H <span class="t-s">'Content-Type: application/json'</span> -d <span class="t-s">'{"nonsense":true}'</span>
+curl http://localhost:<span class="t-n">3000</span>/api/me</code></pre></figure>
+<p>Expect: your profile; the profile with the new display name; a <code>VALIDATION_FAILED</code> error (its details point at the unrecognised key); and finally <code>UNAUTHENTICATED</code> because the last call sent no cookie. Do <strong>not</strong> try the delete call on the account you want to keep. Commit: <code>git add -A && git commit -m "My account endpoints"</code>.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>You have now seen the usual order inside a write endpoint: <strong>1)</strong> authenticate, <strong>2)</strong> read and validate input, <strong>3)</strong> rate limit if abuse is plausible, <strong>4)</strong> check business rules, <strong>5)</strong> change the database inside a transaction, <strong>6)</strong> return a shaped response. Most of the next chapters repeat this order.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="08-accounts.html"><small>Previous</small>Accounts, sign-in and sessions</a><a class="next" href="10-catalog.html"><small>Next</small>Categories, Stars and onboarding</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#read-my-profile">Read my profile</a></li><li><a href="#change-my-username-or-display-name">Change my username or display name</a></li><li><a href="#delete-my-account-with-a-grace-period">Delete my account (with a grace period)</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

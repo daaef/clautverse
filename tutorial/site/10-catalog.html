@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Categories, Stars and onboarding · Build Clautverse</title>
+<meta name="description" content="The public catalog, and the step-by-step picks a new fan makes before joining communities.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="10-catalog">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog" aria-current="page">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 3 · People</p><h1>Categories, Stars and onboarding</h1><p class="meta">About 3 min read</p><p class="lead">A new fan's first job is to choose what they are into. This chapter adds the public lists (categories, countries, Stars) and the three onboarding endpoints that save the fan's choices as they go.</p>
+
+<h2 id="shared-helpers">Shared helpers<a class="anchor" href="#shared-helpers" aria-label="Link to this section">#</a></h2>
+<p>Create <code>server/utils/catalog.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/catalog.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq, inArray } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-k">export</span> <span class="t-k">const</span> list = &lt;T&gt;(items: T[]) =&gt; ({ items, nextCursor: <span class="t-k">null</span> <span class="t-k">as</span> string | <span class="t-k">null</span> })
+
+<span class="t-k">const</span> uniq = &lt;T&gt;(xs: T[]) =&gt; [...<span class="t-k">new</span> Set(xs)]
+
+<span class="t-k">export</span> <span class="t-k">interface</span> Selections { categoryId?: string | <span class="t-k">null</span>, talentIds?: string[] }
+
+<span class="t-c">/** Checks every picked ID exists and is selectable; throws VALIDATION_FAILED with per-field details. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> validateSelections(sel: Selections) {
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> fields: Record&lt;string, string&gt; = {}
+  <span class="t-k">if</span> (sel.categoryId) {
+    <span class="t-k">const</span> [c] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.category).where(eq(schema.category.id, sel.categoryId))
+    <span class="t-k">if</span> (!c) fields.categoryId = <span class="t-s">'unknown'</span>
+    <span class="t-k">else</span> <span class="t-k">if</span> (!c.active) fields.categoryId = <span class="t-s">'inactive'</span>
+  }
+  <span class="t-k">const</span> talentIds = uniq(sel.talentIds ?? [])
+  <span class="t-k">if</span> (talentIds.length) {
+    <span class="t-k">const</span> rows = <span class="t-k">await</span> db.select({ id: schema.talent.id, categoryId: schema.talent.categoryId }).<span class="t-k">from</span>(schema.talent).where(inArray(schema.talent.id, talentIds))
+    <span class="t-k">const</span> byId = <span class="t-k">new</span> Map(rows.map(r =&gt; [r.id, r]))
+    talentIds.forEach((id, i) =&gt; {
+      <span class="t-k">const</span> t = byId.get(id)
+      <span class="t-k">if</span> (!t) fields[<span class="t-s">`talentIds[${i}]`</span>] = <span class="t-s">'unknown'</span>
+      <span class="t-k">else</span> <span class="t-k">if</span> (sel.categoryId &amp;&amp; t.categoryId !== sel.categoryId) fields[<span class="t-s">`talentIds[${i}]`</span>] = <span class="t-s">'not_in_category'</span>
+    })
+  }
+  <span class="t-k">if</span> (Object.keys(fields).length) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Some selections are invalid.'</span>, { fields })
+  <span class="t-k">return</span> { categoryId: sel.categoryId ?? <span class="t-k">null</span>, talentIds }
+}</code></pre></figure>
+<ul>
+  <li><code>list(items)</code> wraps a short list in the same <code>{ items, nextCursor }</code> shape as paged lists, with <code>nextCursor: null</code>. It keeps all list answers looking alike.</li>
+  <li><code>validateSelections</code> checks that the picked category exists and is <code>active</code>, and that every picked Star exists and belongs to that category. If anything is wrong it throws one <code>VALIDATION_FAILED</code> whose <code>details.fields</code> names each problem, such as <code>talentIds[1]: not_in_category</code>.</li>
+</ul>
+<p>Create <code>server/utils/onboarding.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/onboarding.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> loadOnboarding(userId: string) {
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.onboarding).where(eq(schema.onboarding.userId, userId))
+  <span class="t-k">return</span> row
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> onboardingView(status: string, row?: <span class="t-k">typeof</span> schema.onboarding.$inferSelect) {
+  <span class="t-k">const</span> selections = {
+    categoryId: row?.categoryId ?? <span class="t-k">null</span>,
+    talentIds: row?.talentIds ?? [],
+  }
+  <span class="t-k">const</span> nextStep = status === <span class="t-s">'completed'</span> ? <span class="t-k">null</span>
+    : !selections.categoryId ? <span class="t-s">'category'</span>
+    : !selections.talentIds.length ? <span class="t-s">'stars'</span>
+    : <span class="t-s">'review'</span>
+  <span class="t-k">return</span> { status, selections, nextStep, completedAt: row?.completedAt?.toISOString() ?? <span class="t-k">null</span> }
+}</code></pre></figure>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Onboarding is a short checklist: pick a category, pick favourite Stars, review. <code>nextStep</code> tells the app which step to show next, so a fan who closes the app halfway resumes where they stopped.</p>
+</aside>
+
+<h2 id="public-lists">Public lists<a class="anchor" href="#public-lists" aria-label="Link to this section">#</a></h2>
+<p>These three endpoints need no sign-in. Create <code>server/api/categories.get.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/categories.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { asc } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// CAT-01: inactive categories are listed as "coming soon" but not selectable.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> () =&gt; {
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.category).orderBy(asc(schema.category.sortOrder), asc(schema.category.id))
+  <span class="t-k">return</span> list(rows.map(c =&gt; ({ id: c.id, slug: c.slug, name: c.name, active: c.active })))
+})</code></pre></figure>
+<p><code>server/api/countries.get.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/countries.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { asc } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// CAT-02: every country, for a Star's profile and application (plan decision 3).</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> () =&gt; {
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ id: schema.country.id, code: schema.country.code, name: schema.country.name })
+    .<span class="t-k">from</span>(schema.country).orderBy(asc(schema.country.name), asc(schema.country.id))
+  <span class="t-k">return</span> list(rows)
+})</code></pre></figure>
+<p>And the Stars. <code>server/api/talents/index.get.ts</code> lists or searches them:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talents/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, eq, ilike } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// CAT-05 (renamed from PRD /api/stars): browse or search Stars, optionally within a category.</span>
+<span class="t-k">const</span> query = z.object({
+  categoryId: z.uuid().optional(),
+  q: z.string().trim().max(<span class="t-n">60</span>).optional(),
+})
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> { categoryId, q } = readQuery(event, query)
+  <span class="t-k">const</span> t = schema.talent
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ id: t.id, slug: t.slug, name: t.name, knownFor: t.knownFor, imageUrl: t.imageUrl, categoryId: t.categoryId })
+    .<span class="t-k">from</span>(t)
+    .where(and(
+      categoryId ? eq(t.categoryId, categoryId) : <span class="t-k">undefined</span>,
+      q ? ilike(t.name, <span class="t-s">`%${q.replace(/[%_\\]/g, '\\$&amp;')}%`</span>) : <span class="t-k">undefined</span>,
+    ))
+    .orderBy(asc(t.name), asc(t.id))
+    .limit(<span class="t-n">200</span>)
+  <span class="t-k">return</span> list(rows)
+})</code></pre></figure>
+<ul>
+  <li>Optional filters: <code>categoryId</code> and a search text <code>q</code>.</li>
+  <li><code>ilike</code> is a case-insensitive "contains" search. The text is first cleaned with <code>q.replace(/[%_\\]/g, '\\$&amp;')</code> because <code>%</code> and <code>_</code> are wildcards in SQL; without this a visitor could type <code>%</code> and match everything.</li>
+  <li>Results are capped at 200 so one call can never return an unbounded list.</li>
+</ul>
+<p><code>server/api/talents/[id]/index.get.ts</code> shows one Star with their country:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/talents/[id]/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// CAT-06</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> [t] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.talent).where(eq(schema.talent.id, id))
+  <span class="t-k">if</span> (!t) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Talent not found.'</span>)
+  <span class="t-k">const</span> [country] = t.countryId
+    ? <span class="t-k">await</span> db.select({ id: schema.country.id, code: schema.country.code, name: schema.country.name }).<span class="t-k">from</span>(schema.country).where(eq(schema.country.id, t.countryId))
+    : []
+  <span class="t-k">return</span> {
+    id: t.id, slug: t.slug, name: t.name, knownFor: t.knownFor, bio: t.bio, links: t.links, imageUrl: t.imageUrl,
+    categoryId: t.categoryId, country: country ?? <span class="t-k">null</span>, claimed: !!t.userId,
+  }
+})</code></pre></figure>
+
+<h2 id="the-onboarding-endpoints">The onboarding endpoints<a class="anchor" href="#the-onboarding-endpoints" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/onboarding/index.get.ts</code> returns where the fan is:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/onboarding/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// ONB-01: resume onboarding where the user stopped.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> me = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">return</span> onboardingView(me.onboardingStatus, <span class="t-k">await</span> loadOnboarding(me.id))
+})</code></pre></figure>
+<p><code>server/api/onboarding/index.put.ts</code> saves partial progress:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/onboarding/index.put.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// ONB-02: save partial progress (or edit preferences after completion).</span>
+<span class="t-k">const</span> body = z.object({
+  categoryId: z.uuid().nullable().optional(),
+  talentIds: z.array(z.uuid()).max(<span class="t-n">50</span>).optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> me = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> current = <span class="t-k">await</span> loadOnboarding(me.id)
+  <span class="t-k">const</span> merged = <span class="t-k">await</span> validateSelections({
+    categoryId: input.categoryId !== <span class="t-k">undefined</span> ? input.categoryId : current?.categoryId,
+    talentIds: input.talentIds ?? current?.talentIds,
+  })
+  <span class="t-k">if</span> (me.onboardingStatus === <span class="t-s">'completed'</span> &amp;&amp; (!merged.categoryId || !merged.talentIds.length))
+    <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Some selections are invalid.'</span>, { fields: { talentIds: <span class="t-s">'at least one Star is required'</span> } })
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> now = <span class="t-k">new</span> Date()
+  <span class="t-k">const</span> status = me.onboardingStatus === <span class="t-s">'completed'</span> ? <span class="t-s">'completed'</span> : <span class="t-s">'in_progress'</span>
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> db.transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">if</span> (status !== me.onboardingStatus) <span class="t-k">await</span> tx.update(schema.user).set({ onboardingStatus: status }).where(eq(schema.user.id, me.id))
+    <span class="t-k">return</span> tx.insert(schema.onboarding).values({ userId: me.id, ...merged, updatedAt: now })
+      .onConflictDoUpdate({ target: schema.onboarding.userId, set: { ...merged, updatedAt: now } }).returning()
+  })
+  <span class="t-k">return</span> onboardingView(status, row)
+})</code></pre></figure>
+<ul>
+  <li><strong>PUT</strong> here means "store this version of my picks". It merges what arrived with what was saved before, so sending only <code>categoryId</code> keeps earlier Star picks.</li>
+  <li><code>insert(...).onConflictDoUpdate(...)</code> is an <strong>upsert</strong>: create the row if it does not exist, otherwise update it. The <code>onboarding</code> table has one row per user, so this is safe to repeat.</li>
+</ul>
+<p><code>server/api/onboarding/complete.post.ts</code> finishes it:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/onboarding/complete.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// ONB-03: an active category + at least one favourite Star from it (PRD §6.1; plan decision 2).</span>
+<span class="t-k">const</span> body = z.object({
+  categoryId: z.uuid(),
+  talentIds: z.array(z.uuid()).min(<span class="t-n">1</span>, <span class="t-s">'pick at least one Star'</span>).max(<span class="t-n">50</span>),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> me = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'onboarding-complete'</span>, me.id, <span class="t-n">20</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> sel = <span class="t-k">await</span> validateSelections(input)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> now = <span class="t-k">new</span> Date()
+  <span class="t-k">const</span> [row] = <span class="t-k">await</span> db.transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">await</span> tx.update(schema.user).set({ onboardingStatus: <span class="t-s">'completed'</span>, updatedAt: now }).where(eq(schema.user.id, me.id))
+    <span class="t-k">return</span> tx.insert(schema.onboarding).values({ userId: me.id, ...sel, completedAt: now, updatedAt: now })
+      .onConflictDoUpdate({ target: schema.onboarding.userId, set: { ...sel, completedAt: now, updatedAt: now } }).returning()
+  })
+  <span class="t-k">return</span> onboardingView(<span class="t-s">'completed'</span>, row)
+})</code></pre></figure>
+<ul>
+  <li>Needs a category and at least one Star (<code>.min(1, 'pick at least one Star')</code>).</li>
+  <li>Marks the user's <code>onboardingStatus</code> as <code>completed</code> and saves the picks <strong>in one transaction</strong>.</li>
+  <li>From now on, <code>requireUser(event, { onboarded: true })</code> (chapter 8) lets this fan into endpoints such as joining a community. Others answer <code>ONBOARDING_REQUIRED</code>.</li>
+</ul>
+
+<h2 id="two-helper-files-that-later-chapters-rely-on">Two helper files that later chapters rely on<a class="anchor" href="#two-helper-files-that-later-chapters-rely-on" aria-label="Link to this section">#</a></h2>
+<p>Several endpoints you will write soon (community edits, drops, discover) call small helpers that belong to the "Star" side of the product. We create them now so nothing is missing later. Chapter 15 explains them in context.</p>
+<p>Create <code>server/utils/talent-applications.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/talent-applications.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-k">type</span> App = <span class="t-k">typeof</span> schema.talentApplication.$inferSelect
+<span class="t-k">type</span> Claim = <span class="t-k">typeof</span> schema.identityClaim.$inferSelect
+
+<span class="t-k">export</span> <span class="t-k">const</span> httpsLink = z.object({ label: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">40</span>), url: z.url({ protocol: /^https$/ }).max(<span class="t-n">500</span>) })
+
+<span class="t-c">/** Uploads (R2) aren't wired yet; media IDs are rejected until they are. */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> rejectMediaIds(ids: unknown) {
+  <span class="t-k">if</span> (Array.isArray(ids) ? ids.length : ids) <span class="t-k">throw</span> apiError(<span class="t-s">'FEATURE_DISABLED'</span>, <span class="t-s">'File uploads are not available yet. Use links instead.'</span>)
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> REAPPLY_DAYS = <span class="t-n">7</span>
+
+<span class="t-c">// Applicant view: never includes internalNote or decidedBy.</span>
+<span class="t-k">export</span> <span class="t-k">const</span> applicationView = (a: App) =&gt; ({
+  id: a.id, status: a.status, categoryId: a.categoryId, displayName: a.displayName, bio: a.bio, links: a.links, imageUrl: <span class="t-k">null</span>,
+  submittedAt: a.submittedAt.toISOString(), decidedAt: a.decidedAt?.toISOString() ?? <span class="t-k">null</span>, decisionReason: a.decisionReason,
+  reapplyAfter: a.status === <span class="t-s">'declined'</span> &amp;&amp; a.decidedAt ? <span class="t-k">new</span> Date(a.decidedAt.getTime() + REAPPLY_DAYS * <span class="t-n">86400_000</span>).toISOString() : <span class="t-k">null</span>,
+})
+<span class="t-k">export</span> <span class="t-k">const</span> adminApplicationView = (a: App) =&gt; ({ ...applicationView(a), internalNote: a.internalNote, talentId: a.talentId, decidedBy: a.decidedBy })
+
+<span class="t-k">export</span> <span class="t-k">const</span> claimView = (c: Claim) =&gt; ({
+  id: c.id, talentId: c.talentId, status: c.status, submittedAt: c.submittedAt.toISOString(),
+  decidedAt: c.decidedAt?.toISOString() ?? <span class="t-k">null</span>, decisionReason: c.decisionReason,
+})
+<span class="t-k">export</span> <span class="t-k">const</span> adminClaimView = (c: Claim) =&gt; ({ ...claimView(c), evidenceLinks: c.evidenceLinks, message: c.message, internalNote: c.internalNote, decidedBy: c.decidedBy })
+
+<span class="t-k">export</span> <span class="t-k">const</span> decisionBody = z.object({ internalNote: z.string().trim().max(<span class="t-n">2000</span>).optional(), decisionReason: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">1000</span>).optional() }).strict()</code></pre></figure>
+<p>And <code>server/utils/talentProfile.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/talentProfile.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">type</span> Talent = <span class="t-k">typeof</span> schema.talent.$inferSelect
+
+<span class="t-k">export</span> <span class="t-k">const</span> talentView = (t: Talent) =&gt; ({
+  id: t.id, slug: t.slug, name: t.name, knownFor: t.knownFor, categoryId: t.categoryId, countryId: t.countryId, bio: t.bio, links: t.links, imageUrl: t.imageUrl, isClaimed: !!t.userId, createdAt: t.createdAt.toISOString(),
+})
+<span class="t-k">export</span> <span class="t-k">const</span> talentCard = (t: Talent, communityId: string | <span class="t-k">null</span>) =&gt; ({ id: t.id, slug: t.slug, name: t.name, knownFor: t.knownFor, imageUrl: t.imageUrl, communityId })</code></pre></figure>
+<p>For now, note two things: <code>rejectMediaIds</code> answers <code>FEATURE_DISABLED</code> whenever someone sends an uploaded-file ID (uploads are not built yet), and <code>talentView</code> / <code>talentCard</code> shape a Star for the API.</p>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>The public lists first (no cookie needed):</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl http://localhost:<span class="t-n">3000</span>/api/categories
+curl http://localhost:<span class="t-n">3000</span>/api/talents</code></pre></figure>
+<p>You should see Reality TV with <code>"active":true</code> and the three seeded Stars Ada, Bisi and Chidi. Copy the Reality TV <code>id</code> and the Star ids. Then, signed in (<code>jar.txt</code>), walk through onboarding; replace the placeholders:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>curl -b jar.txt http://localhost:<span class="t-n">3000</span>/api/onboarding
+curl -b jar.txt -X PUT http://localhost:<span class="t-n">3000</span>/api/onboarding \
+  -H <span class="t-s">'Content-Type: application/json'</span> -d <span class="t-s">'{"categoryId":"CATEGORY_ID"}'</span>
+curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/onboarding/complete \
+  -H <span class="t-s">'Content-Type: application/json'</span> -d <span class="t-s">'{"categoryId":"CATEGORY_ID","talentIds":["STAR_ID"]}'</span></code></pre></figure>
+<p>The first call shows <code>"status":"not_started"</code> and <code>"nextStep":"category"</code>. After <code>PUT</code> the next step becomes <code>stars</code>. After <code>complete</code> the status is <code>completed</code> and <code>nextStep</code> is <code>null</code>. Try completing with a made-up Star id to see the per-field error details. Commit: <code>git add -A && git commit -m "Catalog and onboarding"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="09-profile.html"><small>Previous</small>My account: profile and deletion</a><a class="next" href="11-communities.html"><small>Next</small>Communities, joining and Originals</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#shared-helpers">Shared helpers</a></li><li><a href="#public-lists">Public lists</a></li><li><a href="#the-onboarding-endpoints">The onboarding endpoints</a></li><li><a href="#two-helper-files-that-later-chapters-rely-on">Two helper files that later chapters rely on</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

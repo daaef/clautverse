@@ -2,6 +2,7 @@
 
 Fan ecosystem platform: Nuxt 4 / Nitro API on Neon Postgres (Drizzle), Better Auth, Zod.
 Open the app root (`/`) for the interactive API Explorer. The plan is in [`docs/plan.md`](./docs/plan.md).
+New to the project? Follow the step-by-step guide in [`tutorial/`](./tutorial/README.md) (open `tutorial/site/index.html`).
 
 ## Local setup
 

@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automated tests · Build Clautverse</title>
+<meta name="description" content="Unit tests for small functions, and end-to-end tests that start the whole app against a throwaway database.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="20-tests">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests" aria-current="page">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 6 · Explorer and tests</p><h1>Automated tests</h1><p class="meta">About 4 min read</p><p class="lead">You have been checking the app with <code>curl</code> and by clicking. Tests do the same thing automatically, in seconds, every time, and tell you the moment a change breaks a rule. This chapter explains the two kinds in this project and how to run them.</p>
+
+<h2 id="why-tests-matter-here">Why tests matter here<a class="anchor" href="#why-tests-matter-here" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Clautverse has rules that are easy to break by accident: "an Originals number is never reused", "a second removal is permanent", "a suspended user cannot sign in". A test is a written promise that a rule still holds. When a promise fails, you find out immediately, not from an angry user.</p>
+</aside>
+<ul>
+  <li><strong>Unit tests</strong> check one small function in isolation (<code>ageOn</code>, <code>encodeCursor</code>). They are instant and need nothing else running. You wrote two in chapters 7 and 8.</li>
+  <li><strong>End-to-end (e2e) tests</strong> start the real Nuxt app, talk to it over HTTP like a client would, and look at the real database. They are slower but prove the whole chain works.</li>
+</ul>
+
+<h2 id="the-test-runner-settings">The test runner settings<a class="anchor" href="#the-test-runner-settings" aria-label="Link to this section">#</a></h2>
+<p>You created <code>vitest.config.ts</code> in chapter 7. Look at it again:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">vitest.config.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { defineConfig } <span class="t-k">from</span> <span class="t-s">'vitest/config'</span>
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineConfig({
+  test: {
+    projects: [
+      { test: { name: <span class="t-s">'unit'</span>, include: [<span class="t-s">'tests/unit/**/*.test.ts'</span>], environment: <span class="t-s">'node'</span> } },
+      {
+        test: {
+          name: <span class="t-s">'e2e'</span>,
+          include: [<span class="t-s">'tests/e2e/**/*.test.ts'</span>],
+          environment: <span class="t-s">'node'</span>,
+          globalSetup: [<span class="t-s">'tests/e2e/global-setup.ts'</span>],
+          testTimeout: <span class="t-n">30_000</span>,
+          hookTimeout: <span class="t-n">240_000</span>,
+          fileParallelism: <span class="t-k">false</span>,
+        },
+      },
+    ],
+  },
+})</code></pre></figure>
+<ul>
+  <li><code>projects</code> defines the two groups, <code>unit</code> and <code>e2e</code>, so <code>pnpm test:unit</code> and <code>pnpm test:e2e</code> can run them separately.</li>
+  <li><code>fileParallelism: false</code> makes e2e test files run one after another, because they share one database.</li>
+  <li>Long timeouts for the e2e group allow for creating and migrating a database before the tests start (<code>hookTimeout</code>).</li>
+</ul>
+
+<h2 id="a-fresh-database-for-every-run">A fresh database for every run<a class="anchor" href="#a-fresh-database-for-every-run" aria-label="Link to this section">#</a></h2>
+<p>Create <code>tests/e2e/global-setup.ts</code>. It runs once before any e2e test:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/global-setup.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { execSync } <span class="t-k">from</span> <span class="t-s">'node:child_process'</span>
+<span class="t-k">import</span> postgres <span class="t-k">from</span> <span class="t-s">'postgres'</span>
+
+<span class="t-c">// Creates a fresh test database, migrates and seeds it.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> <span class="t-k">async</span> <span class="t-k">function</span> () {
+  <span class="t-k">const</span> base = process.env.TEST_DATABASE_ADMIN_URL ?? <span class="t-s">'postgres://postgres:postgres@localhost:5432/postgres'</span>
+  <span class="t-k">const</span> admin = postgres(base, { max: <span class="t-n">1</span> })
+  <span class="t-k">await</span> admin.unsafe(<span class="t-s">'drop database if exists clautverse_test with (force)'</span>)
+  <span class="t-k">await</span> admin.unsafe(<span class="t-s">'create database clautverse_test'</span>)
+  <span class="t-k">await</span> admin.end()
+  <span class="t-k">const</span> url = base.replace(/\/[^/]*$/, <span class="t-s">'/clautverse_test'</span>)
+  process.env.NUXT_DATABASE_URL = url
+  <span class="t-k">const</span> env = { ...process.env, NUXT_DATABASE_URL: url }
+  execSync(<span class="t-s">'pnpm exec drizzle-kit migrate'</span>, { env, stdio: <span class="t-s">'inherit'</span> })
+  execSync(<span class="t-s">'node scripts/seed.mjs'</span>, { env, stdio: <span class="t-s">'inherit'</span> })
+}</code></pre></figure>
+<ul>
+  <li>It drops and recreates a database called <code>clautverse_test</code>, so every run starts clean and your real development data is never touched.</li>
+  <li>It runs the same migrations (<code>drizzle-kit migrate</code>) and the same seed you ran by hand in chapter 5.</li>
+</ul>
+<aside class="callout tip"><p class="callout-label">Tip</p><p>Using a local PostgreSQL instead of Docker? See <a href="90-postgres-without-docker.html#5-tests-with-a-local-database">the appendix</a> for the one setting the tests may need.</p></aside>
+<aside class="callout warn"><p class="callout-label">Watch out</p><p>Docker and the <code>clautverse-pg</code> container from chapter 4 must be running. Tests connect to <code>localhost:5432</code> with the <code>postgres</code> user.</p></aside>
+
+<h2 id="helpers-shared-by-every-e2e-file">Helpers shared by every e2e file<a class="anchor" href="#helpers-shared-by-every-e2e-file" aria-label="Link to this section">#</a></h2>
+<p>Create <code>tests/e2e/helpers.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/helpers.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> postgres <span class="t-k">from</span> <span class="t-s">'postgres'</span>
+<span class="t-k">import</span> { $fetch, fetch, url } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+
+<span class="t-k">export</span> <span class="t-k">const</span> TEST_DB = (process.env.TEST_DATABASE_ADMIN_URL ?? <span class="t-s">'postgres://postgres:postgres@localhost:5432/postgres'</span>).replace(/\/[^/]*$/, <span class="t-s">'/clautverse_test'</span>)
+<span class="t-k">export</span> <span class="t-k">const</span> sql = postgres(TEST_DB, { max: <span class="t-n">2</span> })
+
+<span class="t-k">export</span> <span class="t-k">const</span> testEnv = {
+  NUXT_DATABASE_URL: TEST_DB,
+  NUXT_BETTER_AUTH_SECRET: <span class="t-s">'test-secret-test-secret-test-secret-1234'</span>,
+  NUXT_BETTER_AUTH_URL: <span class="t-s">'http://localhost'</span>,
+  NUXT_CURSOR_SECRET: <span class="t-s">'cursor-secret'</span>,
+  NUXT_CRON_SECRET: <span class="t-s">'test-cron-secret'</span>,
+  NUXT_AUTH_RATE_LIMIT_ENABLED: <span class="t-s">'false'</span>,
+}
+
+<span class="t-k">let</span> n = <span class="t-n">0</span>
+<span class="t-k">export</span> <span class="t-k">function</span> newUser(overrides: Record&lt;string, unknown&gt; = {}) {
+  n++
+  <span class="t-k">const</span> id = <span class="t-s">`${Date.now().toString(36)}${n}`</span>
+  <span class="t-k">return</span> { email: <span class="t-s">`fan${id}@example.com`</span>, password: <span class="t-s">'correct-horse-9'</span>, name: <span class="t-s">'Fan'</span>, username: <span class="t-s">`fan_${id}`</span>, dateOfBirth: <span class="t-s">'1995-05-05'</span>, ...overrides }
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> signUp(body: Record&lt;string, unknown&gt;) {
+  <span class="t-k">return</span> fetch(<span class="t-s">'/api/auth/sign-up/email'</span>, { method: <span class="t-s">'POST'</span>, headers: { <span class="t-s">'content-type'</span>: <span class="t-s">'application/json'</span>, origin: url(<span class="t-s">'/'</span>).replace(/\/$/, <span class="t-s">''</span>) }, body: JSON.stringify(body) })
+}
+
+<span class="t-c">/** Signs up, marks the email verified directly in the DB, signs in, and returns a cookie header. */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> verifiedSession(overrides: Record&lt;string, unknown&gt; = {}) {
+  <span class="t-k">const</span> u = newUser(overrides)
+  <span class="t-k">const</span> res = <span class="t-k">await</span> signUp(u)
+  <span class="t-k">if</span> (res.status !== <span class="t-n">200</span>) <span class="t-k">throw</span> <span class="t-k">new</span> Error(<span class="t-s">`sign-up failed ${res.status} ${await res.text()}`</span>)
+  <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = true where email = ${u.email}`</span>
+  <span class="t-k">const</span> login = <span class="t-k">await</span> fetch(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, headers: { <span class="t-s">'content-type'</span>: <span class="t-s">'application/json'</span>, origin: url(<span class="t-s">'/'</span>).replace(/\/$/, <span class="t-s">''</span>) }, body: JSON.stringify({ email: u.email, password: u.password }) })
+  <span class="t-k">if</span> (login.status !== <span class="t-n">200</span>) <span class="t-k">throw</span> <span class="t-k">new</span> Error(<span class="t-s">`sign-in failed ${login.status} ${await login.text()}`</span>)
+  <span class="t-k">const</span> cookie = login.headers.getSetCookie().map(c =&gt; c.split(<span class="t-s">';'</span>)[<span class="t-n">0</span>]).join(<span class="t-s">'; '</span>)
+  <span class="t-k">return</span> { user: u, cookie }
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> api(path: string, init: { method?: string, body?: unknown, cookie?: string, headers?: Record&lt;string, string&gt; } = {}) {
+  <span class="t-k">const</span> res = <span class="t-k">await</span> fetch(path, {
+    method: init.method ?? <span class="t-s">'GET'</span>,
+    headers: { <span class="t-s">'content-type'</span>: <span class="t-s">'application/json'</span>, ...(init.cookie ? { cookie: init.cookie } : {}), ...init.headers },
+    body: init.body === <span class="t-k">undefined</span> ? <span class="t-k">undefined</span> : JSON.stringify(init.body),
+  })
+  <span class="t-k">const</span> text = <span class="t-k">await</span> res.text()
+  <span class="t-k">return</span> { status: res.status, headers: res.headers, body: text ? JSON.parse(text) : <span class="t-k">null</span> }
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> catalog() {
+  <span class="t-k">const</span> categories = (<span class="t-k">await</span> $fetch&lt;any&gt;(<span class="t-s">'/api/categories'</span>)).items
+  <span class="t-k">const</span> realityTv = categories.find((c: any) =&gt; c.slug === <span class="t-s">'reality-tv'</span>)
+  <span class="t-k">const</span> music = categories.find((c: any) =&gt; c.slug === <span class="t-s">'music'</span>)
+  <span class="t-k">const</span> stars = (<span class="t-k">await</span> $fetch&lt;any&gt;(<span class="t-s">`/api/talents?categoryId=${realityTv.id}`</span>)).items
+  <span class="t-k">const</span> ada = stars.find((s: any) =&gt; s.slug === <span class="t-s">'ada'</span>)
+  <span class="t-k">return</span> { realityTv, music, ada, stars }
+}</code></pre></figure>
+<ul>
+  <li><code>testEnv</code>: the settings given to the test copy of the app (database, secrets, and the login rate limit switched off so tests are not throttled).</li>
+  <li><code>newUser()</code>: makes a unique, valid sign-up body each time.</li>
+  <li><code>verifiedSession()</code>: signs up, flips <code>email_verified</code> directly in the database (so no email is needed), signs in and returns the cookie. You did the same by hand in chapter 8.</li>
+  <li><code>api(path, options)</code>: a small wrapper around HTTP calls that returns <code>{ status, headers, body }</code>.</li>
+  <li><code>catalog()</code>: looks up the seeded Reality TV and Music categories and the star Ada, which many tests need.</li>
+</ul>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p><code>setup({ server: true, … })</code> from <code>@nuxt/test-utils/e2e</code> builds and starts the app on a free port; the helpers' <code>fetch</code> and <code>url</code> then target it. This is why <code>@nuxt/test-utils</code> was installed in chapter 2.</p>
+</aside>
+
+<h2 id="reading-a-real-test-file">Reading a real test file<a class="anchor" href="#reading-a-real-test-file" aria-label="Link to this section">#</a></h2>
+<p><code>tests/e2e/api.test.ts</code> checks the basics from chapters 3 to 10: health, the error shape, sign-up rules, <code>/api/me</code>, account deletion, and onboarding:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/api.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { describe, expect, it, afterAll } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { api, catalog, newUser, signUp, sql, testEnv, verifiedSession } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+describe(<span class="t-s">'conventions'</span>, () =&gt; {
+  it(<span class="t-s">'health reports db ok and returns a request id'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/health'</span>)
+    expect(res.status).toBe(<span class="t-n">200</span>)
+    expect(res.body).toMatchObject({ status: <span class="t-s">'ok'</span>, db: <span class="t-s">'ok'</span> })
+    expect(res.headers.get(<span class="t-s">'x-request-id'</span>)).toMatch(/^req_/)
+  })
+  it(<span class="t-s">'unknown routes use the error envelope'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/nope'</span>)
+    expect(res.status).toBe(<span class="t-n">404</span>)
+    expect(res.body.error).toMatchObject({ code: <span class="t-s">'NOT_FOUND'</span> })
+    expect(res.body.error.requestId).toBe(res.headers.get(<span class="t-s">'x-request-id'</span>))
+  })
+})
+
+describe(<span class="t-s">'auth (AUTH-01..08)'</span>, () =&gt; {
+  it(<span class="t-s">'rejects under-18 sign-ups'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> signUp(newUser({ dateOfBirth: <span class="t-s">'2015-01-01'</span> }))
+    expect(res.status).toBe(<span class="t-n">400</span>)
+    expect((<span class="t-k">await</span> res.json()).code).toBe(<span class="t-s">'UNDER_MINIMUM_AGE'</span>)
+  })
+  it(<span class="t-s">'rejects invalid usernames'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> signUp(newUser({ username: <span class="t-s">'A!'</span> }))
+    expect(res.status).toBe(<span class="t-n">400</span>)
+  })
+  it(<span class="t-s">'blocks sign-in until the email is verified'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> u = newUser()
+    expect((<span class="t-k">await</span> signUp(u)).status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: u.email, password: u.password } })
+    expect(res.status).toBe(<span class="t-n">403</span>)
+  })
+  it(<span class="t-s">'GET /api/me needs a session'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>)
+    expect(res.status).toBe(<span class="t-n">401</span>)
+    expect(res.body.error.code).toBe(<span class="t-s">'UNAUTHENTICATED'</span>)
+  })
+  it(<span class="t-s">'returns me without dateOfBirth'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { user, cookie } = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { cookie })
+    expect(res.status).toBe(<span class="t-n">200</span>)
+    expect(res.body).toMatchObject({ username: user.username, emailVerified: <span class="t-k">true</span>, roles: [<span class="t-s">'fan'</span>], onboardingStatus: <span class="t-s">'not_started'</span> })
+    expect(res.body).not.toHaveProperty(<span class="t-s">'dateOfBirth'</span>)
+  })
+  it(<span class="t-s">'username-check reports taken and reserved names'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { user } = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/auth/username-check?username=${user.username}`</span>)).body).toMatchObject({ available: <span class="t-k">false</span>, reason: <span class="t-s">'taken'</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/auth/username-check?username=admin'</span>)).body).toMatchObject({ available: <span class="t-k">false</span>, reason: <span class="t-s">'reserved'</span> })
+  })
+  it(<span class="t-s">'PATCH /api/me changes username once per 30 days'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { cookie } = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> name = <span class="t-s">`renamed_${Date.now().toString(36)}`</span>
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'PATCH'</span>, cookie, body: { username: name } })).body.username).toBe(name)
+    <span class="t-k">const</span> again = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'PATCH'</span>, cookie, body: { username: <span class="t-s">`${name}2`</span> } })
+    expect(again.status).toBe(<span class="t-n">409</span>)
+    expect(again.body.error.code).toBe(<span class="t-s">'INVALID_STATE'</span>)
+  })
+  it(<span class="t-s">'DELETE /api/me requires a verified email'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> u = newUser()
+    <span class="t-k">await</span> signUp(u)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = true where email = ${u.email}`</span>
+    <span class="t-k">const</span> login = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: u.email, password: u.password } })
+    expect(login.status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = false where email = ${u.email}`</span>
+    <span class="t-k">const</span> cookie = login.headers.getSetCookie().map(c =&gt; c.split(<span class="t-s">';'</span>)[<span class="t-n">0</span>]).join(<span class="t-s">'; '</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'DELETE'</span>, cookie, body: { password: u.password } })
+    expect(res.status).toBe(<span class="t-n">403</span>)
+    expect(res.body.error.code).toBe(<span class="t-s">'EMAIL_NOT_VERIFIED'</span>)
+  })
+  it(<span class="t-s">'DELETE /api/me schedules deletion, logs out, and sign-in restores'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { user, cookie } = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'DELETE'</span>, cookie, body: { password: <span class="t-s">'wrong-password'</span> } })).status).toBe(<span class="t-n">403</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { method: <span class="t-s">'DELETE'</span>, cookie, body: { password: user.password } })
+    expect(res.status).toBe(<span class="t-n">202</span>)
+    expect(res.body.status).toBe(<span class="t-s">'pending_deletion'</span>)
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { cookie })).status).toBe(<span class="t-n">401</span>)
+    <span class="t-k">const</span> login = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: user.email, password: user.password } })
+    expect(login.status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> sql<span class="t-s">`select status from "user" where email = ${user.email}`</span>
+    expect(row!.status).toBe(<span class="t-s">'active'</span>)
+  })
+})
+
+describe(<span class="t-s">'catalog + onboarding (CAT, ONB)'</span>, () =&gt; {
+  it(<span class="t-s">'lists inactive categories as not selectable'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { music } = <span class="t-k">await</span> catalog()
+    expect(music.active).toBe(<span class="t-k">false</span>)
+  })
+  it(<span class="t-s">'lists Stars by category, with their "known for" line'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv, music, ada } = <span class="t-k">await</span> catalog()
+    expect(ada).toMatchObject({ categoryId: realityTv.id, knownFor: expect.any(String) })
+    expect((<span class="t-k">await</span> api(<span class="t-s">`/api/talents?categoryId=${music.id}`</span>)).body.items).toEqual([])
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/shows'</span>)).status).toBe(<span class="t-n">404</span>)
+  })
+  it(<span class="t-s">'unverified users get EMAIL_NOT_VERIFIED'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> u = newUser()
+    <span class="t-k">await</span> signUp(u)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = true where email = ${u.email}`</span>
+    <span class="t-k">const</span> login = <span class="t-k">await</span> api(<span class="t-s">'/api/auth/sign-in/email'</span>, { method: <span class="t-s">'POST'</span>, body: { email: u.email, password: u.password } })
+    expect(login.status).toBe(<span class="t-n">200</span>)
+    <span class="t-k">await</span> sql<span class="t-s">`update "user" set email_verified = false where email = ${u.email}`</span>
+    <span class="t-k">const</span> cookie = login.headers.getSetCookie().map(c =&gt; c.split(<span class="t-s">';'</span>)[<span class="t-n">0</span>]).join(<span class="t-s">'; '</span>)
+    <span class="t-k">const</span> res = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { cookie })
+    expect(res.status).toBe(<span class="t-n">403</span>)
+    expect(res.body.error.code).toBe(<span class="t-s">'EMAIL_NOT_VERIFIED'</span>)
+  })
+  it(<span class="t-s">'saves progress, resumes, then completes'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv, ada } = <span class="t-k">await</span> catalog()
+    <span class="t-k">const</span> { cookie } = <span class="t-k">await</span> verifiedSession()
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { cookie })).body).toMatchObject({ status: <span class="t-s">'not_started'</span>, nextStep: <span class="t-s">'category'</span> })
+    <span class="t-k">const</span> saved = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { method: <span class="t-s">'PUT'</span>, cookie, body: { categoryId: realityTv.id } })
+    expect(saved.body).toMatchObject({ status: <span class="t-s">'in_progress'</span>, nextStep: <span class="t-s">'stars'</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/onboarding'</span>, { cookie })).body.selections.categoryId).toBe(realityTv.id)
+    <span class="t-k">const</span> done = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [ada.id] } })
+    expect(done.status).toBe(<span class="t-n">200</span>)
+    expect(done.body).toMatchObject({ status: <span class="t-s">'completed'</span>, nextStep: <span class="t-k">null</span> })
+    expect((<span class="t-k">await</span> api(<span class="t-s">'/api/me'</span>, { cookie })).body.onboardingStatus).toBe(<span class="t-s">'completed'</span>)
+    <span class="t-k">const</span> repeat = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [ada.id] } })
+    expect(repeat.status).toBe(<span class="t-n">200</span>)
+  })
+  it(<span class="t-s">'requires at least one Star from an active category'</span>, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> { realityTv, music, ada } = <span class="t-k">await</span> catalog()
+    <span class="t-k">const</span> { cookie } = <span class="t-k">await</span> verifiedSession()
+    <span class="t-k">const</span> noStar = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [] } })
+    expect(noStar.status).toBe(<span class="t-n">400</span>)
+    expect(noStar.body.error.details.fields.talentIds).toBeDefined()
+    <span class="t-k">const</span> inactive = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: music.id, talentIds: [ada.id] } })
+    expect(inactive.body.error.details.fields.categoryId).toBe(<span class="t-s">'inactive'</span>)
+    expect(inactive.body.error.details.fields[<span class="t-s">'talentIds[0]'</span>]).toBe(<span class="t-s">'not_in_category'</span>)
+    <span class="t-k">const</span> oldShape = <span class="t-k">await</span> api(<span class="t-s">'/api/onboarding/complete'</span>, { method: <span class="t-s">'POST'</span>, cookie, body: { categoryId: realityTv.id, talentIds: [ada.id], showIds: [ada.id] } })
+    expect(oldShape.status).toBe(<span class="t-n">400</span>)
+  })
+})</code></pre></figure>
+<ul>
+  <li><code>describe('name', () =&gt; { … })</code> groups tests; <code>it('does something', async () =&gt; { … })</code> is one test.</li>
+  <li>The first lines call <code>await setup(…)</code> to start the app, and <code>afterAll(() =&gt; sql.end())</code> closes the test database connection when finished.</li>
+  <li>Each test follows <strong>arrange, act, assert</strong>: create a user (arrange), call an endpoint (act), <code>expect(…)</code> something about the answer (assert).</li>
+  <li>Look for the test <em>"unknown routes use the error envelope"</em>: it proves the catch-all file from chapter 6 works, and that <code>error.requestId</code> matches the response header.</li>
+</ul>
+<p>The sign-up race that once froze the database pool has its own regression test, so it can never silently come back:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/e2e/signup-concurrency.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { fileURLToPath } <span class="t-k">from</span> <span class="t-s">'node:url'</span>
+<span class="t-k">import</span> { afterAll, describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { setup } <span class="t-k">from</span> <span class="t-s">'@nuxt/test-utils/e2e'</span>
+<span class="t-k">import</span> { newUser, signUp, sql, testEnv } <span class="t-k">from</span> <span class="t-s">'./helpers'</span>
+
+<span class="t-k">await</span> setup({ rootDir: fileURLToPath(<span class="t-k">new</span> URL(<span class="t-s">'../..'</span>, <span class="t-k">import</span>.meta.url)), server: <span class="t-k">true</span>, browser: <span class="t-k">false</span>, env: testEnv })
+afterAll(() =&gt; sql.end())
+
+<span class="t-c">// Regression: hooks querying outside Better Auth's transaction exhausted the DB pool under load.</span>
+describe(<span class="t-s">'concurrent sign-ups'</span>, () =&gt; {
+  it(<span class="t-s">'12 simultaneous sign-ups all complete'</span>, { timeout: <span class="t-n">60_000</span> }, <span class="t-k">async</span> () =&gt; {
+    <span class="t-k">const</span> results = <span class="t-k">await</span> Promise.all(Array.<span class="t-k">from</span>({ length: <span class="t-n">12</span> }, () =&gt; signUp(newUser())))
+    expect(results.map(r =&gt; r.status)).toEqual(Array(<span class="t-n">12</span>).fill(<span class="t-n">200</span>))
+  })
+})</code></pre></figure>
+<p>The other end-to-end files cover one feature each. Their code is in the reference pages, ready to copy:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>File</th><th>What it proves</th></tr></thead>
+<tbody>
+<tr><td><a href="ref-tests.html#f-tests-e2e-communities-test-ts"><code>tests/e2e/communities.test.ts</code></a></td><td>Joining, lanes, Originals numbers, leaving, removal rules, admin veto</td></tr>
+<tr><td><a href="ref-tests.html#f-tests-e2e-drops-test-ts"><code>tests/e2e/drops.test.ts</code></a></td><td>Audiences, locked cards, scheduling, likes, replies, idempotency</td></tr>
+<tr><td><a href="ref-tests.html#f-tests-e2e-missions-test-ts"><code>tests/e2e/missions.test.ts</code></a></td><td>Mission rules, XP ledger, badges</td></tr>
+<tr><td><a href="ref-tests.html#f-tests-e2e-watch-parties-test-ts"><code>tests/e2e/watch-parties.test.ts</code></a></td><td>Parties, RSVPs, reminders, the cron job</td></tr>
+<tr><td><a href="ref-tests.html#f-tests-e2e-talent-test-ts"><code>tests/e2e/talent.test.ts</code></a></td><td>Applications, admin accept and decline</td></tr>
+<tr><td><a href="ref-tests.html#f-tests-e2e-discover-talent-test-ts"><code>tests/e2e/discover-talent.test.ts</code></a></td><td>Discover, Star dashboard and profile</td></tr>
+<tr><td><a href="ref-tests.html#f-tests-e2e-moderation-test-ts"><code>tests/e2e/moderation.test.ts</code></a></td><td>Reports, blocks, suspension, audit</td></tr>
+</tbody></table></div>
+
+<h2 id="run-them">Run them<a class="anchor" href="#run-them" aria-label="Link to this section">#</a></h2>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>pnpm test:unit
+pnpm test:e2e</code></pre></figure>
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p><code>pnpm test:unit</code> passes in a second or two. <code>pnpm test:e2e</code> takes noticeably longer (it creates a database and starts the app); every test should pass. When this guide was prepared, Docker was not available on the machine that built the guide, so the end-to-end run was <strong>not</strong> repeated there. The project's plan file recorded 71 passing e2e tests at an earlier commit; your run shows the current number. Commit: <code>git add -A && git commit -m "Automated tests"</code>.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>A good habit from here on: when you fix a bug, first write a test that fails because of it, then fix it. The sign-up concurrency test above came from exactly that.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="19-explorer.html"><small>Previous</small>The API Explorer page (Vue)</a><a class="next" href="21-finish.html"><small>Next</small>Check everything and what comes next</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#why-tests-matter-here">Why tests matter here</a></li><li><a href="#the-test-runner-settings">The test runner settings</a></li><li><a href="#a-fresh-database-for-every-run">A fresh database for every run</a></li><li><a href="#helpers-shared-by-every-e2e-file">Helpers shared by every e2e file</a></li><li><a href="#reading-a-real-test-file">Reading a real test file</a></li><li><a href="#run-them">Run them</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

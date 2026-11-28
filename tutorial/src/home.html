@@ -1,0 +1,47 @@
+<div class="hero">
+  <p class="kicker">A step-by-step guide</p>
+  <h1>Build Clautverse from scratch</h1>
+  <p class="lead">Start with an empty Nuxt 4 project. Finish with a working fan-community backend (accounts, communities, posts, missions, moderation) and a live page where you can try every API route.</p>
+</div>
+
+<div class="cards">
+  <div class="card"><h3>No experience needed</h3><p>Every idea is explained in plain words first, then in programming terms. If you can type and follow steps, you can follow this.</p></div>
+  <div class="card"><h3>Real code only</h3><p>Every code box is copied from the real project when this site is built. Nothing is simplified behind your back.</p></div>
+  <div class="card"><h3>Checkpoints</h3><p>Each chapter ends with something you can run and see, so you always know you are on track.</p></div>
+</div>
+
+<h2>What you will have at the end</h2>
+<ul>
+  <li><strong>An API</strong> (a set of web addresses a phone app or website can talk to) with <!--@counts-->, built into one Nuxt 4 project.</li>
+  <li><strong>A database</strong> in PostgreSQL with <!--@tables--> tables, managed with migrations so changes are tracked.</li>
+  <li><strong>Sign-up and sign-in</strong> with email verification, using Better Auth.</li>
+  <li><strong>Fan features:</strong> pick favourite Stars, join a Star's community, read and react to posts ("drops"), complete missions for XP, RSVP to watch parties, get notifications.</li>
+  <li><strong>Star and admin features:</strong> apply to become a Star, review applications, hide a community, handle reports, keep an audit trail.</li>
+  <li><strong>The API Explorer:</strong> one web page (built with Vue) that lists every route and lets you send real requests.</li>
+  <li><strong>Automated tests</strong> that prove the rules work.</li>
+</ul>
+
+<h2>How to read this guide</h2>
+<p>Go in order. Each chapter builds on the one before. Two kinds of side notes appear throughout:</p>
+<aside class="callout plain"><p class="callout-label">In plain words</p><p>Everyday language and comparisons. Read these first if a term is new.</p></aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p><p>The same idea, named the way developers name it. This is what you will see in job descriptions and documentation.</p></aside>
+<p>The switch at the top of every page (<strong>Both / Plain / Technical</strong>) hides one kind if you want a calmer page. Use the search box to find any word. Tick "I finished this chapter" at the bottom of a page to keep your place (it is saved only in your browser).</p>
+
+<h2>What you need before starting</h2>
+<ul>
+  <li>A computer (Mac, Windows or Linux) and about 6 to 10 hours spread over a few sittings.</li>
+  <li>A code editor. <a href="https://code.visualstudio.com/">Visual Studio Code</a> is a good free one.</li>
+  <li>Willingness to type commands in a terminal. Chapter 1 shows exactly what to type.</li>
+  <li>Docker Desktop (a program that runs a database on your computer without a complicated install), or a PostgreSQL 17 you install yourself (see <a href="90-postgres-without-docker.html">the appendix</a>).</li>
+</ul>
+
+<h2>Honest notes about this guide</h2>
+<aside class="callout warn"><p class="callout-label">Snapshot</p>
+<p>This guide describes the project at commit <code><!--@commit--></code>. The project keeps changing (its <code>docs/plan.md</code> lists upcoming tasks such as removing identity claims and adding XP tiers). When code changes, rebuild the guide with <code>node tutorial/build.mjs</code> and the code boxes update by themselves, but the explanations are written by hand and may need an edit.</p></aside>
+<aside class="callout tip"><p class="callout-label">Size of the project</p>
+<p>The project has about 100 route files. You will type the foundation and the important routes with full explanations. For the repetitive ones, each feature chapter lists them, shows the code, and the <a href="ref-routes.html">reference pages</a> hold every file in one place to copy from.</p></aside>
+<aside class="callout tip"><p class="callout-label">What is not covered</p>
+<p>File uploads (images and voice posts) are not built yet in the project; the routes answer "feature disabled". Deploying to a live server is also outside this guide.</p></aside>
+
+<h2>The chapters</h2>
+<!--@chapters-->

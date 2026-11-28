@@ -1,0 +1,98 @@
+<!--@meta
+part: Part 3 · People
+title: Accounts, sign-in and sessions
+summary: Add Better Auth with email verification, a username, an age gate, and the guard every private endpoint calls.
+-->
+<p class="lead">Almost everything interesting in Clautverse needs to know who is asking. This chapter adds sign-up, sign-in, email verification and a one-line guard, <code>requireUser</code>, that private endpoints call first.</p>
+
+<h2>The ideas</h2>
+<plain>
+<p><strong>Authentication</strong> answers "who are you?" (you sign in). <strong>Authorization</strong> answers "are you allowed to do this?" (a fan may join a community; only the Star may post in it). After you sign in, the server gives your browser a <strong>session cookie</strong>, like a festival wristband. On later requests the browser shows it automatically, so you do not log in again for every click.</p>
+</plain>
+<tech>
+<p>Passwords are never stored; Better Auth stores a salted hash in <code>account.password</code>. The session token lives in the <code>session</code> table and is sent back as a cookie (<code>better-auth.session_token</code>). We do not write any of the cryptography ourselves, which is the right call for security-sensitive code.</p>
+</tech>
+<aside class="callout warn"><p class="callout-label">Security</p>
+<p>Authentication code is where mistakes hurt most. Read this chapter to <em>understand</em> it, but before putting real users on any system like this, have someone experienced review it.</p></aside>
+
+<h2>Small helpers first: age and email</h2>
+<p>Clautverse is 18+. Create <code>server/utils/age.ts</code>:</p>
+<!--@file server/utils/age.ts-->
+<ul>
+  <li><code>ageOn(dateOfBirth, today)</code> counts whole years. It subtracts one if this year's birthday has not happened yet. The <code>today</code> parameter has a default (<code>new Date()</code>) so tests can pass a fixed date.</li>
+  <li><code>isValidIsoDate</code> accepts only real dates in <code>YYYY-MM-DD</code> form. Note how it builds the date and checks it prints back the same: that catches <code>2001-02-29</code>, which JavaScript would otherwise quietly turn into 1 March.</li>
+</ul>
+<p>And its test, <code>tests/unit/age.test.ts</code>:</p>
+<!--@file tests/unit/age.test.ts-->
+<p>Sign-up and password-reset emails go through one function. Create <code>server/utils/email.ts</code>:</p>
+<!--@file server/utils/email.ts-->
+<plain>
+<p>While you develop, no real emails are sent: the text is printed in your terminal, including the confirmation link you would normally click in your inbox. If you later add a Mailtrap account, put its token in <code>.env</code> and the same code sends real mail.</p>
+</plain>
+<tech>
+<p><code>$fetch</code> is Nitro's built-in HTTP client. In production a missing token throws, so you can never silently send nothing. <code>process.env.NODE_ENV</code> is <code>production</code> only in a real deployment.</p>
+</tech>
+
+<h2>The Better Auth setup</h2>
+<p>Create <code>server/utils/auth.ts</code>. It is the biggest file so far; the walk-through below explains each block.</p>
+<!--@file server/utils/auth.ts-->
+
+<h3>Block by block</h3>
+<ul>
+  <li><strong>Constants at the top.</strong> <code>USERNAME_RE</code> allows 3 to 30 characters of <code>a-z</code>, <code>0-9</code> and <code>_</code>. <code>RESERVED_USERNAMES</code> blocks names like <code>admin</code> and <code>support</code>. <code>DELETION_GRACE_DAYS = 30</code> is the "change your mind" window for account deletion (chapter 9).</li>
+  <li><strong><code>emailAndPassword</code></strong>: password login is on, an unverified email cannot sign in (<code>requireEmailVerification</code>), passwords are 8 to 128 characters, and resetting a password signs out other devices. <code>sendResetPassword</code> calls our <code>sendEmail</code>.</li>
+  <li><strong><code>emailVerification</code></strong>: a confirmation email is sent at sign-up, and clicking the link signs the person in.</li>
+  <li><strong><code>user.additionalFields</code></strong>: tells Better Auth about our extra columns. <code>input: true</code> means a sign-up request may supply it; <code>input: false</code> means only the server may set it, so nobody can sign up with <code>roles: "super_admin"</code>. <code>returned: false</code> hides a field from responses (date of birth stays private).</li>
+  <li><strong><code>rateLimit</code></strong>: Better Auth's own limiter, stored in the <code>rate_limit</code> table, 30 calls per 60 seconds, switchable with the <code>authRateLimitEnabled</code> setting.</li>
+  <li><strong><code>databaseHooks.user.create.before</code></strong>: runs just before a new user row is saved. It lower-cases and checks the username, checks the date format, enforces the minimum age (<code>UNDER_MINIMUM_AGE</code>), checks the username is not taken, and forces safe defaults (<code>roles: 'fan'</code>, <code>status: 'active'</code>) no matter what the caller sent. The comment explains a real bug the project hit: querying through a second database connection while Better Auth holds a transaction can freeze the connection pool when many sign-ups arrive together, so the hook uses Better Auth's current transaction (<code>getCurrentAdapter</code>).</li>
+  <li><strong><code>databaseHooks.session.create.before</code></strong>: runs before every sign-in. A suspended user is refused (<code>ACCOUNT_SUSPENDED</code>). A user whose deletion is pending can sign in only within the 30-day window, and doing so cancels the deletion.</li>
+  <li><strong><code>useAuth()</code></strong>: creates the Better Auth object once and reuses it (the same lazy pattern as <code>useDb</code>).</li>
+</ul>
+<tech>
+<p>The last third of the file is <strong>our own guard layer</strong>:</p>
+<ul>
+<li><code>requireUser(event, { verified, onboarded })</code> reads the session from the request headers, loads our <code>user</code> row, and throws the right error: <code>UNAUTHENTICATED</code> (no session, or deletion pending), <code>ACCOUNT_SUSPENDED</code>, <code>EMAIL_NOT_VERIFIED</code>, or <code>ONBOARDING_REQUIRED</code>. By default it requires a verified email; endpoints opt into stricter or looser checks. On success it returns the user, which is how handlers get <code>u.id</code>.</li>
+<li><code>userRoles</code> splits the comma-separated roles text; <code>toMe</code> shapes the user for the API and deliberately leaves out the date of birth.</li>
+</ul>
+</tech>
+
+<h2>Expose the auth routes</h2>
+<p>Better Auth brings its own endpoints (<code>sign-up/email</code>, <code>sign-in/email</code>, <code>sign-out</code>, <code>verify-email</code>, <code>get-session</code>, password reset, and more). One catch-all file hands them over. Create <code>server/api/auth/[...all].ts</code>:</p>
+<!--@file server/api/auth/[...all].ts-->
+<p>And one small endpoint of ours so sign-up screens can show "username taken" live. Create <code>server/api/auth/username-check.get.ts</code>:</p>
+<!--@file server/api/auth/username-check.get.ts-->
+<ul>
+  <li>It uses three helpers from chapter 7: <code>rateLimit</code> (30 per minute per IP), <code>readQuery</code> and Zod (<code>.trim().toLowerCase()</code> cleans the input).</li>
+  <li>It answers <code>available: false</code> with a <code>reason</code> (<code>invalid</code>, <code>reserved</code>, <code>taken</code>) or <code>available: true</code>.</li>
+  <li>The <code>// AUTH-05</code> comment is the route's ID in the API contract (chapter 18).</li>
+</ul>
+
+<check>
+<p>Restart <code>pnpm dev</code>, then try the whole life of an account from the terminal. Replace the example email if you like.</p>
+<p><strong>1. Sign up</strong> (send an <code>Origin</code> header, as the project's own tests do; Better Auth uses it to guard against cross-site request forgery):</p>
+<!--@code bash | terminal-->
+curl -i -X POST http://localhost:3000/api/auth/sign-up/email \
+  -H 'Content-Type: application/json' -H 'Origin: http://localhost:3000' \
+  -d '{"email":"ada@example.com","password":"correct-horse-9","name":"Ada","username":"ada_fan","dateOfBirth":"1995-05-05"}'
+<!--@/code-->
+<p>Expect status <code>200</code>. In the <strong>server</strong> terminal you will see a line starting <code>[email] to=ada@example.com</code> with a confirmation link.</p>
+<p><em>(Local PostgreSQL without Docker? Use the <code>psql "$NUXT_DATABASE_URL"</code> form from <a href="90-postgres-without-docker.html#4-replace-the-docker-commands">the appendix</a> instead of <code>docker exec</code>.)</em></p>
+<p><strong>2. Mark the email verified</strong> (the shortcut for local development: the same thing the link would do):</p>
+<!--@code bash | terminal-->
+docker exec clautverse-pg psql -U postgres -d clautverse -c "update \"user\" set email_verified = true where email = 'ada@example.com'"
+<!--@/code-->
+<p><strong>3. Sign in</strong> and keep the cookie in a file called <code>jar.txt</code>:</p>
+<!--@code bash | terminal-->
+curl -i -c jar.txt -X POST http://localhost:3000/api/auth/sign-in/email \
+  -H 'Content-Type: application/json' -H 'Origin: http://localhost:3000' \
+  -d '{"email":"ada@example.com","password":"correct-horse-9"}'
+curl -b jar.txt http://localhost:3000/api/auth/get-session
+<!--@/code-->
+<p>The second command should print your session and user (without the date of birth).</p>
+<p><strong>4. Try to break the rules:</strong> sign up with <code>"dateOfBirth":"2015-01-01"</code>. Expect status <code>400</code> and a body whose <code>code</code> is <code>UNDER_MINIMUM_AGE</code>. Then call <code>curl "http://localhost:3000/api/auth/username-check?username=ada_fan"</code> and see <code>"reason":"taken"</code>.</p>
+<p>Also run <code>pnpm test:unit</code>: now 2 test files pass (cursor and age).</p>
+</check>
+<tech>
+<p>Errors thrown <em>inside</em> Better Auth's own routes (such as the under-18 rejection) use Better Auth's format, <code>{ "code", "message" }</code>, not our <code>{ "error": {…} }</code> envelope. Errors from our own endpoints use the envelope. The project's tests rely on this difference.</p>
+</tech>
+<p><code>jar.txt</code> holds a live session cookie and is not part of the project. Delete it (<code>rm jar.txt</code>) before you commit: <code>git add -A && git commit -m "Accounts with Better Auth"</code>.</p>

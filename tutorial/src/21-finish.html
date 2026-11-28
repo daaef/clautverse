@@ -1,0 +1,64 @@
+<!--@meta
+part: Finish
+title: Check everything and what comes next
+summary: A final checklist, how to type-check, common problems, and the project's own roadmap.
+-->
+<p class="lead">You built the whole thing. This last chapter is a checklist to prove it all works together, a troubleshooting table, and a look at what the project plans next.</p>
+
+<h2>Type check the whole project</h2>
+<p>TypeScript can check every file without running anything:</p>
+<!--@code bash | terminal-->
+pnpm typecheck
+<!--@/code-->
+<p>It runs <code>nuxt typecheck</code>, which uses <code>vue-tsc</code> to check both server and page code against the files Nuxt generates. A clean run prints no errors.</p>
+<aside class="callout tip"><p class="callout-label">If it fails</p>
+<p>Read the first error only. Most later errors are fallout from it. The file name and line number are given; open that line and compare with the code in the chapter.</p></aside>
+
+<h2>The final checklist</h2>
+<ul>
+  <li><code>pnpm dev</code> starts without errors; <code>/api/health</code> says <code>ok</code>.</li>
+  <li><code>/api/nope</code> answers a JSON <code>NOT_FOUND</code> with a request ID.</li>
+  <li>You can sign up, verify, sign in and call <code>/api/me</code>.</li>
+  <li>Onboarding completes; you can join a community and get Originals number 1.</li>
+  <li>An admin can publish a drop, you can like it and see it in the feed.</li>
+  <li>A mission completion adds XP once, never twice.</li>
+  <li>A reported drop appears in the admin report queue; an accepted application creates a community.</li>
+  <li>The API Explorer at <code>/</code> lists the operations and sends requests as you.</li>
+  <li><code>pnpm test:unit</code> and <code>pnpm test:e2e</code> pass.</li>
+  <li><code>.env</code> is not in git (<code>git status</code> never lists it).</li>
+</ul>
+
+<h2>When something goes wrong</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>You see</th><th>Likely cause</th><th>Try</th></tr></thead>
+<tbody>
+<tr><td><code>NUXT_DATABASE_URL is not set</code></td><td><code>.env</code> missing or the dev server was started before you created it.</td><td>Check <code>.env</code> has the line; restart <code>pnpm dev</code>.</td></tr>
+<tr><td>Health shows <code>"db":"error"</code> and status 503</td><td>The database container is stopped, or the URL is wrong.</td><td><code>docker ps</code>; <code>docker start clautverse-pg</code>.</td></tr>
+<tr><td><code>relation "user" does not exist</code></td><td>Migrations were not applied.</td><td><code>set -a; . ./.env; set +a</code> then <code>pnpm db:migrate</code>.</td></tr>
+<tr><td><code>pnpm db:migrate</code> complains about the URL</td><td>The shell did not load <code>.env</code> (drizzle-kit does not read it by itself).</td><td>Run the <code>set -a; . ./.env; set +a</code> line in the same terminal window.</td></tr>
+<tr><td>Sign-up works but sign-in says email not verified (403)</td><td>This is correct behaviour.</td><td>Click the link printed in the server terminal, or run the SQL shortcut from chapter 8.</td></tr>
+<tr><td><code>ONBOARDING_REQUIRED</code> when joining</td><td>The fan has not completed onboarding.</td><td>Finish chapter 10's <code>complete</code> call.</td></tr>
+<tr><td><code>FORBIDDEN</code> on <code>/api/admin/*</code></td><td>The account is not an admin.</td><td>Run the chapter 17 SQL to grant <code>super_admin</code>.</td></tr>
+<tr><td>Cursor errors (<code>Invalid cursor</code>)</td><td><code>NUXT_CURSOR_SECRET</code> changed, or the cursor came from a different list.</td><td>Start again from page one.</td></tr>
+<tr><td>Changed <code>nuxt.config.ts</code> but nothing happened</td><td>The dev server needs a restart for config changes.</td><td>Stop and rerun <code>pnpm dev</code>.</td></tr>
+<tr><td>Port 5432 already in use</td><td>Another PostgreSQL is running on your machine.</td><td>Stop it, or map Docker to another port and update <code>NUXT_DATABASE_URL</code>.</td></tr>
+<tr><td>Explorer dropdowns are empty</td><td>You are signed out (some lists are private), or the list is empty.</td><td>Sign in at the top of the page; create data.</td></tr>
+</tbody></table></div>
+
+<h2>What is deliberately missing</h2>
+<ul>
+  <li><strong>Uploads</strong> (images, voice): routes that need them answer <code>FEATURE_DISABLED</code>.</li>
+  <li><strong>Deployment</strong>: this guide runs everything on your machine. The project is designed for a hosted Postgres (it mentions Neon) and a scheduler to call the two job routes from chapter 14, but deployment steps are outside this guide.</li>
+  <li><strong>A real front end for fans:</strong> only the API Explorer exists.</li>
+</ul>
+
+<h2>The project's roadmap</h2>
+<p>The project keeps its plan in <code>docs/plan.md</code>. At this snapshot the table of tasks lists these as still to do: small fixes (task 2c), removing identity claims (3), seeding fictional pilot data (5), a 64 KB request-size limit (6), following Rising Stars (7), XP per fandom with tiers (8), a second lane at the Supporter tier (9), and a small analytics event log (10). When one lands, rebuild this guide with <code>node tutorial/build.mjs</code> and re-read the affected chapters.</p>
+
+<h2>Where to go from here</h2>
+<ol>
+  <li>Build a feature of your own end to end: a table in the schema, a migration, an endpoint with Zod and <code>requireUser</code>, an entry in the contract, a test. That one exercise uses every chapter.</li>
+  <li>Read <code>docs/specs/ecosystem-prd.md</code> in the repository to see the product the code is aiming at.</li>
+  <li>Pick one skill to deepen: SQL and transactions, Vue components, or TypeScript types. This project exercises all three.</li>
+</ol>
+<check><p>If you can explain, in your own words, how a request to join a community travels from the address bar to the database and back, you understand this project. Chapter 0's journey list and chapter 11 are the two places to reread.</p></check>

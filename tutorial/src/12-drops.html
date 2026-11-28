@@ -1,0 +1,95 @@
+<!--@meta
+part: Part 4 · Features
+title: Drops, replies, likes and the feed
+summary: Posts by Stars, who can see them, scheduling, replies, and the safe-to-retry trick called idempotency.
+-->
+<p class="lead">A <strong>drop</strong> is a post by a Star in their community. This chapter covers creating and scheduling drops, deciding who may read them, replies and likes, and the feed a fan sees.</p>
+
+<h2>The rules in plain words</h2>
+<ul>
+  <li>Only the community's Star (or an admin) can post. Today only <strong>text</strong> drops work; voice and image answer "feature disabled" until uploads exist.</li>
+  <li>A drop has an <strong>audience</strong>: <code>public</code> (anyone), <code>members</code> (the default: people who joined) or <code>originals_only</code> (only members with an Originals number).</li>
+  <li>A drop is a <code>draft</code> until published. It can be published now, or <strong>scheduled</strong> for later. It becomes visible when its <code>publishAt</code> time passes. No background job is needed: the query simply asks for "published or scheduled <em>and</em> publish time is in the past".</li>
+  <li>Someone who may not read a drop still sees a <strong>locked card</strong>: who posted, the type, the time and a short teaser, but never the body.</li>
+  <li>Fans can like a drop once and reply to it (one level of nesting).</li>
+</ul>
+
+<h2>The drops helper file</h2>
+<p>Create <code>server/utils/drops.ts</code>:</p>
+<!--@file server/utils/drops.ts-->
+<div class="tablewrap"><table>
+<thead><tr><th>Helper</th><th>Job</th></tr></thead>
+<tbody>
+<tr><td><code>isLive</code>, <code>liveFilter</code></td><td>"Is this drop visible yet?" as a JavaScript check and as a SQL condition.</td></tr>
+<tr><td><code>canSeeDrop</code></td><td>The audience rule above, in four lines.</td></tr>
+<tr><td><code>dropView</code></td><td>Builds the answer. If <code>canSee</code> is false it sets <code>locked: true</code> and <code>body: null</code>, so the body cannot leak by accident.</td></tr>
+<tr><td><code>loadDrop</code></td><td>Loads one drop plus its community and Star, applying every visibility rule (vetoed community, archived or removed drop, not yet live, blocked author) and returning <code>canSee</code>, <code>isStaff</code> and the viewer's membership.</td></tr>
+<tr><td><code>dropListViews</code></td><td>Shapes a whole page of drops while loading the viewer's memberships and likes in <strong>two queries total</strong>, not two per drop (this avoids the "N+1 query" slowdown).</td></tr>
+<tr><td><code>notifyDropPublished</code></td><td>One SQL statement that creates a notification for every active member with alerts on (the author excluded).</td></tr>
+<tr><td><code>blockedAuthorIds</code>, <code>notAuthoredByBlocked</code></td><td>Hide content from people the viewer blocked (chapter 16). The comment explains a subtle bug avoided: SQL's <code>NOT IN</code> silently drops rows with a <code>NULL</code> author, so the code uses <code>OR author IS NULL</code>.</td></tr>
+<tr><td><code>idempotencyHeader</code>, <code>findIdempotent</code>, <code>saveIdempotent</code></td><td>The "send it twice safely" machinery, explained next.</td></tr>
+<tr><td><code>replyView</code></td><td>Shapes a reply; a deleted or removed reply becomes a placeholder with no body or author.</td></tr>
+</tbody></table></div>
+
+<h2>Idempotency: making "send twice" safe</h2>
+<plain>
+<p>On a bad phone connection an app may send "create post" and never hear the answer, so it sends again. Without protection the Star ends up with two identical posts. The fix: the app attaches a unique label (an <strong>Idempotency-Key</strong>) to the request. If the server sees the same label again, it returns the <em>original</em> result instead of creating a second one.</p>
+</plain>
+<tech>
+<p>The <code>idempotency_key</code> table stores <code>(userId, scope, key) → resourceId</code>. On create we first call <code>findIdempotent</code>; if there is a hit we return that resource. Otherwise we create the resource and <code>saveIdempotent</code> inside the same transaction, so the key and the resource are saved together or not at all. The header is optional.</p>
+</tech>
+
+<h2>Creating, reading, editing, publishing, deleting</h2>
+<p><code>server/api/drops/index.post.ts</code> creates a drop:</p>
+<!--@file server/api/drops/index.post.ts-->
+<ul>
+  <li>Order inside: authenticate, read the key, validate the body, replay check, rate limit (30 per minute), business rules (text only, body required, <code>publishAt</code> must be in the future, not both <code>publishAt</code> and <code>publishNow</code>), permission (owner or admin), then the transaction.</li>
+  <li>Status comes out as <code>published</code> (<code>publishNow</code>), <code>scheduled</code> (a future <code>publishAt</code>) or <code>draft</code>. Only a published drop triggers member notifications.</li>
+</ul>
+<p><code>server/api/drops/[id]/index.get.ts</code> reads one (with the locked-card rule):</p>
+<!--@file server/api/drops/[id]/index.get.ts-->
+<p><code>server/api/drops/[id]/index.patch.ts</code> edits. Drafts and scheduled drops are fully editable; once live, only the text and teaser can change:</p>
+<!--@file server/api/drops/[id]/index.patch.ts-->
+<p><code>server/api/drops/[id]/publish.post.ts</code> moves a draft to published or scheduled:</p>
+<!--@file server/api/drops/[id]/publish.post.ts-->
+<p><code>server/api/drops/[id]/index.delete.ts</code> removes a drop. The author's delete <em>archives</em> it; an admin's delete marks it <em>removed</em> and is written to the audit log. Repeating the call is harmless (always <code>204 No Content</code>):</p>
+<!--@file server/api/drops/[id]/index.delete.ts-->
+
+<h2>Likes</h2>
+<p><code>server/api/drops/[id]/reactions/me.put.ts</code> likes; <code>me.delete.ts</code> unlikes. The address is "my reaction to this drop", so there is only ever one:</p>
+<!--@file server/api/drops/[id]/reactions/me.put.ts-->
+<!--@file server/api/drops/[id]/reactions/me.delete.ts-->
+<tech>
+<p>The like is stored with a composite primary key <code>(dropId, userId)</code>, so a second like cannot create a second row. We only add one to <code>likeCount</code> when a row was <em>actually inserted</em>, which keeps the counter exact even when the call is repeated.</p>
+</tech>
+
+<h2>Replies</h2>
+<p><code>server/api/drops/[id]/replies.get.ts</code> lists replies in conversation order:</p>
+<!--@file server/api/drops/[id]/replies.get.ts-->
+<p><code>server/api/drops/[id]/replies.post.ts</code> adds one. Only members (or staff) who may see the drop can reply, and a reply can only answer a <em>top-level</em> reply:</p>
+<!--@file server/api/drops/[id]/replies.post.ts-->
+<p><code>server/api/replies/[id].delete.ts</code> removes a reply (author: <code>deleted</code>; Star or admin: <code>removed</code>):</p>
+<!--@file server/api/replies/[id].delete.ts-->
+
+<h2>Timelines: community page, feed, discover</h2>
+<p><code>server/api/communities/[id]/drops.get.ts</code> is the public timeline of one community:</p>
+<!--@file server/api/communities/[id]/drops.get.ts-->
+<p><code>server/api/feed.get.ts</code> is a fan's personal feed: live drops from every community they belong to, newest first:</p>
+<!--@file server/api/feed.get.ts-->
+<p><code>server/api/discover.get.ts</code> is the home screen of suggestions: communities for you, popular ones, and new Stars:</p>
+<!--@file server/api/discover.get.ts-->
+<tech>
+<p>The feed pages on <code>(publish_at, id)</code>, not on an offset, so a drop published while you scroll never causes a duplicate. The <code>from</code>/<code>to</code> filters are limited to a 90-day range so one call cannot scan the whole table.</p>
+</tech>
+
+<check>
+<p><em>(Local PostgreSQL without Docker? Use the <code>psql "$NUXT_DATABASE_URL"</code> form from <a href="90-postgres-without-docker.html#4-replace-the-docker-commands">the appendix</a> instead of <code>docker exec</code>.)</em></p>
+<p>Make your test user an admin (admins can post in any community), then publish a drop and read the feed:</p>
+<!--@code bash | terminal-->
+docker exec clautverse-pg psql -U postgres -d clautverse -c "update \"user\" set roles = 'fan,super_admin' where email = 'ada@example.com'"
+curl -b jar.txt -X POST http://localhost:3000/api/drops \
+  -H 'Content-Type: application/json' -H 'Idempotency-Key: demo-1' \
+  -d '{"communityId":"COMMUNITY_ID","type":"text","body":"Hello fandom!","publishNow":true}'
+<!--@/code-->
+<p>Send the <strong>exact same command again</strong>: you get the same drop <code>id</code> back, not a second drop. That is idempotency at work. Rejoin the community if you left it in chapter 11, then call <code>curl -b jar.txt http://localhost:3000/api/feed</code> and <code>curl -b jar.txt -X PUT http://localhost:3000/api/drops/DROP_ID/reactions/me</code> (a like) and look at <code>reactionCounts</code>. Commit: <code>git add -A && git commit -m "Drops, replies, likes, feed and discover"</code>.</p>
+</check>

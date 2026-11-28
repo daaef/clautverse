@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The API Explorer page (Vue) · Build Clautverse</title>
+<meta name="description" content="The only web page in the project: it lists every route and lets you send real requests as yourself.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="19-explorer">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer" aria-current="page">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 6 · Explorer and tests</p><h1>The API Explorer page (Vue)</h1><p class="meta">About 7 min read</p><p class="lead">Up to now you tested with <code>curl</code>. Here you build the page that does the same thing with buttons and forms: the API Explorer. It is the only screen in the project, and a good first look at Vue inside Nuxt 4.</p>
+
+<h2 id="what-it-does">What it does<a class="anchor" href="#what-it-does" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li>Shows every operation from the OpenAPI contract, grouped by tag, with a search box.</li>
+  <li>Has a sign-in / sign-up strip at the top, so requests run as a real user through the same session cookie you used in <code>curl</code>.</li>
+  <li>Each operation is a card. Open it to see parameters and body fields as the right kind of input (dropdown for fixed choices, a picker of real records for IDs, number boxes that enforce limits), press <strong>Send request</strong> and see the status, timing and JSON answer.</li>
+</ul>
+
+<h2 id="vue-and-nuxt-in-five-minutes">Vue and Nuxt in five minutes<a class="anchor" href="#vue-and-nuxt-in-five-minutes" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>A web page is built from <strong>components</strong>: small reusable pieces (a button, a card, a top bar) that each own their appearance and behaviour. Vue is the library for writing components. Nuxt adds conventions so you write less setup.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<ul>
+<li>A <code>.vue</code> file has up to three blocks: <code>&lt;script setup lang="ts"&gt;</code> (logic), <code>&lt;template&gt;</code> (HTML with extras), and optional styles. Here styling lives in one shared CSS file.</li>
+<li><code>ref(x)</code> makes a reactive value: when it changes, the page updates. You read and write it with <code>.value</code> in script, but just by name in the template. <code>computed(() =&gt; …)</code> is a value derived from others. <code>reactive({})</code> is a reactive object. <code>watch(source, fn)</code> runs code when something changes.</li>
+<li>Template extras: <code>v-if</code> / <code>v-else</code> (show or hide), <code>v-for</code> (repeat), <code>v-model</code> (two-way link between an input and a value), <code>:prop="value"</code> (bind an attribute to JavaScript), <code>@click="fn"</code> (handle an event).</li>
+<li><strong>Nuxt conventions used here:</strong> a file in <code>app/pages/</code> is a route (<code>index.vue</code> is <code>/</code>); components in <code>app/components/</code> are used without importing, and a subfolder becomes a prefix (<code>components/docs/AuthPanel.vue</code> is <code>&lt;DocsAuthPanel&gt;</code>); exported functions in <code>app/composables/</code> are auto-imported; and Vue's <code>ref</code>, <code>computed</code>, <code>watch</code>, <code>onMounted</code> are auto-imported too.</li>
+</ul>
+</aside>
+
+<h2 id="step-1-composables-the-logic">Step 1: composables (the logic)<a class="anchor" href="#step-1-composables-the-logic" aria-label="Link to this section">#</a></h2>
+<p>A <strong>composable</strong> is a plain function holding logic that components share. The first one fetches and understands the contract. Create <code>app/composables/useOpenApi.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/composables/useOpenApi.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// Fetches the OpenAPI spec once and derives a flat, ordered operation list</span>
+<span class="t-c">// plus tag-grouped views for the API Explorer.</span>
+
+<span class="t-k">export</span> <span class="t-k">interface</span> ApiSchema {
+  <span class="t-k">type</span>?: string, format?: string, enum?: string[], example?: unknown, description?: string
+  minLength?: number, maxLength?: number, minimum?: number, maximum?: number
+  items?: ApiSchema, properties?: Record&lt;string, ApiSchema&gt;, required?: string[]
+}
+<span class="t-k">export</span> <span class="t-k">interface</span> ApiParameter { name: string, <span class="t-k">in</span>: <span class="t-s">'path'</span> | <span class="t-s">'query'</span> | <span class="t-s">'header'</span> | <span class="t-s">'cookie'</span>, required?: boolean, schema?: ApiSchema, description?: string }
+<span class="t-k">export</span> <span class="t-k">interface</span> ApiBody { required?: boolean, schema?: ApiSchema, example?: unknown }
+<span class="t-k">export</span> <span class="t-k">interface</span> ApiOperation {
+  method: <span class="t-s">'get'</span> | <span class="t-s">'post'</span> | <span class="t-s">'put'</span> | <span class="t-s">'patch'</span> | <span class="t-s">'delete'</span> | <span class="t-s">'head'</span> | <span class="t-s">'options'</span>
+  path: string
+  operationId?: string
+  routeId?: string
+  status?: string
+  tag: string
+  summary?: string
+  description?: string
+  parameters: ApiParameter[]
+  body?: ApiBody
+  services: string[]
+}
+<span class="t-k">interface</span> OpenApiSpec {
+  info?: { title?: string, version?: string, description?: string }
+  paths?: Record&lt;string, Record&lt;string, Record&lt;string, unknown&gt;&gt;&gt;
+}
+
+<span class="t-k">const</span> METHODS = [<span class="t-s">'get'</span>, <span class="t-s">'post'</span>, <span class="t-s">'put'</span>, <span class="t-s">'patch'</span>, <span class="t-s">'delete'</span>, <span class="t-s">'head'</span>, <span class="t-s">'options'</span>] <span class="t-k">as</span> <span class="t-k">const</span>
+
+<span class="t-k">export</span> <span class="t-k">function</span> specOperations(spec: OpenApiSpec | <span class="t-k">null</span> | <span class="t-k">undefined</span>): ApiOperation[] {
+  <span class="t-k">const</span> ops: ApiOperation[] = []
+  <span class="t-k">for</span> (<span class="t-k">const</span> [path, item] <span class="t-k">of</span> Object.entries(spec?.paths ?? {})) {
+    <span class="t-k">for</span> (<span class="t-k">const</span> method <span class="t-k">of</span> METHODS) {
+      <span class="t-k">const</span> op = item?.[method]
+      <span class="t-k">if</span> (!op) continue
+      <span class="t-k">const</span> o = op <span class="t-k">as</span> Record&lt;string, unknown&gt;
+      ops.push({
+        method,
+        path,
+        operationId: o.operationId <span class="t-k">as</span> string | <span class="t-k">undefined</span>,
+        routeId: (o[<span class="t-s">'x-route-id'</span>] ?? o.operationId) <span class="t-k">as</span> string | <span class="t-k">undefined</span>,
+        status: o[<span class="t-s">'x-status'</span>] <span class="t-k">as</span> string | <span class="t-k">undefined</span>,
+        tag: ((o.tags <span class="t-k">as</span> string[] | <span class="t-k">undefined</span>)?.[<span class="t-n">0</span>]) ?? <span class="t-s">'MISC'</span>,
+        summary: o.summary <span class="t-k">as</span> string | <span class="t-k">undefined</span>,
+        description: o.description <span class="t-k">as</span> string | <span class="t-k">undefined</span>,
+        parameters: (o.parameters <span class="t-k">as</span> ApiParameter[] | <span class="t-k">undefined</span>) ?? [],
+        body: bodyOf(o.requestBody),
+        services: (o[<span class="t-s">'x-services'</span>] <span class="t-k">as</span> string[] | <span class="t-k">undefined</span>) ?? [],
+      })
+    }
+  }
+  <span class="t-k">return</span> ops
+}
+
+<span class="t-k">function</span> bodyOf(rb: unknown): ApiBody | <span class="t-k">undefined</span> {
+  <span class="t-k">const</span> r = rb <span class="t-k">as</span> { required?: boolean, content?: Record&lt;string, { schema?: ApiSchema, example?: unknown }&gt; } | <span class="t-k">undefined</span>
+  <span class="t-k">const</span> json = r?.content?.[<span class="t-s">'application/json'</span>]
+  <span class="t-k">return</span> json ? { required: r?.required, schema: json.schema, example: json.example } : <span class="t-k">undefined</span>
+}
+
+<span class="t-c">/** Short human rule text for a schema, e.g. "string · uuid" or "one of: a, b". */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> describeSchema(s?: ApiSchema): string {
+  <span class="t-k">if</span> (!s) <span class="t-k">return</span> <span class="t-s">''</span>
+  <span class="t-k">if</span> (s.enum) <span class="t-k">return</span> <span class="t-s">`one of: ${s.enum.join(', ')}`</span>
+  <span class="t-k">const</span> parts = [s.<span class="t-k">type</span> === <span class="t-s">'array'</span> ? <span class="t-s">`array of ${s.items?.type ?? 'value'}`</span> : s.<span class="t-k">type</span>, s.format]
+  <span class="t-k">if</span> (s.minLength != <span class="t-k">null</span> || s.maxLength != <span class="t-k">null</span>) parts.push(<span class="t-s">`${s.minLength ?? 0}–${s.maxLength ?? '∞'} chars`</span>)
+  <span class="t-k">if</span> (s.minimum != <span class="t-k">null</span> || s.maximum != <span class="t-k">null</span>) parts.push(<span class="t-s">`${s.minimum ?? '−∞'} to ${s.maximum ?? '∞'}`</span>)
+  <span class="t-k">return</span> parts.filter(Boolean).join(<span class="t-s">' · '</span>)
+}
+
+<span class="t-c">/** Flattens body fields (one level of nesting) into rows for a table. */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> bodyFields(s?: ApiSchema): { name: string, required: boolean, rule: string, example: string, note?: string, schema: ApiSchema }[] {
+  <span class="t-k">const</span> rows: { name: string, required: boolean, rule: string, example: string, note?: string, schema: ApiSchema }[] = []
+  <span class="t-k">const</span> walk = (sch: ApiSchema | <span class="t-k">undefined</span>, prefix: string) =&gt; {
+    <span class="t-k">for</span> (<span class="t-k">const</span> [k, v] <span class="t-k">of</span> Object.entries(sch?.properties ?? {})) {
+      <span class="t-k">const</span> name = prefix + k
+      <span class="t-k">if</span> (v.<span class="t-k">type</span> === <span class="t-s">'object'</span> &amp;&amp; v.properties) { walk(v, <span class="t-s">`${name}.`</span>); continue }
+      rows.push({ name, required: !!sch?.required?.includes(k), rule: describeSchema(v), example: JSON.stringify(v.example), note: v.description, schema: v })
+    }
+  }
+  walk(s, <span class="t-s">''</span>)
+  <span class="t-k">return</span> rows
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> groupByTag(ops: ApiOperation[]) {
+  <span class="t-k">const</span> groups = <span class="t-k">new</span> Map&lt;string, ApiOperation[]&gt;()
+  <span class="t-k">for</span> (<span class="t-k">const</span> op <span class="t-k">of</span> ops) {
+    <span class="t-k">if</span> (!groups.has(op.tag)) groups.set(op.tag, [])
+    groups.get(op.tag)!.push(op)
+  }
+  <span class="t-k">return</span> [...groups.entries()].map(([tag, items]) =&gt; ({ tag, items }))
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> useOpenApi() {
+  <span class="t-k">return</span> useAsyncData(<span class="t-s">'openapi-spec'</span>, () =&gt; $fetch&lt;OpenApiSpec&gt;(<span class="t-s">'/api/_docs/openapi'</span>))
+}</code></pre></figure>
+<ul>
+  <li>The <code>interface</code> blocks describe the shapes we read from the contract, so the editor can autocomplete them.</li>
+  <li><code>specOperations(spec)</code> flattens the nested <code>paths → methods</code> into one simple list of operations, pulling out our <code>x-route-id</code>, <code>x-status</code> and <code>x-services</code> fields.</li>
+  <li><code>describeSchema</code> writes a short rule such as <code>string · uuid</code> or <code>one of: a, b</code>; <code>bodyFields</code> flattens a request body into table rows; <code>groupByTag</code> builds the sidebar groups.</li>
+  <li><code>useOpenApi()</code> calls <code>/api/_docs/openapi</code> (chapter 18) with <code>useAsyncData</code>, which fetches on the server for the first paint and shares the result across components.</li>
+</ul>
+<p>The second composable fills dropdowns with <em>real records</em>, so you pick an existing community instead of pasting a made-up ID. Create <code>app/composables/useLookup.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/composables/useLookup.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// Picks real ids from the live API so you choose an existing record instead of</span>
+<span class="t-c">// pasting a made-up uuid. Fields are matched by name (communityId, talentId…)</span>
+<span class="t-c">// or, for a path `{id}`, by the route it belongs to.</span>
+
+<span class="t-k">const</span> BY_FIELD: Record&lt;string, string&gt; = {
+  communityId: <span class="t-s">'/api/communities'</span>,
+  categoryId: <span class="t-s">'/api/categories'</span>,
+  talentId: <span class="t-s">'/api/talents'</span>,
+  talentIds: <span class="t-s">'/api/talents'</span>,
+  countryId: <span class="t-s">'/api/countries'</span>,
+
+  
+}
+
+<span class="t-k">const</span> BY_PATH: [prefix: string, list: string][] = [
+  [<span class="t-s">'/api/communities/{id}'</span>, <span class="t-s">'/api/communities'</span>],
+  [<span class="t-s">'/api/admin/communities/{id}'</span>, <span class="t-s">'/api/admin/communities'</span>],
+  [<span class="t-s">'/api/talents/{id}'</span>, <span class="t-s">'/api/talents'</span>],
+  [<span class="t-s">'/api/missions/{id}'</span>, <span class="t-s">'/api/missions'</span>],
+  [<span class="t-s">'/api/watch-parties/{id}'</span>, <span class="t-s">'/api/watch-parties'</span>],
+  [<span class="t-s">'/api/notifications/{id}'</span>, <span class="t-s">'/api/notifications'</span>],
+  [<span class="t-s">'/api/badges/{id}'</span>, <span class="t-s">'/api/badges'</span>],
+  [<span class="t-s">'/api/admin/badges/{id}'</span>, <span class="t-s">'/api/admin/badges'</span>],
+  [<span class="t-s">'/api/admin/applications/{id}'</span>, <span class="t-s">'/api/admin/applications'</span>],
+  [<span class="t-s">'/api/admin/reports/{id}'</span>, <span class="t-s">'/api/admin/reports'</span>],
+  [<span class="t-s">'/api/admin/users/{id}'</span>, <span class="t-s">'/api/admin/users'</span>],
+]
+
+<span class="t-k">export</span> <span class="t-k">function</span> lookupUrl(field: string, path?: string): string | <span class="t-k">undefined</span> {
+  <span class="t-k">if</span> (field === <span class="t-s">'id'</span> &amp;&amp; path) <span class="t-k">return</span> BY_PATH.find(([p]) =&gt; path.startsWith(p))?.[<span class="t-n">1</span>]
+  <span class="t-k">return</span> BY_FIELD[field]
+}
+
+<span class="t-k">export</span> <span class="t-k">interface</span> LookupOption { value: string, label: string }
+
+<span class="t-c">// One request per list, shared by every card. Errors (e.g. not signed in) give [].</span>
+<span class="t-k">const</span> cache = <span class="t-k">new</span> Map&lt;string, Ref&lt;LookupOption[]&gt;&gt;()
+<span class="t-k">function</span> load(url: string, opts: Ref&lt;LookupOption[]&gt;) {
+  <span class="t-k">if</span> (!<span class="t-k">import</span>.meta.client) <span class="t-k">return</span>
+  $fetch&lt;{ items?: Record&lt;string, unknown&gt;[] }&gt;(url, { query: { limit: <span class="t-n">100</span> }, credentials: <span class="t-s">'same-origin'</span> })
+    .then((r) =&gt; {
+      opts.value = (r.items ?? []).filter(i =&gt; i.id).map((i) =&gt; {
+        <span class="t-k">const</span> name = String(i.name ?? i.title ?? i.displayName ?? i.username ?? i.body ?? i.status ?? <span class="t-s">''</span>)
+        <span class="t-k">return</span> { value: String(i.id), label: name ? <span class="t-s">`${name.slice(0, 40)} · ${String(i.id).slice(0, 8)}`</span> : String(i.id) }
+      })
+    })
+    .<span class="t-k">catch</span>(() =&gt; { opts.value = [] })
+}
+<span class="t-k">export</span> <span class="t-k">function</span> useLookup(url: string | <span class="t-k">undefined</span>) {
+  <span class="t-k">if</span> (!url) <span class="t-k">return</span> ref&lt;LookupOption[]&gt;([])
+  <span class="t-k">if</span> (!cache.has(url)) {
+    <span class="t-k">const</span> opts = ref&lt;LookupOption[]&gt;([])
+    cache.set(url, opts)
+    load(url, opts)
+  }
+  <span class="t-k">return</span> cache.get(url)!
+}
+
+<span class="t-c">/** Reloads every list, e.g. after signing in or out (private lists change). */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> reloadLookups() { <span class="t-k">for</span> (<span class="t-k">const</span> [url, opts] <span class="t-k">of</span> cache) load(url, opts) }</code></pre></figure>
+<ul>
+  <li><code>BY_FIELD</code> maps a field name (<code>communityId</code>) to the list endpoint that holds valid values (<code>/api/communities</code>). <code>BY_PATH</code> does the same for a path parameter called plain <code>id</code>, by looking at which route it belongs to.</li>
+  <li>Each list is fetched once and cached in a <code>Map</code>, so ten cards asking for communities cause one request. A failed request (for example, not signed in) gives an empty list.</li>
+  <li><code>reloadLookups()</code> refetches everything. The sign-in strip calls it after signing in or out, because some lists are private.</li>
+  <li><code>import.meta.client</code> guards the fetch so it only runs in the browser.</li>
+</ul>
+
+<h2 id="step-2-small-components">Step 2: small components<a class="anchor" href="#step-2-small-components" aria-label="Link to this section">#</a></h2>
+<p>One input that picks its own type from the field's rule. Create <code>app/components/FieldInput.vue</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/components/FieldInput.vue</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>&lt;script setup lang=<span class="t-s">"ts"</span>&gt;
+<span class="t-c">// One input that matches a field's rule: dropdown for fixed choices and real</span>
+<span class="t-c">// records, number box with limits, date picker, or plain text.</span>
+<span class="t-k">import</span> <span class="t-k">type</span> { ApiSchema } <span class="t-k">from</span> <span class="t-s">'~/composables/useOpenApi'</span>
+
+<span class="t-k">const</span> props = <span class="t-k">defineProps</span>&lt;{ name: string, schema?: ApiSchema, required?: boolean, path?: string }&gt;()
+<span class="t-k">const</span> model = <span class="t-k">defineModel</span>&lt;unknown&gt;()
+
+<span class="t-k">const</span> s = computed(() =&gt; props.schema ?? {})
+<span class="t-k">const</span> isArray = computed(() =&gt; s.value.<span class="t-k">type</span> === <span class="t-s">'array'</span>)
+<span class="t-k">const</span> options = useLookup(lookupUrl(props.name, props.path))
+<span class="t-k">const</span> choices = computed(() =&gt; s.value.enum ?? (s.value.<span class="t-k">type</span> === <span class="t-s">'boolean'</span> ? [<span class="t-s">'true'</span>, <span class="t-s">'false'</span>] : <span class="t-k">null</span>))
+
+<span class="t-c">// Enum / boolean: keep the real type (boolean stays boolean).</span>
+<span class="t-k">const</span> choiceValue = computed({
+  get: () =&gt; (model.value === <span class="t-k">undefined</span> || model.value === <span class="t-k">null</span> ? <span class="t-s">''</span> : String(model.value)),
+  set: (v: string) =&gt; { model.value = v === <span class="t-s">''</span> ? <span class="t-k">undefined</span> : s.value.<span class="t-k">type</span> === <span class="t-s">'boolean'</span> ? v === <span class="t-s">'true'</span> : v },
+})
+<span class="t-c">// Numbers: clamp to the allowed range so 500 can't slip past a max of 100.</span>
+<span class="t-k">const</span> numValue = computed({
+  get: () =&gt; (model.value ?? <span class="t-s">''</span>) <span class="t-k">as</span> number | <span class="t-s">''</span>,
+  set: (v: number | <span class="t-s">''</span>) =&gt; {
+    <span class="t-k">if</span> (v === <span class="t-s">''</span> || Number.isNaN(Number(v))) { model.value = <span class="t-k">undefined</span>; <span class="t-k">return</span> }
+    <span class="t-k">let</span> n = Math.trunc(Number(v))
+    <span class="t-k">if</span> (s.value.minimum != <span class="t-k">null</span>) n = Math.max(s.value.minimum, n)
+    <span class="t-k">if</span> (s.value.maximum != <span class="t-k">null</span>) n = Math.min(s.value.maximum, n)
+    model.value = n
+  },
+})
+<span class="t-c">// Dates: the picker gives local time; the API wants ISO 8601 with an offset.</span>
+<span class="t-k">const</span> dateValue = computed({
+  get: () =&gt; {
+    <span class="t-k">if</span> (!model.value) <span class="t-k">return</span> <span class="t-s">''</span>
+    <span class="t-k">const</span> d = <span class="t-k">new</span> Date(String(model.value))
+    <span class="t-k">if</span> (Number.isNaN(d.getTime())) <span class="t-k">return</span> <span class="t-s">''</span>
+    <span class="t-k">return</span> <span class="t-k">new</span> Date(d.getTime() - d.getTimezoneOffset() * <span class="t-n">60000</span>).toISOString().slice(<span class="t-n">0</span>, <span class="t-n">16</span>)
+  },
+  set: (v: string) =&gt; { model.value = v ? <span class="t-k">new</span> Date(v).toISOString() : <span class="t-k">undefined</span> },
+})
+<span class="t-c">// Arrays of ids: multi-select from real records.</span>
+<span class="t-k">const</span> multiValue = computed({
+  get: () =&gt; (Array.isArray(model.value) ? model.value.map(String) : []),
+  set: (v: string[]) =&gt; { model.value = v.length ? v : <span class="t-k">undefined</span> },
+})
+<span class="t-k">const</span> textValue = computed({
+  get: () =&gt; (model.value === <span class="t-k">undefined</span> || model.value === <span class="t-k">null</span> ? <span class="t-s">''</span> : String(model.value)),
+  set: (v: string) =&gt; { model.value = v === <span class="t-s">''</span> ? <span class="t-k">undefined</span> : v },
+})
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;select v-<span class="t-k">if</span>=<span class="t-s">"choices"</span> v-model=<span class="t-s">"choiceValue"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span>&gt;
+    &lt;option value=<span class="t-s">""</span>&gt;{{ required ? <span class="t-s">'— choose —'</span> : <span class="t-s">'— not set —'</span> }}&lt;/option&gt;
+    &lt;option v-<span class="t-k">for</span>=<span class="t-s">"c in choices"</span> :key=<span class="t-s">"c"</span> :value=<span class="t-s">"c"</span>&gt;{{ c }}&lt;/option&gt;
+  &lt;/select&gt;
+  &lt;select v-<span class="t-k">else</span>-<span class="t-k">if</span>=<span class="t-s">"isArray &amp;&amp; options.length"</span> v-model=<span class="t-s">"multiValue"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input docs-multi"</span> multiple&gt;
+    &lt;option v-<span class="t-k">for</span>=<span class="t-s">"o in options"</span> :key=<span class="t-s">"o.value"</span> :value=<span class="t-s">"o.value"</span>&gt;{{ o.label }}&lt;/option&gt;
+  &lt;/select&gt;
+  &lt;select v-<span class="t-k">else</span>-<span class="t-k">if</span>=<span class="t-s">"options.length"</span> v-model=<span class="t-s">"textValue"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span>&gt;
+    &lt;option value=<span class="t-s">""</span>&gt;{{ required ? <span class="t-s">'— choose —'</span> : <span class="t-s">'— not set —'</span> }}&lt;/option&gt;
+    &lt;option v-<span class="t-k">for</span>=<span class="t-s">"o in options"</span> :key=<span class="t-s">"o.value"</span> :value=<span class="t-s">"o.value"</span>&gt;{{ o.label }}&lt;/option&gt;
+  &lt;/select&gt;
+  &lt;input
+    v-<span class="t-k">else</span>-<span class="t-k">if</span>=<span class="t-s">"s.type === 'integer' || s.type === 'number'"</span> v-model.lazy=<span class="t-s">"numValue"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> <span class="t-k">type</span>=<span class="t-s">"number"</span>
+    :min=<span class="t-s">"s.minimum"</span> :max=<span class="t-s">"s.maximum"</span> :placeholder=<span class="t-s">"String(s.example ?? '')"</span>
+  &gt;
+  &lt;input v-<span class="t-k">else</span>-<span class="t-k">if</span>=<span class="t-s">"s.format === 'date-time'"</span> v-model=<span class="t-s">"dateValue"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> <span class="t-k">type</span>=<span class="t-s">"datetime-local"</span>&gt;
+  &lt;input v-<span class="t-k">else</span>-<span class="t-k">if</span>=<span class="t-s">"!isArray"</span> v-model=<span class="t-s">"textValue"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> :maxlength=<span class="t-s">"s.maxLength"</span> :placeholder=<span class="t-s">"String(s.example ?? '')"</span>&gt;
+  &lt;span v-<span class="t-k">else</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-hint"</span>&gt;edit <span class="t-k">in</span> the JSON box below&lt;/span&gt;
+&lt;/template&gt;</code></pre></figure>
+<ul>
+  <li><code>defineProps</code> declares what the parent passes in; <code>defineModel</code> makes <code>v-model</code> work on this component.</li>
+  <li>The template is a chain of <code>v-if / v-else-if</code>: fixed choices → dropdown; list of IDs → multi-select; known record list → dropdown; number → number box clamped to its min and max; date-time → date picker; otherwise plain text.</li>
+  <li>The <code>computed({ get, set })</code> blocks convert between what the user types and what the API needs (for example a local date-time becomes an ISO 8601 string with an offset, which chapter 12's Zod shapes demand).</li>
+</ul>
+<p>Now the three pieces of the page chrome. <code>app/components/docs/Topbar.vue</code>, with the light/dark switch:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/components/docs/Topbar.vue</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>&lt;script setup lang=<span class="t-s">"ts"</span>&gt;
+<span class="t-k">const</span> emit = <span class="t-k">defineEmits</span>&lt;{ <span class="t-s">'toggle-nav'</span>: [] }&gt;()
+
+<span class="t-k">const</span> light = ref(<span class="t-k">false</span>)
+onMounted(() =&gt; { light.value = document.documentElement.classList.contains(<span class="t-s">'docs-light'</span>) })
+<span class="t-k">function</span> toggle() {
+  light.value = !light.value
+  document.documentElement.classList.toggle(<span class="t-s">'docs-light'</span>, light.value)
+  <span class="t-k">try</span> { localStorage.setItem(<span class="t-s">'clautverse-docs-theme'</span>, light.value ? <span class="t-s">'light'</span> : <span class="t-s">'dark'</span>) } <span class="t-k">catch</span> {}
+}
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;header <span class="t-k">class</span>=<span class="t-s">"docs-top"</span>&gt;
+    &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-top-left"</span>&gt;
+      &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-icon-btn docs-burger"</span> aria-label=<span class="t-s">"Toggle navigation"</span> @click=<span class="t-s">"emit('toggle-nav')"</span>&gt;
+        &lt;svg width=<span class="t-s">"18"</span> height=<span class="t-s">"18"</span> viewBox=<span class="t-s">"0 0 24 24"</span> fill=<span class="t-s">"none"</span> stroke=<span class="t-s">"currentColor"</span> stroke-width=<span class="t-s">"2"</span>&gt;&lt;path d=<span class="t-s">"M3 6h18M3 12h18M3 18h18"</span> /&gt;&lt;/svg&gt;
+      &lt;/button&gt;
+      &lt;NuxtLink to=<span class="t-s">"/"</span> <span class="t-k">class</span>=<span class="t-s">"docs-logo"</span> aria-label=<span class="t-s">"Clautverse API Explorer"</span>&gt;
+        &lt;img src=<span class="t-s">"/clautverse-ghost.png"</span> alt=<span class="t-s">""</span> <span class="t-k">class</span>=<span class="t-s">"docs-logo-img"</span>&gt;
+        &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-logo-text"</span>&gt;Clautverse &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-logo-sub"</span>&gt;API&lt;/span&gt;&lt;/span&gt;
+      &lt;/NuxtLink&gt;
+    &lt;/div&gt;
+    &lt;div /&gt;
+    &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-top-right"</span>&gt;
+      &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-icon-btn"</span> :aria-label=<span class="t-s">"light ? 'Switch to dark theme' : 'Switch to light theme'"</span> @click=<span class="t-s">"toggle"</span>&gt;
+        &lt;svg v-<span class="t-k">if</span>=<span class="t-s">"light"</span> width=<span class="t-s">"16"</span> height=<span class="t-s">"16"</span> viewBox=<span class="t-s">"0 0 24 24"</span> fill=<span class="t-s">"none"</span> stroke=<span class="t-s">"currentColor"</span> stroke-width=<span class="t-s">"2"</span>&gt;&lt;path d=<span class="t-s">"M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"</span> /&gt;&lt;/svg&gt;
+        &lt;svg v-<span class="t-k">else</span> width=<span class="t-s">"16"</span> height=<span class="t-s">"16"</span> viewBox=<span class="t-s">"0 0 24 24"</span> fill=<span class="t-s">"none"</span> stroke=<span class="t-s">"currentColor"</span> stroke-width=<span class="t-s">"2"</span>&gt;&lt;circle cx=<span class="t-s">"12"</span> cy=<span class="t-s">"12"</span> r=<span class="t-s">"4"</span> /&gt;&lt;path d=<span class="t-s">"M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"</span> /&gt;&lt;/svg&gt;
+      &lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/header&gt;
+&lt;/template&gt;</code></pre></figure>
+<p><code>app/components/docs/Sidebar.vue</code>, a link per tag:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/components/docs/Sidebar.vue</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>&lt;script setup lang=<span class="t-s">"ts"</span>&gt;
+<span class="t-c">// Left rail: one link per API tag, jumping to that group on the page.</span>
+<span class="t-k">defineProps</span>&lt;{ groups: { tag: string, items: unknown[] }[], open?: boolean }&gt;()
+<span class="t-k">const</span> emit = <span class="t-k">defineEmits</span>&lt;{ navigate: [] }&gt;()
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;aside <span class="t-k">class</span>=<span class="t-s">"docs-side"</span> :<span class="t-k">class</span>=<span class="t-s">"{ open }"</span>&gt;
+    &lt;nav <span class="t-k">class</span>=<span class="t-s">"docs-nav"</span> aria-label=<span class="t-s">"API groups"</span>&gt;
+      &lt;h2 <span class="t-k">class</span>=<span class="t-s">"docs-nav-title"</span>&gt;API groups&lt;/h2&gt;
+      &lt;a
+        v-<span class="t-k">for</span>=<span class="t-s">"g in groups"</span> :key=<span class="t-s">"g.tag"</span>
+        :href=<span class="t-s">"`#tag-${g.tag}`"</span>
+        <span class="t-k">class</span>=<span class="t-s">"docs-nav-link"</span>
+        @click=<span class="t-s">"emit('navigate')"</span>
+      &gt;{{ g.tag }} &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-api-count"</span>&gt;{{ g.items.length }}&lt;/span&gt;&lt;/a&gt;
+    &lt;/nav&gt;
+  &lt;/aside&gt;
+&lt;/template&gt;</code></pre></figure>
+<p><code>app/components/docs/AuthPanel.vue</code>, the sign-in strip. It calls the real Better Auth endpoints from chapter 8 (<code>/api/auth/sign-in/email</code>, <code>/sign-up/email</code>, <code>/sign-out</code>, <code>/get-session</code>):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/components/docs/AuthPanel.vue</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>&lt;script setup lang=<span class="t-s">"ts"</span>&gt;
+<span class="t-c">// Session strip for the API Explorer — signs in/out and signs up through the</span>
+<span class="t-c">// real Better Auth routes so every Try-it request runs as a real user.</span>
+<span class="t-k">const</span> session = ref&lt;{ user?: { email?: string, name?: string } } | <span class="t-k">null</span>&gt;(<span class="t-k">null</span>)
+<span class="t-k">const</span> mode = ref&lt;<span class="t-s">'in'</span> | <span class="t-s">'up'</span>&gt;(<span class="t-s">'in'</span>)
+<span class="t-k">const</span> email = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> password = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> name = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> username = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> dob = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> terms = ref(<span class="t-k">false</span>)
+<span class="t-k">const</span> error = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> notice = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> busy = ref(<span class="t-k">false</span>)
+
+<span class="t-k">async</span> <span class="t-k">function</span> refresh() {
+  <span class="t-k">try</span> { session.value = <span class="t-k">await</span> $fetch&lt;<span class="t-k">typeof</span> session.value, string&gt;(<span class="t-s">'/api/auth/get-session'</span>, { credentials: <span class="t-s">'same-origin'</span> }) }
+  <span class="t-k">catch</span> { session.value = <span class="t-k">null</span> }
+  reloadLookups()
+}
+onMounted(refresh)
+
+<span class="t-k">async</span> <span class="t-k">function</span> signIn() {
+  busy.value = <span class="t-k">true</span>
+  error.value = <span class="t-s">''</span>
+  <span class="t-k">try</span> {
+    <span class="t-k">await</span> $fetch(<span class="t-s">'/api/auth/sign-in/email'</span>, {
+      method: <span class="t-s">'POST'</span>,
+      body: { email: email.value, password: password.value },
+      credentials: <span class="t-s">'same-origin'</span>,
+    })
+    password.value = <span class="t-s">''</span>
+    <span class="t-k">await</span> refresh()
+  }
+  <span class="t-k">catch</span> (e: unknown) {
+    error.value = (e <span class="t-k">as</span> { data?: { message?: string } })?.data?.message ?? <span class="t-s">'Sign-in failed'</span>
+  }
+  <span class="t-k">finally</span> { busy.value = <span class="t-k">false</span> }
+}
+
+<span class="t-k">async</span> <span class="t-k">function</span> signUp() {
+  busy.value = <span class="t-k">true</span>
+  error.value = <span class="t-s">''</span>
+  notice.value = <span class="t-s">''</span>
+  <span class="t-k">try</span> {
+    <span class="t-k">await</span> $fetch(<span class="t-s">'/api/auth/sign-up/email'</span>, {
+      method: <span class="t-s">'POST'</span>,
+      body: {
+        email: email.value, password: password.value, name: name.value,
+        username: username.value, dateOfBirth: dob.value, acceptTerms: terms.value,
+      },
+      credentials: <span class="t-s">'same-origin'</span>,
+    })
+    notice.value = <span class="t-s">'Account created — verify the email (dev: click the link in the dev console, or set email_verified=true in the DB), then sign in.'</span>
+    mode.value = <span class="t-s">'in'</span>
+  }
+  <span class="t-k">catch</span> (e: unknown) {
+    error.value = (e <span class="t-k">as</span> { data?: { message?: string } })?.data?.message ?? <span class="t-s">'Sign-up failed'</span>
+  }
+  <span class="t-k">finally</span> { busy.value = <span class="t-k">false</span> }
+}
+
+<span class="t-k">async</span> <span class="t-k">function</span> signOut() {
+  <span class="t-k">await</span> $fetch(<span class="t-s">'/api/auth/sign-out'</span>, { method: <span class="t-s">'POST'</span>, credentials: <span class="t-s">'same-origin'</span> }).<span class="t-k">catch</span>(() =&gt; {})
+  <span class="t-k">await</span> refresh()
+}
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-authbar"</span>&gt;
+    &lt;template v-<span class="t-k">if</span>=<span class="t-s">"session?.user"</span>&gt;
+      &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-authbar-dot on"</span> /&gt;
+      &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-authbar-text"</span>&gt;Signed <span class="t-k">in</span> <span class="t-k">as</span> &lt;strong&gt;{{ session.user.email ?? session.user.name }}&lt;/strong&gt;&lt;/span&gt;
+      &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-mini-btn"</span> @click=<span class="t-s">"signOut"</span>&gt;Sign out&lt;/button&gt;
+    &lt;/template&gt;
+    &lt;template v-<span class="t-k">else</span>&gt;
+      &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-authbar-dot"</span> /&gt;
+      &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-authbar-text"</span>&gt;Signed out — requests run unauthenticated&lt;/span&gt;
+      &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-authbar-tabs"</span>&gt;
+        &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-mini-btn"</span> :<span class="t-k">class</span>=<span class="t-s">"{ on: mode === 'in' }"</span> @click=<span class="t-s">"mode = 'in'"</span>&gt;Sign <span class="t-k">in</span>&lt;/button&gt;
+        &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-mini-btn"</span> :<span class="t-k">class</span>=<span class="t-s">"{ on: mode === 'up' }"</span> @click=<span class="t-s">"mode = 'up'"</span>&gt;Sign up&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;template v-<span class="t-k">if</span>=<span class="t-s">"mode === 'in'"</span>&gt;
+        &lt;input v-model=<span class="t-s">"email"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> <span class="t-k">type</span>=<span class="t-s">"email"</span> placeholder=<span class="t-s">"email"</span> autocomplete=<span class="t-s">"email"</span> style=<span class="t-s">"width: 11rem"</span>&gt;
+        &lt;input v-model=<span class="t-s">"password"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> <span class="t-k">type</span>=<span class="t-s">"password"</span> placeholder=<span class="t-s">"password"</span> autocomplete=<span class="t-s">"current-password"</span> style=<span class="t-s">"width: 9rem"</span> @keyup.enter=<span class="t-s">"signIn"</span>&gt;
+        &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-send-btn"</span> :disabled=<span class="t-s">"busy || !email || !password"</span> @click=<span class="t-s">"signIn"</span>&gt;{{ busy ? <span class="t-s">'…'</span> : <span class="t-s">'Sign in'</span> }}&lt;/button&gt;
+      &lt;/template&gt;
+      &lt;template v-<span class="t-k">else</span>&gt;
+        &lt;input v-model=<span class="t-s">"email"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> <span class="t-k">type</span>=<span class="t-s">"email"</span> placeholder=<span class="t-s">"email"</span> style=<span class="t-s">"width: 10rem"</span>&gt;
+        &lt;input v-model=<span class="t-s">"password"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> <span class="t-k">type</span>=<span class="t-s">"password"</span> placeholder=<span class="t-s">"password (8+)"</span> autocomplete=<span class="t-s">"new-password"</span> style=<span class="t-s">"width: 7rem"</span>&gt;
+        &lt;input v-model=<span class="t-s">"name"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> placeholder=<span class="t-s">"name"</span> style=<span class="t-s">"width: 7rem"</span>&gt;
+        &lt;input v-model=<span class="t-s">"username"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> placeholder=<span class="t-s">"username (a-z0-9_)"</span> style=<span class="t-s">"width: 9rem"</span>&gt;
+        &lt;input v-model=<span class="t-s">"dob"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> <span class="t-k">type</span>=<span class="t-s">"date"</span> title=<span class="t-s">"date of birth"</span> style=<span class="t-s">"width: 8.5rem"</span>&gt;
+        &lt;label <span class="t-k">class</span>=<span class="t-s">"docs-authbar-terms"</span>&gt;&lt;input v-model=<span class="t-s">"terms"</span> <span class="t-k">type</span>=<span class="t-s">"checkbox"</span>&gt; <span class="t-n">18</span>+&lt;/label&gt;
+        &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-send-btn"</span> :disabled=<span class="t-s">"busy || !email || !password || !name || !username || !dob || !terms"</span> @click=<span class="t-s">"signUp"</span>&gt;{{ busy ? <span class="t-s">'…'</span> : <span class="t-s">'Sign up'</span> }}&lt;/button&gt;
+      &lt;/template&gt;
+      &lt;span v-<span class="t-k">if</span>=<span class="t-s">"error"</span> <span class="t-k">class</span>=<span class="t-s">"docs-response-err"</span>&gt;{{ error }}&lt;/span&gt;
+      &lt;span v-<span class="t-k">if</span>=<span class="t-s">"notice"</span> <span class="t-k">class</span>=<span class="t-s">"docs-authbar-note"</span>&gt;{{ notice }}&lt;/span&gt;
+    &lt;/template&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p><code>credentials: 'same-origin'</code> tells the browser to attach the session cookie to requests to our own site. This is also why the page needs no tokens in code: the cookie is the login.</p>
+</aside>
+
+<h2 id="step-3-the-endpoint-card">Step 3: the endpoint card<a class="anchor" href="#step-3-the-endpoint-card" aria-label="Link to this section">#</a></h2>
+<p>The biggest component. Create <code>app/components/ApiEndpoint.vue</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/components/ApiEndpoint.vue</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>&lt;script setup lang=<span class="t-s">"ts"</span>&gt;
+<span class="t-c">// Interactive endpoint card used by the API Explorer page. Looks the</span>
+<span class="t-c">// operation up in the OpenAPI spec, renders inputs, and sends a real</span>
+<span class="t-c">// same-origin request (session cookie included).</span>
+<span class="t-k">const</span> props = <span class="t-k">defineProps</span>&lt;{ method: string, path: string }&gt;()
+
+<span class="t-k">const</span> { data: spec } = useOpenApi()
+<span class="t-k">const</span> op = computed(() =&gt;
+  specOperations(spec.value).find(
+    o =&gt; o.method === props.method.toLowerCase() &amp;&amp; o.path === props.path,
+  ),
+)
+
+<span class="t-k">const</span> pathParams = computed(() =&gt; op.value?.parameters.filter(p =&gt; p.<span class="t-k">in</span> === <span class="t-s">'path'</span>) ?? [])
+<span class="t-k">const</span> queryParams = computed(() =&gt; op.value?.parameters.filter(p =&gt; p.<span class="t-k">in</span> === <span class="t-s">'query'</span>) ?? [])
+<span class="t-k">const</span> headerParams = computed(() =&gt; op.value?.parameters.filter(p =&gt; p.<span class="t-k">in</span> === <span class="t-s">'header'</span>) ?? [])
+<span class="t-k">const</span> hasBody = computed(() =&gt; !!op.value?.body)
+<span class="t-k">const</span> fields = computed(() =&gt; bodyFields(op.value?.body?.schema))
+<span class="t-k">const</span> sample = (v: unknown) =&gt; (v === <span class="t-k">undefined</span> || v === <span class="t-s">''</span> ? <span class="t-s">''</span> : String(v))
+<span class="t-k">const</span> leaf = (name: string) =&gt; name.split(<span class="t-s">'.'</span>).pop()!
+
+<span class="t-k">const</span> pathValues = reactive&lt;Record&lt;string, unknown&gt;&gt;({})
+<span class="t-k">const</span> queryValues = reactive&lt;Record&lt;string, unknown&gt;&gt;({})
+<span class="t-k">const</span> headerValues = reactive&lt;Record&lt;string, string&gt;&gt;({})
+<span class="t-k">const</span> bodyText = ref(<span class="t-s">''</span>)
+
+<span class="t-c">// Body form ⇄ JSON box: editing either one updates the other.</span>
+<span class="t-k">const</span> bodyObj = ref&lt;Record&lt;string, unknown&gt;&gt;({})
+<span class="t-k">function</span> getField(name: string) {
+  <span class="t-k">return</span> name.split(<span class="t-s">'.'</span>).reduce&lt;unknown&gt;((o, k) =&gt; (o <span class="t-k">as</span> Record&lt;string, unknown&gt; | <span class="t-k">undefined</span>)?.[k], bodyObj.value)
+}
+<span class="t-k">function</span> setField(name: string, value: unknown) {
+  <span class="t-k">const</span> keys = name.split(<span class="t-s">'.'</span>)
+  <span class="t-k">const</span> next = structuredClone(toRaw(bodyObj.value))
+  <span class="t-k">let</span> o = next <span class="t-k">as</span> Record&lt;string, unknown&gt;
+  <span class="t-k">for</span> (<span class="t-k">const</span> k <span class="t-k">of</span> keys.slice(<span class="t-n">0</span>, -<span class="t-n">1</span>)) o = (o[k] ??= {}) <span class="t-k">as</span> Record&lt;string, unknown&gt;
+  <span class="t-k">if</span> (value === <span class="t-k">undefined</span>) delete o[keys.at(-<span class="t-n">1</span>)!]
+  <span class="t-k">else</span> o[keys.at(-<span class="t-n">1</span>)!] = value
+  bodyObj.value = next
+  bodyText.value = Object.keys(next).length ? JSON.stringify(next, <span class="t-k">null</span>, <span class="t-n">2</span>) : <span class="t-s">''</span>
+}
+watch(bodyText, (txt) =&gt; {
+  <span class="t-k">try</span> { <span class="t-k">const</span> v = txt.trim() ? JSON.parse(txt) : {}; <span class="t-k">if</span> (v &amp;&amp; <span class="t-k">typeof</span> v === <span class="t-s">'object'</span>) bodyObj.value = v }
+  <span class="t-k">catch</span> {}
+})
+<span class="t-k">const</span> open = ref(<span class="t-k">false</span>)
+
+<span class="t-k">interface</span> Result { status: number, ms: number, body: string, error?: string }
+<span class="t-k">const</span> result = ref&lt;Result | <span class="t-k">null</span>&gt;(<span class="t-k">null</span>)
+<span class="t-k">const</span> sending = ref(<span class="t-k">false</span>)
+
+<span class="t-k">function</span> generateIdemKey() {
+  headerValues[<span class="t-s">'Idempotency-Key'</span>] = globalThis.crypto.randomUUID()
+}
+
+<span class="t-c">// Fills every input with the contract's sample values. Sample ids are fake:</span>
+<span class="t-c">// swap them for real ids from a GET response before sending.</span>
+<span class="t-k">function</span> fillSamples() {
+  <span class="t-k">for</span> (<span class="t-k">const</span> p <span class="t-k">of</span> pathParams.value) pathValues[p.name] = firstReal(p.name) ?? p.schema?.example
+  <span class="t-k">for</span> (<span class="t-k">const</span> p <span class="t-k">of</span> queryParams.value) queryValues[p.name] = p.schema?.example === <span class="t-s">''</span> ? <span class="t-k">undefined</span> : p.schema?.example
+  <span class="t-k">for</span> (<span class="t-k">const</span> p <span class="t-k">of</span> headerParams.value) headerValues[p.name] = sample(p.schema?.example)
+  <span class="t-k">if</span> (op.value?.body?.example) {
+    <span class="t-k">const</span> ex = structuredClone(op.value.body.example) <span class="t-k">as</span> Record&lt;string, unknown&gt;
+    <span class="t-c">// Prefer a real record over the made-up uuid where we can look one up.</span>
+    <span class="t-k">for</span> (<span class="t-k">const</span> k <span class="t-k">of</span> Object.keys(ex)) {
+      <span class="t-k">const</span> real = firstReal(k)
+      <span class="t-k">if</span> (real) ex[k] = Array.isArray(ex[k]) ? [real] : real
+    }
+    bodyText.value = JSON.stringify(ex, <span class="t-k">null</span>, <span class="t-n">2</span>)
+  }
+}
+<span class="t-k">function</span> firstReal(field: string) {
+  <span class="t-k">return</span> useLookup(lookupUrl(field, props.path)).value[<span class="t-n">0</span>]?.value
+}
+
+<span class="t-k">function</span> resolvedPath() {
+  <span class="t-k">let</span> p = props.path
+  <span class="t-k">for</span> (<span class="t-k">const</span> [k, v] <span class="t-k">of</span> Object.entries(pathValues)) p = p.replaceAll(<span class="t-s">`{${k}}`</span>, v ? encodeURIComponent(String(v)) : <span class="t-s">`{${k}}`</span>)
+  <span class="t-k">const</span> qs = Object.entries(queryValues).filter(([, v]) =&gt; v !== <span class="t-s">''</span> &amp;&amp; v !== <span class="t-k">undefined</span>).map(([k, v]) =&gt; <span class="t-s">`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`</span>)
+  <span class="t-k">return</span> qs.length ? <span class="t-s">`${p}?${qs.join('&amp;')}`</span> : p
+}
+
+<span class="t-k">async</span> <span class="t-k">function</span> send() {
+  sending.value = <span class="t-k">true</span>
+  result.value = <span class="t-k">null</span>
+  <span class="t-k">const</span> headers: Record&lt;string, string&gt; = {}
+  <span class="t-k">for</span> (<span class="t-k">const</span> [k, v] <span class="t-k">of</span> Object.entries(headerValues)) <span class="t-k">if</span> (v) headers[k] = v
+  <span class="t-k">let</span> body: string | <span class="t-k">undefined</span>
+  <span class="t-k">if</span> (hasBody.value &amp;&amp; bodyText.value.trim()) {
+    headers[<span class="t-s">'Content-Type'</span>] = <span class="t-s">'application/json'</span>
+    body = bodyText.value
+  }
+  <span class="t-k">const</span> started = performance.now()
+  <span class="t-k">try</span> {
+    <span class="t-k">const</span> res = <span class="t-k">await</span> fetch(resolvedPath(), {
+      method: props.method.toUpperCase(),
+      headers,
+      body,
+      credentials: <span class="t-s">'same-origin'</span>,
+    })
+    <span class="t-k">const</span> text = <span class="t-k">await</span> res.text()
+    <span class="t-k">let</span> pretty = text
+    <span class="t-k">try</span> { pretty = JSON.stringify(JSON.parse(text), <span class="t-k">null</span>, <span class="t-n">2</span>) } <span class="t-k">catch</span> {}
+    result.value = { status: res.status, ms: Math.round(performance.now() - started), body: pretty }
+  }
+  <span class="t-k">catch</span> (e) {
+    result.value = { status: <span class="t-n">0</span>, ms: Math.round(performance.now() - started), body: <span class="t-s">''</span>, error: e instanceof Error ? e.message : <span class="t-s">'Request failed'</span> }
+  }
+  <span class="t-k">finally</span> { sending.value = <span class="t-k">false</span> }
+}
+
+<span class="t-k">const</span> statusClass = computed(() =&gt; {
+  <span class="t-k">const</span> s = result.value?.status ?? <span class="t-n">0</span>
+  <span class="t-k">if</span> (s &gt;= <span class="t-n">200</span> &amp;&amp; s &lt; <span class="t-n">300</span>) <span class="t-k">return</span> <span class="t-s">'ok'</span>
+  <span class="t-k">if</span> (s &gt;= <span class="t-n">400</span> &amp;&amp; s &lt; <span class="t-n">500</span>) <span class="t-k">return</span> <span class="t-s">'client-err'</span>
+  <span class="t-k">if</span> (s &gt;= <span class="t-n">500</span> || s === <span class="t-n">0</span>) <span class="t-k">return</span> <span class="t-s">'server-err'</span>
+  <span class="t-k">return</span> <span class="t-s">''</span>
+})
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-endpoint"</span> :<span class="t-k">class</span>=<span class="t-s">"{ open }"</span>&gt;
+    &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-endpoint-head"</span> @click=<span class="t-s">"open = !open"</span>&gt;
+      &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-method"</span> :<span class="t-k">class</span>=<span class="t-s">"method.toLowerCase()"</span>&gt;{{ method.toUpperCase() }}&lt;/span&gt;
+      &lt;code <span class="t-k">class</span>=<span class="t-s">"docs-endpoint-path"</span>&gt;{{ path }}&lt;/code&gt;
+      &lt;span v-<span class="t-k">if</span>=<span class="t-s">"op?.status"</span> <span class="t-k">class</span>=<span class="t-s">"docs-badge"</span> :<span class="t-k">class</span>=<span class="t-s">"{ warn: op.status !== 'implemented' }"</span>&gt;{{ op.status }}&lt;/span&gt;
+      &lt;span v-<span class="t-k">if</span>=<span class="t-s">"op?.routeId"</span> <span class="t-k">class</span>=<span class="t-s">"docs-route-id"</span>&gt;{{ op.routeId }}&lt;/span&gt;
+      &lt;svg <span class="t-k">class</span>=<span class="t-s">"docs-chevron"</span> :<span class="t-k">class</span>=<span class="t-s">"{ open }"</span> width=<span class="t-s">"14"</span> height=<span class="t-s">"14"</span> viewBox=<span class="t-s">"0 0 24 24"</span> fill=<span class="t-s">"none"</span> stroke=<span class="t-s">"currentColor"</span> stroke-width=<span class="t-s">"2"</span>&gt;&lt;path d=<span class="t-s">"m6 9 6 6 6-6"</span> /&gt;&lt;/svg&gt;
+    &lt;/button&gt;
+
+    &lt;div v-<span class="t-k">if</span>=<span class="t-s">"open"</span> <span class="t-k">class</span>=<span class="t-s">"docs-endpoint-body"</span>&gt;
+      &lt;p v-<span class="t-k">if</span>=<span class="t-s">"op?.summary"</span> <span class="t-k">class</span>=<span class="t-s">"docs-endpoint-summary"</span>&gt;{{ op.summary }}&lt;/p&gt;
+      &lt;p v-<span class="t-k">if</span>=<span class="t-s">"!op"</span> <span class="t-k">class</span>=<span class="t-s">"docs-endpoint-summary"</span>&gt;Not found <span class="t-k">in</span> openapi/clautverse.yaml.&lt;/p&gt;
+
+      &lt;div v-<span class="t-k">if</span>=<span class="t-s">"op?.services.length"</span> <span class="t-k">class</span>=<span class="t-s">"docs-services"</span>&gt;
+        &lt;span v-<span class="t-k">for</span>=<span class="t-s">"s in op.services"</span> :key=<span class="t-s">"s"</span> <span class="t-k">class</span>=<span class="t-s">"docs-service-chip"</span>&gt;{{ s }}&lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;div v-<span class="t-k">if</span>=<span class="t-s">"pathParams.length || queryParams.length"</span> <span class="t-k">class</span>=<span class="t-s">"docs-params"</span>&gt;
+        &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-params-title"</span>&gt;Parameters&lt;/p&gt;
+        &lt;label v-<span class="t-k">for</span>=<span class="t-s">"p in pathParams"</span> :key=<span class="t-s">"`p-${p.name}`"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-row"</span>&gt;
+          &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-param-name"</span>&gt;{{ p.name }} &lt;em&gt;path{{ p.required ? <span class="t-s">' · required'</span> : <span class="t-s">''</span> }}&lt;/em&gt;&lt;/span&gt;
+          &lt;FieldInput v-model=<span class="t-s">"pathValues[p.name]"</span> :name=<span class="t-s">"p.name"</span> :schema=<span class="t-s">"p.schema"</span> :required=<span class="t-s">"p.required"</span> :path=<span class="t-s">"path"</span> /&gt;
+          &lt;small <span class="t-k">class</span>=<span class="t-s">"docs-param-hint"</span>&gt;{{ describeSchema(p.schema) }}&lt;template v-<span class="t-k">if</span>=<span class="t-s">"p.schema?.description"</span>&gt; — {{ p.schema.description }}&lt;/template&gt;&lt;/small&gt;
+        &lt;/label&gt;
+        &lt;label v-<span class="t-k">for</span>=<span class="t-s">"p in queryParams"</span> :key=<span class="t-s">"`q-${p.name}`"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-row"</span>&gt;
+          &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-param-name"</span>&gt;{{ p.name }} &lt;em&gt;query{{ p.required ? <span class="t-s">' · required'</span> : <span class="t-s">''</span> }}&lt;/em&gt;&lt;/span&gt;
+          &lt;FieldInput v-model=<span class="t-s">"queryValues[p.name]"</span> :name=<span class="t-s">"p.name"</span> :schema=<span class="t-s">"p.schema"</span> :required=<span class="t-s">"p.required"</span> /&gt;
+          &lt;small <span class="t-k">class</span>=<span class="t-s">"docs-param-hint"</span>&gt;{{ describeSchema(p.schema) }}&lt;template v-<span class="t-k">if</span>=<span class="t-s">"p.schema?.description"</span>&gt; — {{ p.schema.description }}&lt;/template&gt;&lt;/small&gt;
+        &lt;/label&gt;
+      &lt;/div&gt;
+
+      &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-params"</span>&gt;
+        &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-params-title"</span>&gt;Headers&lt;/p&gt;
+        &lt;label v-<span class="t-k">for</span>=<span class="t-s">"h in headerParams"</span> :key=<span class="t-s">"`h-${h.name}`"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-row"</span>&gt;
+          &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-param-name"</span>&gt;{{ h.name }} &lt;em&gt;header{{ h.required ? <span class="t-s">' · required'</span> : <span class="t-s">' · optional'</span> }}&lt;/em&gt;&lt;/span&gt;
+          &lt;span style=<span class="t-s">"display: flex; gap: 0.5rem"</span>&gt;
+            &lt;input v-model=<span class="t-s">"headerValues[h.name]"</span> <span class="t-k">class</span>=<span class="t-s">"docs-param-input"</span> style=<span class="t-s">"flex: 1"</span> :placeholder=<span class="t-s">"sample(h.schema?.example)"</span>&gt;
+            &lt;button v-<span class="t-k">if</span>=<span class="t-s">"h.name === 'Idempotency-Key'"</span> <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-mini-btn"</span> @click=<span class="t-s">"generateIdemKey"</span>&gt;Generate&lt;/button&gt;
+          &lt;/span&gt;
+          &lt;small <span class="t-k">class</span>=<span class="t-s">"docs-param-hint"</span>&gt;{{ h.description }}&lt;/small&gt;
+        &lt;/label&gt;
+        &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-param-hint"</span>&gt;
+          &lt;code&gt;Content-Type: application/json&lt;/code&gt;&lt;template v-<span class="t-k">if</span>=<span class="t-s">"hasBody"</span>&gt; is added <span class="t-k">for</span> you.&lt;/template&gt;&lt;template v-<span class="t-k">else</span>&gt; is not needed (no body).&lt;/template&gt;
+          Your session cookie is sent automatically once you sign <span class="t-k">in</span> above.
+        &lt;/p&gt;
+      &lt;/div&gt;
+
+      &lt;div v-<span class="t-k">if</span>=<span class="t-s">"hasBody"</span>&gt;
+        &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-params-title"</span>&gt;Body &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-hint"</span>&gt;(JSON{{ op?.body?.required ? <span class="t-s">''</span> : <span class="t-s">' · optional'</span> }})&lt;/span&gt;&lt;/p&gt;
+        &lt;table v-<span class="t-k">if</span>=<span class="t-s">"fields.length"</span> <span class="t-k">class</span>=<span class="t-s">"docs-fields"</span>&gt;
+          &lt;thead&gt;&lt;tr&gt;&lt;th&gt;Field&lt;/th&gt;&lt;th&gt;Rule · sample&lt;/th&gt;&lt;th&gt;Value&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+          &lt;tbody&gt;
+            &lt;tr v-<span class="t-k">for</span>=<span class="t-s">"f in fields"</span> :key=<span class="t-s">"f.name"</span>&gt;
+              &lt;td&gt;&lt;code&gt;{{ f.name }}&lt;/code&gt;&lt;em v-<span class="t-k">if</span>=<span class="t-s">"f.required"</span>&gt; required&lt;/em&gt;&lt;/td&gt;
+              &lt;td&gt;{{ f.rule }}&lt;br&gt;&lt;code&gt;{{ f.example }}&lt;/code&gt;&lt;template v-<span class="t-k">if</span>=<span class="t-s">"f.note"</span>&gt;&lt;br&gt;&lt;small&gt;{{ f.note }}&lt;/small&gt;&lt;/template&gt;&lt;/td&gt;
+              &lt;td&gt;&lt;FieldInput :model-value=<span class="t-s">"getField(f.name)"</span> :name=<span class="t-s">"leaf(f.name)"</span> :schema=<span class="t-s">"f.schema"</span> :required=<span class="t-s">"f.required"</span> @update:model-value=<span class="t-s">"setField(f.name, $event)"</span> /&gt;&lt;/td&gt;
+            &lt;/tr&gt;
+          &lt;/tbody&gt;
+        &lt;/table&gt;
+        &lt;textarea v-model=<span class="t-s">"bodyText"</span> <span class="t-k">class</span>=<span class="t-s">"docs-body-editor"</span> rows=<span class="t-s">"8"</span> spellcheck=<span class="t-s">"false"</span> :placeholder=<span class="t-s">"op?.body?.example ? JSON.stringify(op.body.example, null, 2) : '{}'"</span> /&gt;
+      &lt;/div&gt;
+
+      &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-param-hint"</span>&gt;
+        &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-mini-btn"</span> @click=<span class="t-s">"fillSamples"</span>&gt;Fill with sample data&lt;/button&gt;
+        Dropdowns list real records when the API returns some (sign <span class="t-k">in</span> first <span class="t-k">for</span> private lists). Anything left <span class="t-k">as</span> a made-up id will <span class="t-k">return</span> “not found”.
+      &lt;/p&gt;
+
+      &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-send-row"</span>&gt;
+        &lt;code <span class="t-k">class</span>=<span class="t-s">"docs-resolved"</span>&gt;{{ method.toUpperCase() }} {{ resolvedPath() }}&lt;/code&gt;
+        &lt;button <span class="t-k">type</span>=<span class="t-s">"button"</span> <span class="t-k">class</span>=<span class="t-s">"docs-send-btn"</span> :disabled=<span class="t-s">"sending"</span> @click=<span class="t-s">"send"</span>&gt;
+          {{ sending ? <span class="t-s">'Sending…'</span> : <span class="t-s">'Send request'</span> }}
+        &lt;/button&gt;
+      &lt;/div&gt;
+
+      &lt;div v-<span class="t-k">if</span>=<span class="t-s">"result"</span> <span class="t-k">class</span>=<span class="t-s">"docs-response"</span>&gt;
+        &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-response-meta"</span>&gt;
+          &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-status"</span> :<span class="t-k">class</span>=<span class="t-s">"statusClass"</span>&gt;{{ result.status || <span class="t-s">'ERR'</span> }}&lt;/span&gt;
+          &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-response-ms"</span>&gt;{{ result.ms }} ms&lt;/span&gt;
+        &lt;/p&gt;
+        &lt;pre v-<span class="t-k">if</span>=<span class="t-s">"result.body"</span> <span class="t-k">class</span>=<span class="t-s">"docs-response-body"</span>&gt;&lt;code&gt;{{ result.body }}&lt;/code&gt;&lt;/pre&gt;
+        &lt;p v-<span class="t-k">if</span>=<span class="t-s">"result.error"</span> <span class="t-k">class</span>=<span class="t-s">"docs-response-err"</span>&gt;{{ result.error }}&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre></figure>
+<ul>
+  <li><strong>Looking itself up.</strong> It receives only a <code>method</code> and <code>path</code>, finds its operation in the contract, and splits its parameters into path, query and header groups.</li>
+  <li><strong>Two ways to edit the body.</strong> The form fields and the JSON box stay in sync: <code>setField</code> writes into the object and re-prints the JSON; a <code>watch</code> on the JSON text parses it back when it is valid.</li>
+  <li><strong><code>fillSamples()</code></strong> fills every input with the contract's examples, replacing made-up IDs with real ones where <code>useLookup</code> has some.</li>
+  <li><strong><code>send()</code></strong> builds the final address (<code>resolvedPath</code> swaps <code>{id}</code> and appends the query string), sends it with the browser's <code>fetch</code>, and shows status, time and the pretty-printed answer. A status colour comes from <code>statusClass</code> (2xx ok, 4xx client error, 5xx or 0 server error).</li>
+  <li>The <code>Idempotency-Key</code> header gets a <strong>Generate</strong> button (chapter 12).</li>
+</ul>
+
+<h2 id="step-4-the-page-and-the-app-shell">Step 4: the page and the app shell<a class="anchor" href="#step-4-the-page-and-the-app-shell" aria-label="Link to this section">#</a></h2>
+<p><code>app/pages/index.vue</code> assembles everything. Create the <code>pages</code> folder first:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/pages/index.vue</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>&lt;script setup lang=<span class="t-s">"ts"</span>&gt;
+<span class="t-c">// API Explorer — the only page in this app. Lists every operation in</span>
+<span class="t-c">// openapi/clautverse.yaml and lets you send real requests as your session.</span>
+<span class="t-k">const</span> { data: spec } = useOpenApi()
+<span class="t-k">const</span> tagGroups = computed(() =&gt; groupByTag(specOperations(spec.value)))
+<span class="t-k">const</span> filter = ref(<span class="t-s">''</span>)
+<span class="t-k">const</span> navOpen = ref(<span class="t-k">false</span>)
+<span class="t-k">const</span> visible = computed(() =&gt; {
+  <span class="t-k">const</span> f = filter.value.trim().toLowerCase()
+  <span class="t-k">if</span> (!f) <span class="t-k">return</span> tagGroups.value
+  <span class="t-k">return</span> tagGroups.value
+    .map(g =&gt; ({ tag: g.tag, items: g.items.filter(o =&gt; <span class="t-s">`${o.method} ${o.path} ${o.summary ?? ''}`</span>.toLowerCase().includes(f)) }))
+    .filter(g =&gt; g.items.length)
+})
+
+useHead({ title: <span class="t-s">'API Explorer · Clautverse'</span> })
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;div <span class="t-k">class</span>=<span class="t-s">"docs"</span>&gt;
+    &lt;DocsTopbar @toggle-nav=<span class="t-s">"navOpen = !navOpen"</span> /&gt;
+    &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-layout"</span>&gt;
+      &lt;DocsSidebar :groups=<span class="t-s">"visible"</span> :open=<span class="t-s">"navOpen"</span> @navigate=<span class="t-s">"navOpen = false"</span> /&gt;
+      &lt;div <span class="t-k">class</span>=<span class="t-s">"docs-content"</span>&gt;
+        &lt;article <span class="t-k">class</span>=<span class="t-s">"docs-article docs-prose"</span>&gt;
+          &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-tag"</span>&gt;Live contract&lt;/p&gt;
+          &lt;h1&gt;API Explorer&lt;/h1&gt;
+          &lt;p <span class="t-k">class</span>=<span class="t-s">"docs-lead"</span>&gt;
+            Every operation <span class="t-k">in</span> &lt;code&gt;openapi/clautverse.yaml&lt;/code&gt;, with a live request panel.
+            Sign <span class="t-k">in</span> below — requests run <span class="t-k">as</span> your session against this app's API.
+          &lt;/p&gt;
+          &lt;DocsAuthPanel /&gt;
+          &lt;input v-model=<span class="t-s">"filter"</span> <span class="t-k">class</span>=<span class="t-s">"docs-api-filter"</span> <span class="t-k">type</span>=<span class="t-s">"search"</span> placeholder=<span class="t-s">"Filter operations… e.g. communities, missions, XP"</span>&gt;
+          &lt;template v-<span class="t-k">if</span>=<span class="t-s">"spec"</span>&gt;
+            &lt;section v-<span class="t-k">for</span>=<span class="t-s">"g in visible"</span> :id=<span class="t-s">"`tag-${g.tag}`"</span> :key=<span class="t-s">"g.tag"</span> <span class="t-k">class</span>=<span class="t-s">"docs-api-group"</span>&gt;
+              &lt;h2 <span class="t-k">class</span>=<span class="t-s">"docs-api-tag-title"</span>&gt;&lt;code&gt;{{ g.tag }}&lt;/code&gt; &lt;span <span class="t-k">class</span>=<span class="t-s">"docs-api-count"</span>&gt;{{ g.items.length }}&lt;/span&gt;&lt;/h2&gt;
+              &lt;ApiEndpoint v-<span class="t-k">for</span>=<span class="t-s">"op in g.items"</span> :key=<span class="t-s">"`${op.method}-${op.path}`"</span> :method=<span class="t-s">"op.method"</span> :path=<span class="t-s">"op.path"</span> /&gt;
+            &lt;/section&gt;
+            &lt;p v-<span class="t-k">if</span>=<span class="t-s">"!visible.length"</span> <span class="t-k">class</span>=<span class="t-s">"docs-search-empty"</span>&gt;No operations match “{{ filter }}”.&lt;/p&gt;
+          &lt;/template&gt;
+          &lt;p v-<span class="t-k">else</span> <span class="t-k">class</span>=<span class="t-s">"docs-search-empty"</span>&gt;Loading specification…&lt;/p&gt;
+        &lt;/article&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre></figure>
+<ul>
+  <li>It fetches the contract, groups it by tag, and applies the search box's text with a <code>computed</code> filter.</li>
+  <li><code>&lt;ApiEndpoint v-for="op in g.items" … /&gt;</code> renders one card per operation. The <code>:key</code> helps Vue keep cards stable when the filter changes.</li>
+  <li><code>useHead({ title })</code> sets the browser tab title.</li>
+</ul>
+<p>Replace <code>app/app.vue</code> (the starter showed <code>&lt;NuxtWelcome /&gt;</code>) so it shows the page and sets the theme before the first paint, which avoids a light-to-dark flash:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">app/app.vue</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>&lt;script setup lang=<span class="t-s">"ts"</span>&gt;
+<span class="t-c">// Sets the docs theme class before first paint (prevents a light/dark flash).</span>
+<span class="t-c">// Default: dark; user choice persists in localStorage.</span>
+useHead({
+  link: [{ rel: <span class="t-s">'icon'</span>, <span class="t-k">type</span>: <span class="t-s">'image/png'</span>, href: <span class="t-s">'/favicon.png'</span> }],
+  script: [{
+    innerHTML: <span class="t-s">`try{if(localStorage.getItem('clautverse-docs-theme')==='light')document.documentElement.classList.add('docs-light')}catch(e){}`</span>,
+  }],
+})
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;div&gt;
+    &lt;NuxtRouteAnnouncer /&gt;
+    &lt;NuxtPage /&gt;
+  &lt;/div&gt;
+&lt;/template&gt;</code></pre></figure>
+
+<h2 id="step-5-styles-images-and-config">Step 5: styles, images and config<a class="anchor" href="#step-5-styles-images-and-config" aria-label="Link to this section">#</a></h2>
+<p>The look is one hand-written stylesheet. It is long and purely visual, so copy it rather than type it: open <a href="ref-app.html#f-app-assets-css-docs-css"><code>app/assets/css/docs.css in the reference</code></a> and use the Copy button, saving it as <code>app/assets/css/docs.css</code>. Two helper images are used: <code>public/clautverse-ghost.png</code> (the logo in the top bar) and <code>public/favicon.png</code> (the tab icon). Use any PNG files with those names, or change the paths in <code>Topbar.vue</code> and <code>app.vue</code>.</p>
+<p>Finally, finish <code>nuxt.config.ts</code>. After this step it matches the project's file exactly. Compare yours to:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">nuxt.config.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// https://nuxt.com/docs/api/configuration/nuxt-config</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineNuxtConfig({
+  compatibilityDate: <span class="t-s">'2025-07-15'</span>,
+  devtools: { enabled: <span class="t-k">true</span> },
+  css: [<span class="t-s">'~/assets/css/docs.css'</span>],
+  runtimeConfig: {
+    databaseUrl: <span class="t-s">''</span>,
+    betterAuthSecret: <span class="t-s">''</span>,
+    betterAuthUrl: <span class="t-s">'http://localhost:3000'</span>,
+    mailtrapApiToken: <span class="t-s">''</span>,
+    mailtrapInboxId: <span class="t-s">''</span>,
+    emailFrom: <span class="t-s">'Clautverse &lt;no-reply@clautverse.local&gt;'</span>,
+    cursorSecret: <span class="t-s">''</span>,
+    appVersion: <span class="t-s">'dev'</span>,
+    authRateLimitEnabled: <span class="t-k">true</span>,
+    cronSecret: <span class="t-s">''</span>,
+  },
+  routeRules: { <span class="t-s">'/docs/**'</span>: { redirect: <span class="t-s">'/'</span> } },
+  nitro: {
+    errorHandler: <span class="t-s">'~~/server/error-handler.ts'</span>,
+  },
+})</code></pre></figure>
+<ul>
+  <li><code>css: ['~/assets/css/docs.css']</code> loads the stylesheet on every page.</li>
+  <li><code>routeRules: { '/docs/**': { redirect: '/' } }</code> sends old documentation links (from the removed docs app) to the Explorer.</li>
+</ul>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Restart <code>pnpm dev</code> and open <code>http://localhost:3000/</code>. You should see the API Explorer with a list of groups on the left. Then:</p>
+<ol>
+  <li>Type <code>health</code> in the filter, open <code>GET /api/health</code> and press <strong>Send request</strong>. You should see a green <code>200</code> and the health JSON.</li>
+  <li>Sign in with the verified account from chapter 8 using the strip at the top, then open <code>GET /api/me</code> and send it. You should see your profile.</li>
+  <li>Open <code>POST /api/communities/{id}/join</code>, press <strong>Fill with sample data</strong>, and notice <code>id</code> becomes a dropdown of real communities and <code>lane</code> a dropdown of the six lanes.</li>
+</ol>
+<p>Commit: <code>git add -A && git commit -m "API Explorer page"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="18-contract.html"><small>Previous</small>The API contract (OpenAPI)</a><a class="next" href="20-tests.html"><small>Next</small>Automated tests</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#what-it-does">What it does</a></li><li><a href="#vue-and-nuxt-in-five-minutes">Vue and Nuxt in five minutes</a></li><li><a href="#step-1-composables-the-logic">Step 1: composables (the logic)</a></li><li><a href="#step-2-small-components">Step 2: small components</a></li><li><a href="#step-3-the-endpoint-card">Step 3: the endpoint card</a></li><li><a href="#step-4-the-page-and-the-app-shell">Step 4: the page and the app shell</a></li><li><a href="#step-5-styles-images-and-config">Step 5: styles, images and config</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

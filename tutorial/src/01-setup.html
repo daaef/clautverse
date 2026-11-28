@@ -1,0 +1,83 @@
+<!--@meta
+part: Part 1 · Set up
+title: Install tools and create the project
+summary: Install Node, pnpm and Docker, then scaffold a plain Nuxt 4 project.
+-->
+<p class="lead">In this chapter you install the tools and create an empty Nuxt 4 project. By the end you will see Nuxt's welcome page in your browser.</p>
+
+<h2>Install the tools</h2>
+<tip>
+<p><strong>No Docker?</strong> You can install PostgreSQL directly instead. See <a href="90-postgres-without-docker.html">PostgreSQL without Docker</a> for installs and drop-in replacements for every Docker command. The guide uses <strong>PostgreSQL 17</strong>.</p>
+</tip>
+<div class="tablewrap"><table>
+<thead><tr><th>Tool</th><th>What it is</th><th>Check it</th></tr></thead>
+<tbody>
+<tr><td>Node.js 24 or newer</td><td>Runs JavaScript outside a browser. Our server is a Node program.</td><td><code>node -v</code></td></tr>
+<tr><td>pnpm</td><td>Downloads and manages the libraries (packages) our project uses.</td><td><code>pnpm -v</code></td></tr>
+<tr><td>Docker Desktop</td><td>Runs the PostgreSQL database in a sealed box on your machine.</td><td><code>docker -v</code></td></tr>
+<tr><td>Git</td><td>Saves the history of your work.</td><td><code>git --version</code></td></tr>
+</tbody></table></div>
+<plain>
+<p>A <strong>terminal</strong> is a window where you type instructions instead of clicking. On a Mac open "Terminal"; on Windows open "PowerShell" (or use WSL). Every line in a grey command box below is something you type there, then press Enter.</p>
+</plain>
+<tech>
+<p>The project's <code>package.json</code> declares <code>"engines": {"node": "<!--@pkg node-->"}</code>. That means "this project is built and tested on Node 24 or newer". Nuxt itself documents a lower minimum, but follow the project's number so everything in this guide behaves the same for you.</p>
+</tech>
+<p>Install Node from <a href="https://nodejs.org">nodejs.org</a> (pick the current or LTS version that is 24 or higher) and Docker from <a href="https://www.docker.com/products/docker-desktop/">docker.com</a>. Then install pnpm:</p>
+<!--@code bash | terminal-->
+npm install -g pnpm
+<!--@/code-->
+<p>Open Docker Desktop once so it is running in the background. You will need it in chapter 4.</p>
+
+<h2>Create the Nuxt 4 project</h2>
+<p>Nuxt's official command asks a few questions and then downloads a starter. This is the command from the <a href="https://nuxt.com/docs/4.x/getting-started/installation">Nuxt 4 installation page</a>:</p>
+<!--@code bash | terminal-->
+npm create nuxt@latest clautverse
+<!--@/code-->
+<p>Answer the questions like this:</p>
+<ul>
+  <li><strong>Template:</strong> <code>minimal</code>. It is the emptiest starting point.</li>
+  <li><strong>Package manager:</strong> <code>pnpm</code>.</li>
+  <li><strong>Modules:</strong> choose none. Do not add Docus, Nuxt UI or anything else. We add exactly what we need by hand, so you understand every piece.</li>
+  <li><strong>Git:</strong> yes, initialise a repository.</li>
+</ul>
+<tip>
+<p>Prefer no questions? Use the flagged form from Nuxt's docs: <code>npm create nuxt@latest clautverse -- --template minimal --packageManager pnpm --no-modules</code>. When this guide was prepared that command produced the exact project described below.</p>
+</tip>
+<p>Now move into the folder and start the development server:</p>
+<!--@code bash | terminal-->
+cd clautverse
+pnpm dev
+<!--@/code-->
+<check>
+<p>Open <code>http://localhost:3000</code>. You should see the Nuxt welcome page. In the terminal you will see a line saying the server is listening on that address. Press <code>Ctrl+C</code> in the terminal to stop the server whenever you want.</p>
+</check>
+
+<h2>What the starter gave you</h2>
+<p>The minimal Nuxt 4 starter contains these files (we checked by generating one):</p>
+<!--@code text | the starter project-->
+app/app.vue          the root of the web page (shows <NuxtWelcome />)
+public/              files served as-is (favicon, robots.txt)
+nuxt.config.ts       Nuxt settings
+package.json         the project's name, scripts and libraries
+tsconfig.json        TypeScript settings (points at generated files)
+.gitignore           files git should not save
+README.md            starter notes
+<!--@/code-->
+<tech>
+<p><strong>Nuxt 4 uses an <code>app/</code> folder</strong> for everything the browser runs (pages, components, composables). Server code lives in <code>server/</code> at the project root, next to it. Nuxt 3 projects kept both at the root; this guide uses the Nuxt 4 layout. Nuxt also generates a hidden <code>.nuxt/</code> folder with types; you never edit it, and <code>.gitignore</code> keeps it out of git.</p>
+</tech>
+<p>The starter's <code>package.json</code> scripts are what you will use all the time:</p>
+<ul>
+  <li><code>pnpm dev</code>: run the server with live reload while you work.</li>
+  <li><code>pnpm build</code> / <code>pnpm preview</code>: make and test a production build.</li>
+</ul>
+
+<h2>Save your first commit</h2>
+<!--@code bash | terminal-->
+git add -A
+git commit -m "Scaffold Nuxt 4 minimal project"
+<!--@/code-->
+<plain>
+<p>A commit is a save point you can always return to. Make one at the end of every chapter. If something breaks later, you can compare against your last good save.</p>
+</plain>

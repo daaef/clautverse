@@ -1,0 +1,84 @@
+<!--@meta
+part: Part 6 · Explorer and tests
+title: Automated tests
+summary: Unit tests for small functions, and end-to-end tests that start the whole app against a throwaway database.
+-->
+<p class="lead">You have been checking the app with <code>curl</code> and by clicking. Tests do the same thing automatically, in seconds, every time, and tell you the moment a change breaks a rule. This chapter explains the two kinds in this project and how to run them.</p>
+
+<h2>Why tests matter here</h2>
+<plain>
+<p>Clautverse has rules that are easy to break by accident: "an Originals number is never reused", "a second removal is permanent", "a suspended user cannot sign in". A test is a written promise that a rule still holds. When a promise fails, you find out immediately, not from an angry user.</p>
+</plain>
+<ul>
+  <li><strong>Unit tests</strong> check one small function in isolation (<code>ageOn</code>, <code>encodeCursor</code>). They are instant and need nothing else running. You wrote two in chapters 7 and 8.</li>
+  <li><strong>End-to-end (e2e) tests</strong> start the real Nuxt app, talk to it over HTTP like a client would, and look at the real database. They are slower but prove the whole chain works.</li>
+</ul>
+
+<h2>The test runner settings</h2>
+<p>You created <code>vitest.config.ts</code> in chapter 7. Look at it again:</p>
+<!--@file vitest.config.ts-->
+<ul>
+  <li><code>projects</code> defines the two groups, <code>unit</code> and <code>e2e</code>, so <code>pnpm test:unit</code> and <code>pnpm test:e2e</code> can run them separately.</li>
+  <li><code>fileParallelism: false</code> makes e2e test files run one after another, because they share one database.</li>
+  <li>Long timeouts for the e2e group allow for creating and migrating a database before the tests start (<code>hookTimeout</code>).</li>
+</ul>
+
+<h2>A fresh database for every run</h2>
+<p>Create <code>tests/e2e/global-setup.ts</code>. It runs once before any e2e test:</p>
+<!--@file tests/e2e/global-setup.ts-->
+<ul>
+  <li>It drops and recreates a database called <code>clautverse_test</code>, so every run starts clean and your real development data is never touched.</li>
+  <li>It runs the same migrations (<code>drizzle-kit migrate</code>) and the same seed you ran by hand in chapter 5.</li>
+</ul>
+<tip><p>Using a local PostgreSQL instead of Docker? See <a href="90-postgres-without-docker.html#5-tests-with-a-local-database">the appendix</a> for the one setting the tests may need.</p></tip>
+<warn><p>Docker and the <code>clautverse-pg</code> container from chapter 4 must be running. Tests connect to <code>localhost:5432</code> with the <code>postgres</code> user.</p></warn>
+
+<h2>Helpers shared by every e2e file</h2>
+<p>Create <code>tests/e2e/helpers.ts</code>:</p>
+<!--@file tests/e2e/helpers.ts-->
+<ul>
+  <li><code>testEnv</code>: the settings given to the test copy of the app (database, secrets, and the login rate limit switched off so tests are not throttled).</li>
+  <li><code>newUser()</code>: makes a unique, valid sign-up body each time.</li>
+  <li><code>verifiedSession()</code>: signs up, flips <code>email_verified</code> directly in the database (so no email is needed), signs in and returns the cookie. You did the same by hand in chapter 8.</li>
+  <li><code>api(path, options)</code>: a small wrapper around HTTP calls that returns <code>{ status, headers, body }</code>.</li>
+  <li><code>catalog()</code>: looks up the seeded Reality TV and Music categories and the star Ada, which many tests need.</li>
+</ul>
+<tech>
+<p><code>setup({ server: true, … })</code> from <code>@nuxt/test-utils/e2e</code> builds and starts the app on a free port; the helpers' <code>fetch</code> and <code>url</code> then target it. This is why <code>@nuxt/test-utils</code> was installed in chapter 2.</p>
+</tech>
+
+<h2>Reading a real test file</h2>
+<p><code>tests/e2e/api.test.ts</code> checks the basics from chapters 3 to 10: health, the error shape, sign-up rules, <code>/api/me</code>, account deletion, and onboarding:</p>
+<!--@file tests/e2e/api.test.ts-->
+<ul>
+  <li><code>describe('name', () =&gt; { … })</code> groups tests; <code>it('does something', async () =&gt; { … })</code> is one test.</li>
+  <li>The first lines call <code>await setup(…)</code> to start the app, and <code>afterAll(() =&gt; sql.end())</code> closes the test database connection when finished.</li>
+  <li>Each test follows <strong>arrange, act, assert</strong>: create a user (arrange), call an endpoint (act), <code>expect(…)</code> something about the answer (assert).</li>
+  <li>Look for the test <em>"unknown routes use the error envelope"</em>: it proves the catch-all file from chapter 6 works, and that <code>error.requestId</code> matches the response header.</li>
+</ul>
+<p>The sign-up race that once froze the database pool has its own regression test, so it can never silently come back:</p>
+<!--@file tests/e2e/signup-concurrency.test.ts-->
+<p>The other end-to-end files cover one feature each. Their code is in the reference pages, ready to copy:</p>
+<div class="tablewrap"><table>
+<thead><tr><th>File</th><th>What it proves</th></tr></thead>
+<tbody>
+<tr><td><!--@ref tests/e2e/communities.test.ts--></td><td>Joining, lanes, Originals numbers, leaving, removal rules, admin veto</td></tr>
+<tr><td><!--@ref tests/e2e/drops.test.ts--></td><td>Audiences, locked cards, scheduling, likes, replies, idempotency</td></tr>
+<tr><td><!--@ref tests/e2e/missions.test.ts--></td><td>Mission rules, XP ledger, badges</td></tr>
+<tr><td><!--@ref tests/e2e/watch-parties.test.ts--></td><td>Parties, RSVPs, reminders, the cron job</td></tr>
+<tr><td><!--@ref tests/e2e/talent.test.ts--></td><td>Applications, admin accept and decline</td></tr>
+<tr><td><!--@ref tests/e2e/discover-talent.test.ts--></td><td>Discover, Star dashboard and profile</td></tr>
+<tr><td><!--@ref tests/e2e/moderation.test.ts--></td><td>Reports, blocks, suspension, audit</td></tr>
+</tbody></table></div>
+
+<h2>Run them</h2>
+<!--@code bash | terminal-->
+pnpm test:unit
+pnpm test:e2e
+<!--@/code-->
+<check>
+<p><code>pnpm test:unit</code> passes in a second or two. <code>pnpm test:e2e</code> takes noticeably longer (it creates a database and starts the app); every test should pass. When this guide was prepared, Docker was not available on the machine that built the guide, so the end-to-end run was <strong>not</strong> repeated there. The project's plan file recorded 71 passing e2e tests at an earlier commit; your run shows the current number. Commit: <code>git add -A && git commit -m "Automated tests"</code>.</p>
+</check>
+<tech>
+<p>A good habit from here on: when you fix a bug, first write a test that fails because of it, then fix it. The sign-up concurrency test above came from exactly that.</p>
+</tech>

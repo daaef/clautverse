@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drops, replies, likes and the feed · Build Clautverse</title>
+<meta name="description" content="Posts by Stars, who can see them, scheduling, replies, and the safe-to-retry trick called idempotency.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="12-drops">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops" aria-current="page">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 4 · Features</p><h1>Drops, replies, likes and the feed</h1><p class="meta">About 5 min read</p><p class="lead">A <strong>drop</strong> is a post by a Star in their community. This chapter covers creating and scheduling drops, deciding who may read them, replies and likes, and the feed a fan sees.</p>
+
+<h2 id="the-rules-in-plain-words">The rules in plain words<a class="anchor" href="#the-rules-in-plain-words" aria-label="Link to this section">#</a></h2>
+<ul>
+  <li>Only the community's Star (or an admin) can post. Today only <strong>text</strong> drops work; voice and image answer "feature disabled" until uploads exist.</li>
+  <li>A drop has an <strong>audience</strong>: <code>public</code> (anyone), <code>members</code> (the default: people who joined) or <code>originals_only</code> (only members with an Originals number).</li>
+  <li>A drop is a <code>draft</code> until published. It can be published now, or <strong>scheduled</strong> for later. It becomes visible when its <code>publishAt</code> time passes. No background job is needed: the query simply asks for "published or scheduled <em>and</em> publish time is in the past".</li>
+  <li>Someone who may not read a drop still sees a <strong>locked card</strong>: who posted, the type, the time and a short teaser, but never the body.</li>
+  <li>Fans can like a drop once and reply to it (one level of nesting).</li>
+</ul>
+
+<h2 id="the-drops-helper-file">The drops helper file<a class="anchor" href="#the-drops-helper-file" aria-label="Link to this section">#</a></h2>
+<p>Create <code>server/utils/drops.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/drops.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> <span class="t-k">type</span> { H3Event } <span class="t-k">from</span> <span class="t-s">'h3'</span>
+<span class="t-k">import</span> { and, eq, inArray, isNull, lte, notInArray, or, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-k">type</span> Drop = <span class="t-k">typeof</span> schema.drop.$inferSelect
+<span class="t-k">type</span> Membership = <span class="t-k">typeof</span> schema.membership.$inferSelect
+<span class="t-k">type</span> TalentLite = { id: string, name: string, imageUrl: string | <span class="t-k">null</span>, userId: string | <span class="t-k">null</span> } | <span class="t-k">null</span>
+
+<span class="t-k">export</span> <span class="t-k">const</span> isLive = (d: Drop, now = <span class="t-k">new</span> Date()) =&gt; (d.status === <span class="t-s">'published'</span> || d.status === <span class="t-s">'scheduled'</span>) &amp;&amp; !!d.publishAt &amp;&amp; d.publishAt &lt;= now
+<span class="t-k">export</span> <span class="t-k">const</span> effectiveStatus = (d: Drop) =&gt; (isLive(d) ? <span class="t-s">'published'</span> : d.status)
+<span class="t-k">export</span> <span class="t-k">const</span> liveFilter = () =&gt; and(inArray(schema.drop.status, [<span class="t-s">'published'</span>, <span class="t-s">'scheduled'</span>]), lte(schema.drop.publishAt, sql<span class="t-s">`now()`</span>))
+
+<span class="t-c">/** Decisions 7–8: who may see a drop's body. Staff = community owner or admin. */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> canSeeDrop(d: Drop, isStaff: boolean, m: Membership | <span class="t-k">null</span> | <span class="t-k">undefined</span>) {
+  <span class="t-k">if</span> (isStaff || d.audience === <span class="t-s">'public'</span>) <span class="t-k">return</span> <span class="t-k">true</span>
+  <span class="t-k">if</span> (!m || m.status !== <span class="t-s">'active'</span>) <span class="t-k">return</span> <span class="t-k">false</span>
+  <span class="t-k">return</span> d.audience === <span class="t-s">'members'</span> || m.originalPosition !== <span class="t-k">null</span>
+}
+
+<span class="t-c">/** Locked cards carry talent, type, time and teaser only — never body or media. */</span>
+<span class="t-k">export</span> <span class="t-k">const</span> dropView = (d: Drop, talent: TalentLite, canSee: boolean, liked = <span class="t-k">false</span>) =&gt; ({
+  id: d.id, communityId: d.communityId, <span class="t-k">type</span>: d.<span class="t-k">type</span>, audience: d.audience, status: effectiveStatus(d),
+  talent: talent ? { id: talent.id, name: talent.name, imageUrl: talent.imageUrl } : <span class="t-k">null</span>,
+  teaser: d.teaser, locked: !canSee, body: canSee ? d.body : <span class="t-k">null</span>, media: <span class="t-k">null</span>,
+  publishedAt: d.publishAt?.toISOString() ?? <span class="t-k">null</span>, createdAt: d.createdAt.toISOString(), editedAt: d.editedAt?.toISOString() ?? <span class="t-k">null</span>,
+  reactionCounts: { like: d.likeCount }, replyCount: d.replyCount, viewerReaction: canSee &amp;&amp; liked ? <span class="t-s">'like'</span> : <span class="t-k">null</span>,
+})
+
+<span class="t-c">/** User ids this viewer has blocked (empty for anonymous viewers). */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> blockedAuthorIds(viewerId: string | <span class="t-k">null</span> | <span class="t-k">undefined</span>, tx: DbOrTx = useDb()) {
+  <span class="t-k">if</span> (!viewerId) <span class="t-k">return</span> <span class="t-k">new</span> Set&lt;string&gt;()
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> tx.select({ id: schema.block.blockedId }).<span class="t-k">from</span>(schema.block).where(eq(schema.block.blockerId, viewerId))
+  <span class="t-k">return</span> <span class="t-k">new</span> Set(rows.map(r =&gt; r.id))
+}
+
+<span class="t-c">/**
+ * WHERE clause that excludes rows authored by anyone the viewer blocked. Nullable author columns
+ * (erased accounts) must stay visible: `NOT IN` would silently drop them via NULL comparison.
+ */</span>
+<span class="t-k">export</span> <span class="t-k">const</span> notAuthoredByBlocked = (authorCol: <span class="t-k">typeof</span> schema.drop.authorId | <span class="t-k">typeof</span> schema.reply.authorId, blocked: Set&lt;string&gt;) =&gt;
+  blocked.size ? or(isNull(authorCol), notInArray(authorCol, [...blocked])) : <span class="t-k">undefined</span>
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> loadDrop(id: string, viewer: DbUser | <span class="t-k">null</span>, tx: DbOrTx = useDb(), lock = <span class="t-k">false</span>) {
+  <span class="t-k">const</span> q = tx.select({ drop: schema.drop, community: schema.community, talent: schema.talent }).<span class="t-k">from</span>(schema.drop)
+    .innerJoin(schema.community, eq(schema.community.id, schema.drop.communityId))
+    .leftJoin(schema.talent, eq(schema.talent.id, schema.community.ownerTalentId))
+    .where(eq(schema.drop.id, id)).limit(<span class="t-n">1</span>)
+  <span class="t-k">const</span> [r] = lock ? <span class="t-k">await</span> q.<span class="t-k">for</span>(<span class="t-s">'update'</span>, { <span class="t-k">of</span>: schema.drop }) : <span class="t-k">await</span> q
+  <span class="t-k">const</span> admin = isAdmin(viewer)
+  <span class="t-k">if</span> (!r || (r.community.status === <span class="t-s">'vetoed'</span> &amp;&amp; !admin)) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Drop not found.'</span>)
+  <span class="t-k">const</span> isAuthor = !!viewer &amp;&amp; r.drop.authorId === viewer.id
+  <span class="t-k">const</span> isStaff = admin || (!!viewer &amp;&amp; r.talent?.userId === viewer.id)
+  <span class="t-k">const</span> gone = r.drop.status === <span class="t-s">'archived'</span> || r.drop.status === <span class="t-s">'removed'</span>
+  <span class="t-k">if</span> ((gone &amp;&amp; !admin) || (!isLive(r.drop) &amp;&amp; !isStaff &amp;&amp; !isAuthor)) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Drop not found.'</span>)
+  <span class="t-c">// A blocked author's drop is invisible to the blocker (silent omission, same as any invisible drop).</span>
+  <span class="t-k">if</span> (viewer &amp;&amp; r.drop.authorId &amp;&amp; (<span class="t-k">await</span> blockedAuthorIds(viewer.id, tx)).has(r.drop.authorId)) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Drop not found.'</span>)
+  <span class="t-k">const</span> membership = viewer
+    ? (<span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.membership).where(and(eq(schema.membership.userId, viewer.id), eq(schema.membership.communityId, r.community.id))).limit(<span class="t-n">1</span>))[<span class="t-n">0</span>] ?? <span class="t-k">null</span>
+    : <span class="t-k">null</span>
+  <span class="t-k">return</span> { ...r, isAuthor, isStaff, membership, canSee: canSeeDrop(r.drop, isStaff, membership) }
+}
+
+<span class="t-c">/** Shapes a page of drop rows for a viewer (batch-loads memberships and likes). */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> dropListViews(rows: { drop: Drop, talent: TalentLite }[], viewer: DbUser | <span class="t-k">null</span>) {
+  <span class="t-k">const</span> mine = <span class="t-k">await</span> viewerMemberships(viewer?.id, [...<span class="t-k">new</span> Set(rows.map(r =&gt; r.drop.communityId))])
+  <span class="t-k">const</span> liked = viewer &amp;&amp; rows.length
+    ? <span class="t-k">new</span> Set((<span class="t-k">await</span> useDb().select({ id: schema.dropReaction.dropId }).<span class="t-k">from</span>(schema.dropReaction)
+        .where(and(eq(schema.dropReaction.userId, viewer.id), inArray(schema.dropReaction.dropId, rows.map(r =&gt; r.drop.id))))).map(r =&gt; r.id))
+    : <span class="t-k">new</span> Set&lt;string&gt;()
+  <span class="t-k">const</span> admin = isAdmin(viewer)
+  <span class="t-k">return</span> (r: { drop: Drop, talent: TalentLite }) =&gt; {
+    <span class="t-k">const</span> staff = admin || (!!viewer &amp;&amp; r.talent?.userId === viewer.id)
+    <span class="t-k">return</span> dropView(r.drop, r.talent, canSeeDrop(r.drop, staff, mine.get(r.drop.communityId)), liked.has(r.drop.id))
+  }
+}
+
+<span class="t-c">/** Decision 13: in-app alert to active members with alerts on (author excluded). */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> notifyDropPublished(tx: DbOrTx, d: Drop) {
+  <span class="t-k">await</span> tx.execute(sql<span class="t-s">`
+    insert into notification (user_id, type, data)
+    select m.user_id, 'drop.published', jsonb_build_object('dropId', ${d.id}::text, 'communityId', ${d.communityId}::text)
+    from membership m
+    where m.community_id = ${d.communityId} and m.status = 'active' and m.alerts_enabled and m.user_id is distinct from ${d.authorId}`</span>)
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> idempotencyHeader = (event: H3Event) =&gt; {
+  <span class="t-k">const</span> k = getRequestHeader(event, <span class="t-s">'idempotency-key'</span>)?.trim()
+  <span class="t-k">if</span> (k &amp;&amp; k.length &gt; <span class="t-n">200</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Idempotency-Key is too long.'</span>)
+  <span class="t-k">return</span> k || <span class="t-k">null</span>
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> findIdempotent(userId: string, scope: string, key: string | <span class="t-k">null</span>) {
+  <span class="t-k">if</span> (!key) <span class="t-k">return</span> <span class="t-k">null</span>
+  <span class="t-k">const</span> [r] = <span class="t-k">await</span> useDb().select({ id: schema.idempotencyKey.resourceId }).<span class="t-k">from</span>(schema.idempotencyKey)
+    .where(and(eq(schema.idempotencyKey.userId, userId), eq(schema.idempotencyKey.scope, scope), eq(schema.idempotencyKey.key, key))).limit(<span class="t-n">1</span>)
+  <span class="t-k">return</span> r?.id ?? <span class="t-k">null</span>
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> saveIdempotent(tx: DbOrTx, userId: string, scope: string, key: string | <span class="t-k">null</span>, resourceId: string) {
+  <span class="t-k">if</span> (key) <span class="t-k">await</span> tx.insert(schema.idempotencyKey).values({ userId, scope, key, resourceId })
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> replyView = (r: <span class="t-k">typeof</span> schema.reply.$inferSelect, author: Parameters&lt;<span class="t-k">typeof</span> publicUser&gt;[<span class="t-n">0</span>] | <span class="t-k">null</span>) =&gt; {
+  <span class="t-k">const</span> hidden = r.status !== <span class="t-s">'active'</span>
+  <span class="t-k">return</span> {
+    id: r.id, dropId: r.dropId, parentReplyId: r.parentReplyId, status: r.status,
+    author: hidden || !author ? <span class="t-k">null</span> : publicUser(author), body: hidden ? <span class="t-k">null</span> : r.body,
+    createdAt: r.createdAt.toISOString(), editedAt: r.editedAt?.toISOString() ?? <span class="t-k">null</span>,
+  }
+}</code></pre></figure>
+<div class="tablewrap"><table>
+<thead><tr><th>Helper</th><th>Job</th></tr></thead>
+<tbody>
+<tr><td><code>isLive</code>, <code>liveFilter</code></td><td>"Is this drop visible yet?" as a JavaScript check and as a SQL condition.</td></tr>
+<tr><td><code>canSeeDrop</code></td><td>The audience rule above, in four lines.</td></tr>
+<tr><td><code>dropView</code></td><td>Builds the answer. If <code>canSee</code> is false it sets <code>locked: true</code> and <code>body: null</code>, so the body cannot leak by accident.</td></tr>
+<tr><td><code>loadDrop</code></td><td>Loads one drop plus its community and Star, applying every visibility rule (vetoed community, archived or removed drop, not yet live, blocked author) and returning <code>canSee</code>, <code>isStaff</code> and the viewer's membership.</td></tr>
+<tr><td><code>dropListViews</code></td><td>Shapes a whole page of drops while loading the viewer's memberships and likes in <strong>two queries total</strong>, not two per drop (this avoids the "N+1 query" slowdown).</td></tr>
+<tr><td><code>notifyDropPublished</code></td><td>One SQL statement that creates a notification for every active member with alerts on (the author excluded).</td></tr>
+<tr><td><code>blockedAuthorIds</code>, <code>notAuthoredByBlocked</code></td><td>Hide content from people the viewer blocked (chapter 16). The comment explains a subtle bug avoided: SQL's <code>NOT IN</code> silently drops rows with a <code>NULL</code> author, so the code uses <code>OR author IS NULL</code>.</td></tr>
+<tr><td><code>idempotencyHeader</code>, <code>findIdempotent</code>, <code>saveIdempotent</code></td><td>The "send it twice safely" machinery, explained next.</td></tr>
+<tr><td><code>replyView</code></td><td>Shapes a reply; a deleted or removed reply becomes a placeholder with no body or author.</td></tr>
+</tbody></table></div>
+
+<h2 id="idempotency-making-send-twice-safe">Idempotency: making "send twice" safe<a class="anchor" href="#idempotency-making-send-twice-safe" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>On a bad phone connection an app may send "create post" and never hear the answer, so it sends again. Without protection the Star ends up with two identical posts. The fix: the app attaches a unique label (an <strong>Idempotency-Key</strong>) to the request. If the server sees the same label again, it returns the <em>original</em> result instead of creating a second one.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The <code>idempotency_key</code> table stores <code>(userId, scope, key) → resourceId</code>. On create we first call <code>findIdempotent</code>; if there is a hit we return that resource. Otherwise we create the resource and <code>saveIdempotent</code> inside the same transaction, so the key and the resource are saved together or not at all. The header is optional.</p>
+</aside>
+
+<h2 id="creating-reading-editing-publishing-deleting">Creating, reading, editing, publishing, deleting<a class="anchor" href="#creating-reading-editing-publishing-deleting" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/drops/index.post.ts</code> creates a drop:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/index.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// DROP-01: community owner (talent) or admin. Voice/image need uploads (R2) — not yet available.</span>
+<span class="t-k">const</span> body = z.object({
+  communityId: z.uuid(),
+  <span class="t-k">type</span>: z.enum([<span class="t-s">'text'</span>, <span class="t-s">'voice'</span>, <span class="t-s">'image'</span>]),
+  body: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">5000</span>).optional(),
+  mediaIds: z.array(z.string()).max(<span class="t-n">10</span>).optional(),
+  audience: z.enum([<span class="t-s">'public'</span>, <span class="t-s">'members'</span>, <span class="t-s">'originals_only'</span>]).<span class="t-k">default</span>(<span class="t-s">'members'</span>),
+  teaser: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">100</span>).optional(),
+  publishAt: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional(),
+  publishNow: z.boolean().optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> key = idempotencyHeader(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> replay = <span class="t-k">await</span> findIdempotent(u.id, <span class="t-s">'drop.create'</span>, key)
+  <span class="t-k">if</span> (replay) {
+    setResponseStatus(event, <span class="t-n">201</span>)
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(replay, u)
+    <span class="t-k">return</span> dropView(r.drop, r.talent, <span class="t-k">true</span>)
+  }
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'drop'</span>, u.id, <span class="t-n">30</span>, <span class="t-n">60</span>)
+  <span class="t-k">if</span> (input.<span class="t-k">type</span> !== <span class="t-s">'text'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'FEATURE_DISABLED'</span>, <span class="t-s">'Voice and image drops arrive with uploads. Post a text drop for now.'</span>)
+  rejectMediaIds(input.mediaIds)
+  <span class="t-k">if</span> (!input.body) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Text drops need a body.'</span>, { fields: { body: <span class="t-s">'required'</span> } })
+  <span class="t-k">const</span> publishAt = input.publishAt ? <span class="t-k">new</span> Date(input.publishAt) : <span class="t-k">null</span>
+  <span class="t-k">if</span> (publishAt &amp;&amp; publishAt &lt;= <span class="t-k">new</span> Date()) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'publishAt must be in the future.'</span>, { fields: { publishAt: <span class="t-s">'past'</span> } })
+  <span class="t-k">if</span> (publishAt &amp;&amp; input.publishNow) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Use publishAt or publishNow, not both.'</span>, { fields: { publishAt: <span class="t-s">'conflict'</span> } })
+  <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(input.communityId, u)
+  <span class="t-k">if</span> (!isAdmin(u) &amp;&amp; !(<span class="t-k">await</span> isCommunityOwner(comm, u.id))) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the community\'s talent can post drops.'</span>)
+  <span class="t-k">const</span> status = input.publishNow ? <span class="t-s">'published'</span> : publishAt ? <span class="t-s">'scheduled'</span> : <span class="t-s">'draft'</span>
+  <span class="t-k">const</span> created = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.insert(schema.drop).values({
+      communityId: comm.id, authorId: u.id, <span class="t-k">type</span>: input.<span class="t-k">type</span>, body: input.body, teaser: input.teaser ?? <span class="t-k">null</span>,
+      audience: input.audience, status, publishAt: input.publishNow ? <span class="t-k">new</span> Date() : publishAt,
+    }).returning()
+    <span class="t-k">await</span> saveIdempotent(tx, u.id, <span class="t-s">'drop.create'</span>, key, row!.id)
+    <span class="t-k">if</span> (status === <span class="t-s">'published'</span>) <span class="t-k">await</span> notifyDropPublished(tx, row!)
+    <span class="t-k">return</span> row!
+  })
+  <span class="t-k">const</span> [tal] = comm.ownerTalentId ? <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.talent).where(eq(schema.talent.id, comm.ownerTalentId)).limit(<span class="t-n">1</span>) : []
+  setResponseStatus(event, <span class="t-n">201</span>)
+  <span class="t-k">return</span> dropView(created, tal ?? <span class="t-k">null</span>, <span class="t-k">true</span>)
+})</code></pre></figure>
+<ul>
+  <li>Order inside: authenticate, read the key, validate the body, replay check, rate limit (30 per minute), business rules (text only, body required, <code>publishAt</code> must be in the future, not both <code>publishAt</code> and <code>publishNow</code>), permission (owner or admin), then the transaction.</li>
+  <li>Status comes out as <code>published</code> (<code>publishNow</code>), <code>scheduled</code> (a future <code>publishAt</code>) or <code>draft</code>. Only a published drop triggers member notifications.</li>
+</ul>
+<p><code>server/api/drops/[id]/index.get.ts</code> reads one (with the locked-card rule):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/index.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// DROP-02</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(id, viewer)
+  <span class="t-k">const</span> liked = viewer &amp;&amp; r.canSee
+    ? !!(<span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.dropReaction).where(and(eq(schema.dropReaction.dropId, id), eq(schema.dropReaction.userId, viewer.id))).limit(<span class="t-n">1</span>))[<span class="t-n">0</span>]
+    : <span class="t-k">false</span>
+  <span class="t-k">return</span> dropView(r.drop, r.talent, r.canSee, liked)
+})</code></pre></figure>
+<p><code>server/api/drops/[id]/index.patch.ts</code> edits. Drafts and scheduled drops are fully editable; once live, only the text and teaser can change:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/index.patch.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// DROP-03: drafts/scheduled fully editable; published drops allow body/teaser only.</span>
+<span class="t-k">const</span> body = z.object({
+  body: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">5000</span>).optional(),
+  teaser: z.string().trim().max(<span class="t-n">100</span>).nullable().optional(),
+  audience: z.enum([<span class="t-s">'public'</span>, <span class="t-s">'members'</span>, <span class="t-s">'originals_only'</span>]).optional(),
+  publishAt: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional(),
+}).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(id, u, tx, <span class="t-k">true</span>)
+    <span class="t-k">if</span> (!r.isAuthor &amp;&amp; !isAdmin(u)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the author can edit this drop.'</span>)
+    <span class="t-k">const</span> d = r.drop
+    <span class="t-k">if</span> (d.status === <span class="t-s">'archived'</span> || d.status === <span class="t-s">'removed'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This drop can no longer be edited.'</span>)
+    <span class="t-k">const</span> patch: Partial&lt;<span class="t-k">typeof</span> schema.drop.$inferInsert&gt; = {}
+    <span class="t-k">if</span> (input.body !== <span class="t-k">undefined</span>) patch.body = input.body
+    <span class="t-k">if</span> (input.teaser !== <span class="t-k">undefined</span>) patch.teaser = input.teaser || <span class="t-k">null</span>
+    <span class="t-k">if</span> (isLive(d)) {
+      <span class="t-k">if</span> ((input.audience &amp;&amp; input.audience !== d.audience) || input.publishAt) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'Only text and teaser can change after publishing.'</span>)
+      patch.editedAt = <span class="t-k">new</span> Date()
+    }
+    <span class="t-k">else</span> {
+      <span class="t-k">if</span> (input.audience) patch.audience = input.audience
+      <span class="t-k">if</span> (input.publishAt) {
+        <span class="t-k">const</span> at = <span class="t-k">new</span> Date(input.publishAt)
+        <span class="t-k">if</span> (at &lt;= <span class="t-k">new</span> Date()) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'publishAt must be in the future.'</span>, { fields: { publishAt: <span class="t-s">'past'</span> } })
+        Object.assign(patch, { publishAt: at, status: <span class="t-s">'scheduled'</span> })
+      }
+    }
+    <span class="t-k">if</span> (!Object.keys(patch).length) <span class="t-k">return</span> r
+    <span class="t-k">const</span> [updated] = <span class="t-k">await</span> tx.update(schema.drop).set(patch).where(eq(schema.drop.id, id)).returning()
+    <span class="t-k">return</span> { ...r, drop: updated! }
+  })
+  <span class="t-k">return</span> dropView(row.drop, row.talent, <span class="t-k">true</span>)
+})</code></pre></figure>
+<p><code>server/api/drops/[id]/publish.post.ts</code> moves a draft to published or scheduled:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/publish.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// DROP-04: draft → scheduled|published; scheduled → published|rescheduled; published → no-op.</span>
+<span class="t-k">const</span> body = z.object({ publishAt: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional() }).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { publishAt } = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> row = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(id, u, tx, <span class="t-k">true</span>)
+    <span class="t-k">if</span> (!r.isAuthor &amp;&amp; !isAdmin(u)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Only the author can publish this drop.'</span>)
+    <span class="t-k">if</span> (isLive(r.drop)) <span class="t-k">return</span> r.drop
+    <span class="t-k">if</span> (r.drop.status === <span class="t-s">'archived'</span> || r.drop.status === <span class="t-s">'removed'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This drop can no longer be published.'</span>)
+    <span class="t-k">const</span> at = publishAt ? <span class="t-k">new</span> Date(publishAt) : <span class="t-k">null</span>
+    <span class="t-k">const</span> now = !at || at &lt;= <span class="t-k">new</span> Date()
+    <span class="t-k">const</span> [updated] = <span class="t-k">await</span> tx.update(schema.drop).set({ status: now ? <span class="t-s">'published'</span> : <span class="t-s">'scheduled'</span>, publishAt: now ? <span class="t-k">new</span> Date() : at })
+      .where(eq(schema.drop.id, id)).returning()
+    <span class="t-k">if</span> (now) <span class="t-k">await</span> notifyDropPublished(tx, updated!)
+    <span class="t-k">return</span> updated!
+  })
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(id, u)
+  <span class="t-k">return</span> dropView(row, r.talent, <span class="t-k">true</span>)
+})</code></pre></figure>
+<p><code>server/api/drops/[id]/index.delete.ts</code> removes a drop. The author's delete <em>archives</em> it; an admin's delete marks it <em>removed</em> and is written to the audit log. Repeating the call is harmless (always <code>204 No Content</code>):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/index.delete.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// DROP-05: author → archived; admin moderation → removed (audited). Idempotent 204.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [d] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.drop).where(eq(schema.drop.id, id)).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!d) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Drop not found.'</span>)
+    <span class="t-k">const</span> admin = isAdmin(u)
+    <span class="t-k">if</span> (d.authorId !== u.id &amp;&amp; !admin) <span class="t-k">throw</span> apiError(d.status === <span class="t-s">'published'</span> ? <span class="t-s">'FORBIDDEN'</span> : <span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'You cannot delete this drop.'</span>)
+    <span class="t-k">if</span> (d.status === <span class="t-s">'archived'</span> || d.status === <span class="t-s">'removed'</span>) <span class="t-k">return</span>
+    <span class="t-k">const</span> status = d.authorId === u.id ? <span class="t-s">'archived'</span> : <span class="t-s">'removed'</span>
+    <span class="t-k">await</span> tx.update(schema.drop).set({ status }).where(eq(schema.drop.id, id))
+    <span class="t-k">if</span> (status === <span class="t-s">'removed'</span>) <span class="t-k">await</span> audit(tx, u.id, <span class="t-s">'drop.removed'</span>, <span class="t-s">'drop'</span>, id)
+  })
+  setResponseStatus(event, <span class="t-n">204</span>)
+  <span class="t-k">return</span> <span class="t-k">null</span>
+})</code></pre></figure>
+
+<h2 id="likes">Likes<a class="anchor" href="#likes" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/drops/[id]/reactions/me.put.ts</code> likes; <code>me.delete.ts</code> unlikes. The address is "my reaction to this drop", so there is only ever one:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/reactions/me.put.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// DROP-06: one like per fan per drop; repeating is a no-op.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event, { onboarded: <span class="t-k">true</span> })
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'reaction'</span>, u.id, <span class="t-n">60</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> likes = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(id, u, tx)
+    <span class="t-k">if</span> (!isLive(r.drop)) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This drop is not published.'</span>)
+    <span class="t-k">if</span> (!r.canSee) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Join to unlock this drop.'</span>, { reason: <span class="t-s">'locked'</span> })
+    <span class="t-k">const</span> added = <span class="t-k">await</span> tx.insert(schema.dropReaction).values({ dropId: id, userId: u.id }).onConflictDoNothing().returning()
+    <span class="t-k">const</span> [d] = added.length
+      ? <span class="t-k">await</span> tx.update(schema.drop).set({ likeCount: sql<span class="t-s">`${schema.drop.likeCount} + 1`</span> }).where(eq(schema.drop.id, id)).returning({ n: schema.drop.likeCount })
+      : <span class="t-k">await</span> tx.select({ n: schema.drop.likeCount }).<span class="t-k">from</span>(schema.drop).where(eq(schema.drop.id, id))
+    <span class="t-k">return</span> d!.n
+  })
+  <span class="t-k">return</span> { dropId: id, <span class="t-k">type</span>: <span class="t-s">'like'</span>, reactionCounts: { like: likes } }
+})</code></pre></figure>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/reactions/me.delete.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// DROP-07: idempotent 204.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'reaction'</span>, u.id, <span class="t-n">60</span>, <span class="t-n">60</span>)
+  <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> gone = <span class="t-k">await</span> tx.delete(schema.dropReaction).where(and(eq(schema.dropReaction.dropId, id), eq(schema.dropReaction.userId, u.id))).returning()
+    <span class="t-k">if</span> (gone.length) <span class="t-k">await</span> tx.update(schema.drop).set({ likeCount: sql<span class="t-s">`greatest(${schema.drop.likeCount} - 1, 0)`</span> }).where(eq(schema.drop.id, id))
+  })
+  setResponseStatus(event, <span class="t-n">204</span>)
+  <span class="t-k">return</span> <span class="t-k">null</span>
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The like is stored with a composite primary key <code>(dropId, userId)</code>, so a second like cannot create a second row. We only add one to <code>likeCount</code> when a row was <em>actually inserted</em>, which keeps the counter exact even when the call is repeated.</p>
+</aside>
+
+<h2 id="replies">Replies<a class="anchor" href="#replies" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/drops/[id]/replies.get.ts</code> lists replies in conversation order:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/replies.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, asc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// DROP-08: entitled viewers only; conversation order; removed replies become placeholders.</span>
+<span class="t-k">const</span> query = z.object(pageQuery)
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(id, viewer)
+  <span class="t-k">if</span> (!r.canSee) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Join to unlock this drop.'</span>, { reason: <span class="t-s">'locked'</span> })
+  <span class="t-k">const</span> scope = <span class="t-s">`replies-${id}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> rp = schema.reply
+  <span class="t-k">const</span> blocked = <span class="t-k">await</span> blockedAuthorIds(viewer?.id)
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ reply: rp, author: schema.user }).<span class="t-k">from</span>(rp).leftJoin(schema.user, eq(schema.user.id, rp.authorId))
+    .where(and(eq(rp.dropId, id), notAuthoredByBlocked(rp.authorId, blocked), cur ? sql<span class="t-s">`(${rp.createdAt}, ${rp.id}) &gt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(asc(rp.createdAt), asc(rp.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">return</span> toPage(rows, limit, scope, x =&gt; ({ t: x.reply.createdAt.toISOString(), id: x.reply.id }),
+    x =&gt; replyView(x.reply, x.author &amp;&amp; x.author.status === <span class="t-s">'active'</span> ? x.author : <span class="t-k">null</span>))
+})</code></pre></figure>
+<p><code>server/api/drops/[id]/replies.post.ts</code> adds one. Only members (or staff) who may see the drop can reply, and a reply can only answer a <em>top-level</em> reply:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/drops/[id]/replies.post.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// DROP-09: active members (or staff) entitled to the drop; one level of nesting.</span>
+<span class="t-k">const</span> body = z.object({ body: z.string().trim().min(<span class="t-n">1</span>).max(<span class="t-n">1000</span>), parentReplyId: z.uuid().optional() }).strict()
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event, { onboarded: <span class="t-k">true</span> })
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> key = idempotencyHeader(event)
+  <span class="t-k">const</span> input = <span class="t-k">await</span> readJsonBody(event, body)
+  <span class="t-k">const</span> replay = <span class="t-k">await</span> findIdempotent(u.id, <span class="t-s">`reply.create:${id}`</span>, key)
+  <span class="t-k">if</span> (replay) {
+    <span class="t-k">const</span> [x] = <span class="t-k">await</span> useDb().select().<span class="t-k">from</span>(schema.reply).where(eq(schema.reply.id, replay)).limit(<span class="t-n">1</span>)
+    setResponseStatus(event, <span class="t-n">201</span>)
+    <span class="t-k">return</span> replyView(x!, u)
+  }
+  <span class="t-k">await</span> rateLimit(event, <span class="t-s">'reply'</span>, u.id, <span class="t-n">30</span>, <span class="t-n">60</span>)
+  <span class="t-k">const</span> created = <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(id, u, tx)
+    <span class="t-k">if</span> (!isLive(r.drop)) <span class="t-k">throw</span> apiError(<span class="t-s">'INVALID_STATE'</span>, <span class="t-s">'This drop is not published.'</span>)
+    <span class="t-k">if</span> (!r.canSee) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Join to unlock this drop.'</span>, { reason: <span class="t-s">'locked'</span> })
+    <span class="t-k">if</span> (!r.isStaff &amp;&amp; r.membership?.status !== <span class="t-s">'active'</span>) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Join this community to reply.'</span>, { reason: <span class="t-s">'not_member'</span> })
+    <span class="t-k">let</span> parent: <span class="t-k">typeof</span> schema.reply.$inferSelect | <span class="t-k">undefined</span>
+    <span class="t-k">if</span> (input.parentReplyId) {
+      [parent] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.reply).where(eq(schema.reply.id, input.parentReplyId)).limit(<span class="t-n">1</span>)
+      <span class="t-k">if</span> (!parent || parent.dropId !== id || parent.parentReplyId || parent.status !== <span class="t-s">'active'</span>)
+        <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'You can only reply to a top-level reply on this drop.'</span>, { fields: { parentReplyId: <span class="t-s">'invalid'</span> } })
+    }
+    <span class="t-k">const</span> [row] = <span class="t-k">await</span> tx.insert(schema.reply).values({ dropId: id, authorId: u.id, body: input.body, parentReplyId: parent?.id ?? <span class="t-k">null</span> }).returning()
+    <span class="t-k">await</span> tx.update(schema.drop).set({ replyCount: sql<span class="t-s">`${schema.drop.replyCount} + 1`</span> }).where(eq(schema.drop.id, id))
+    <span class="t-k">await</span> saveIdempotent(tx, u.id, <span class="t-s">`reply.create:${id}`</span>, key, row!.id)
+    <span class="t-c">// Don't surface a blocked author's reply to someone who blocked them.</span>
+    <span class="t-k">if</span> (parent?.authorId &amp;&amp; parent.authorId !== u.id &amp;&amp; !(<span class="t-k">await</span> blockedAuthorIds(parent.authorId, tx)).has(u.id))
+      <span class="t-k">await</span> notify(tx, parent.authorId, <span class="t-s">'reply.replied'</span>, { dropId: id, replyId: row!.id, parentReplyId: parent.id })
+    <span class="t-k">return</span> row!
+  })
+  setResponseStatus(event, <span class="t-n">201</span>)
+  <span class="t-k">return</span> replyView(created, u)
+})</code></pre></figure>
+<p><code>server/api/replies/[id].delete.ts</code> removes a reply (author: <code>deleted</code>; Star or admin: <code>removed</code>):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/replies/[id].delete.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// DROP-10: author → deleted; community owner or admin → removed (admin audited). Idempotent 204.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">await</span> useDb().transaction(<span class="t-k">async</span> (tx) =&gt; {
+    <span class="t-k">const</span> [x] = <span class="t-k">await</span> tx.select().<span class="t-k">from</span>(schema.reply).where(eq(schema.reply.id, id)).<span class="t-k">for</span>(<span class="t-s">'update'</span>).limit(<span class="t-n">1</span>)
+    <span class="t-k">if</span> (!x) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Reply not found.'</span>)
+    <span class="t-k">const</span> r = <span class="t-k">await</span> loadDrop(x.dropId, u, tx).<span class="t-k">catch</span>(() =&gt; <span class="t-k">null</span>)
+    <span class="t-k">const</span> admin = isAdmin(u)
+    <span class="t-k">const</span> isAuthor = x.authorId === u.id
+    <span class="t-k">if</span> (!isAuthor &amp;&amp; !admin &amp;&amp; !(r?.isStaff)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'You cannot delete this reply.'</span>)
+    <span class="t-k">if</span> (x.status !== <span class="t-s">'active'</span>) <span class="t-k">return</span>
+    <span class="t-k">await</span> tx.update(schema.reply).set({ status: isAuthor ? <span class="t-s">'deleted'</span> : <span class="t-s">'removed'</span> }).where(eq(schema.reply.id, id))
+    <span class="t-k">await</span> tx.update(schema.drop).set({ replyCount: sql<span class="t-s">`greatest(${schema.drop.replyCount} - 1, 0)`</span> }).where(eq(schema.drop.id, x.dropId))
+    <span class="t-k">if</span> (!isAuthor &amp;&amp; admin) <span class="t-k">await</span> audit(tx, u.id, <span class="t-s">'reply.removed'</span>, <span class="t-s">'reply'</span>, id)
+  })
+  setResponseStatus(event, <span class="t-n">204</span>)
+  <span class="t-k">return</span> <span class="t-k">null</span>
+})</code></pre></figure>
+
+<h2 id="timelines-community-page-feed-discover">Timelines: community page, feed, discover<a class="anchor" href="#timelines-community-page-feed-discover" aria-label="Link to this section">#</a></h2>
+<p><code>server/api/communities/[id]/drops.get.ts</code> is the public timeline of one community:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/communities/[id]/drops.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// FEED-02: public community timeline; non-entitled viewers get locked cards.</span>
+<span class="t-k">const</span> query = z.object({ <span class="t-k">type</span>: z.enum([<span class="t-s">'text'</span>, <span class="t-s">'voice'</span>, <span class="t-s">'image'</span>]).optional(), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> id = readIdParam(event)
+  <span class="t-k">const</span> { <span class="t-k">type</span>, limit, cursor } = readQuery(event, query)
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> comm = <span class="t-k">await</span> loadVisibleCommunity(id, viewer)
+  <span class="t-k">const</span> scope = <span class="t-s">`com-drops-${id}-${type ?? 'all'}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> d = schema.drop
+  <span class="t-k">const</span> blocked = <span class="t-k">await</span> blockedAuthorIds(viewer?.id)
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().select({ drop: d, talent: schema.talent }).<span class="t-k">from</span>(d)
+    .leftJoin(schema.talent, eq(schema.talent.id, sql<span class="t-s">`${comm.ownerTalentId}::uuid`</span>))
+    .where(and(eq(d.communityId, id), liveFilter(), notAuthoredByBlocked(d.authorId, blocked), <span class="t-k">type</span> ? eq(d.<span class="t-k">type</span>, <span class="t-k">type</span>) : <span class="t-k">undefined</span>,
+      cur ? sql<span class="t-s">`(${d.publishAt}, ${d.id}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(desc(d.publishAt), desc(d.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">const</span> view = <span class="t-k">await</span> dropListViews(rows, viewer)
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ t: r.drop.publishAt!.toISOString(), id: r.drop.id }), view)
+})</code></pre></figure>
+<p><code>server/api/feed.get.ts</code> is a fan's personal feed: live drops from every community they belong to, newest first:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/feed.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, inArray, gte, lte, sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-c">// FEED-01: live drops from my active memberships. Keyset paging on (publish_at, id) so new</span>
+<span class="t-c">// drops arriving between page fetches never cause duplicates.</span>
+<span class="t-k">const</span> query = z.object({ communityId: z.uuid().optional(), <span class="t-k">from</span>: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional(), to: z.iso.datetime({ offset: <span class="t-k">true</span> }).optional(), ...pageQuery })
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> u = <span class="t-k">await</span> requireUser(event)
+  <span class="t-k">const</span> { communityId, <span class="t-k">from</span>, to, limit, cursor } = readQuery(event, query)
+  <span class="t-k">if</span> (<span class="t-k">from</span> &amp;&amp; to &amp;&amp; (<span class="t-k">new</span> Date(<span class="t-k">from</span>) &gt;= <span class="t-k">new</span> Date(to) || <span class="t-k">new</span> Date(to).getTime() - <span class="t-k">new</span> Date(<span class="t-k">from</span>).getTime() &gt; <span class="t-n">90</span> * <span class="t-n">86400_000</span>))
+    <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'from must be before to, within 90 days.'</span>, { fields: { <span class="t-k">from</span>: <span class="t-s">'invalid_range'</span> } })
+  <span class="t-k">const</span> scope = <span class="t-s">`feed-${communityId ?? 'all'}`</span>
+  <span class="t-k">const</span> cur = readCursor&lt;{ t: string, id: string }&gt;(cursor, scope)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> m = schema.membership
+  <span class="t-k">const</span> memberOf = (<span class="t-k">await</span> db.select({ id: m.communityId }).<span class="t-k">from</span>(m).where(and(eq(m.userId, u.id), eq(m.status, <span class="t-s">'active'</span>)))).map(r =&gt; r.id)
+  <span class="t-k">if</span> (communityId &amp;&amp; !memberOf.includes(communityId)) <span class="t-k">throw</span> apiError(<span class="t-s">'FORBIDDEN'</span>, <span class="t-s">'Join this community to see its feed.'</span>, { reason: <span class="t-s">'not_member'</span> })
+  <span class="t-k">const</span> ids = communityId ? [communityId] : memberOf
+  <span class="t-k">if</span> (!ids.length) <span class="t-k">return</span> { items: [], nextCursor: <span class="t-k">null</span> }
+  <span class="t-k">const</span> d = schema.drop
+  <span class="t-k">const</span> blocked = <span class="t-k">await</span> blockedAuthorIds(u.id)
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> db.select({ drop: d, talent: schema.talent }).<span class="t-k">from</span>(d)
+    .innerJoin(schema.community, eq(schema.community.id, d.communityId))
+    .leftJoin(schema.talent, eq(schema.talent.id, schema.community.ownerTalentId))
+    .where(and(inArray(d.communityId, ids), eq(schema.community.status, <span class="t-s">'active'</span>), liveFilter(), notAuthoredByBlocked(d.authorId, blocked),
+      <span class="t-k">from</span> ? gte(d.publishAt, <span class="t-k">new</span> Date(<span class="t-k">from</span>)) : <span class="t-k">undefined</span>, to ? lte(d.publishAt, <span class="t-k">new</span> Date(to)) : <span class="t-k">undefined</span>,
+      cur ? sql<span class="t-s">`(${d.publishAt}, ${d.id}) &lt; (${cur.t}::timestamptz, ${cur.id}::uuid)`</span> : <span class="t-k">undefined</span>))
+    .orderBy(desc(d.publishAt), desc(d.id)).limit(limit + <span class="t-n">1</span>)
+  <span class="t-k">const</span> view = <span class="t-k">await</span> dropListViews(rows, u)
+  <span class="t-k">return</span> toPage(rows, limit, scope, r =&gt; ({ t: r.drop.publishAt!.toISOString(), id: r.drop.id }), view)
+})</code></pre></figure>
+<p><code>server/api/discover.get.ts</code> is the home screen of suggestions: communities for you, popular ones, and new Stars:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/discover.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { and, desc, eq, inArray, notInArray } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// DIS-01: for_you (signed in: fandoms of the Stars picked in onboarding, not joined),</span>
+<span class="t-c">// popular_communities, new_talents. ≤12 each; "see all" uses COM-01 / CAT-05.</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  <span class="t-k">const</span> viewer = <span class="t-k">await</span> optionalUser(event)
+  <span class="t-k">const</span> db = useDb()
+  <span class="t-k">const</span> cm = schema.community
+  <span class="t-k">const</span> joined = viewer
+    ? (<span class="t-k">await</span> db.select({ id: schema.membership.communityId }).<span class="t-k">from</span>(schema.membership)
+        .where(and(eq(schema.membership.userId, viewer.id), eq(schema.membership.status, <span class="t-s">'active'</span>)))).map(r =&gt; r.id)
+    : []
+  <span class="t-k">const</span> notJoined = joined.length ? notInArray(cm.id, joined) : <span class="t-k">undefined</span>
+  <span class="t-k">const</span> sections = []
+  <span class="t-k">if</span> (viewer) {
+    <span class="t-k">const</span> [o] = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(schema.onboarding).where(eq(schema.onboarding.userId, viewer.id)).limit(<span class="t-n">1</span>)
+    <span class="t-k">let</span> items: ReturnType&lt;<span class="t-k">typeof</span> communityCard&gt;[] = []
+    <span class="t-k">if</span> (o?.talentIds.length) {
+      <span class="t-k">const</span> rows = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(cm).where(and(eq(cm.status, <span class="t-s">'active'</span>), notJoined, inArray(cm.ownerTalentId, o.talentIds)))
+        .orderBy(desc(cm.memberCount), cm.id).limit(<span class="t-n">12</span>)
+      items = rows.map(c =&gt; communityCard(c, <span class="t-k">null</span>))
+    }
+    sections.push({ key: <span class="t-s">'for_you'</span>, title: <span class="t-s">'For you'</span>, items })
+  }
+  <span class="t-k">const</span> popular = <span class="t-k">await</span> db.select().<span class="t-k">from</span>(cm).where(and(eq(cm.status, <span class="t-s">'active'</span>), notJoined)).orderBy(desc(cm.memberCount), cm.id).limit(<span class="t-n">12</span>)
+  sections.push({ key: <span class="t-s">'popular_communities'</span>, title: <span class="t-s">'Popular communities'</span>, items: popular.map(c =&gt; communityCard(c, <span class="t-k">null</span>)) })
+  <span class="t-k">const</span> fresh = <span class="t-k">await</span> db.select({ t: schema.talent, communityId: cm.id }).<span class="t-k">from</span>(schema.talent)
+    .innerJoin(cm, and(eq(cm.ownerTalentId, schema.talent.id), eq(cm.status, <span class="t-s">'active'</span>)))
+    .orderBy(desc(schema.talent.createdAt), schema.talent.id).limit(<span class="t-n">12</span>)
+  sections.push({ key: <span class="t-s">'new_talents'</span>, title: <span class="t-s">'New talents'</span>, items: fresh.map(r =&gt; talentCard(r.t, r.communityId)) })
+  <span class="t-k">return</span> { sections }
+})</code></pre></figure>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The feed pages on <code>(publish_at, id)</code>, not on an offset, so a drop published while you scroll never causes a duplicate. The <code>from</code>/<code>to</code> filters are limited to a 90-day range so one call cannot scan the whole table.</p>
+</aside>
+
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p><em>(Local PostgreSQL without Docker? Use the <code>psql "$NUXT_DATABASE_URL"</code> form from <a href="90-postgres-without-docker.html#4-replace-the-docker-commands">the appendix</a> instead of <code>docker exec</code>.)</em></p>
+<p>Make your test user an admin (admins can post in any community), then publish a drop and read the feed:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>docker exec clautverse-pg psql -U postgres -d clautverse -c <span class="t-s">"update \"user\" set roles = 'fan,super_admin' where email = 'ada@example.com'"</span>
+curl -b jar.txt -X POST http://localhost:<span class="t-n">3000</span>/api/drops \
+  -H <span class="t-s">'Content-Type: application/json'</span> -H <span class="t-s">'Idempotency-Key: demo-1'</span> \
+  -d <span class="t-s">'{"communityId":"COMMUNITY_ID","type":"text","body":"Hello fandom!","publishNow":true}'</span></code></pre></figure>
+<p>Send the <strong>exact same command again</strong>: you get the same drop <code>id</code> back, not a second drop. That is idempotency at work. Rejoin the community if you left it in chapter 11, then call <code>curl -b jar.txt http://localhost:3000/api/feed</code> and <code>curl -b jar.txt -X PUT http://localhost:3000/api/drops/DROP_ID/reactions/me</code> (a like) and look at <code>reactionCounts</code>. Commit: <code>git add -A && git commit -m "Drops, replies, likes, feed and discover"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="11-communities.html"><small>Previous</small>Communities, joining and Originals</a><a class="next" href="13-missions.html"><small>Next</small>Missions, XP and badges</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#the-rules-in-plain-words">The rules in plain words</a></li><li><a href="#the-drops-helper-file">The drops helper file</a></li><li><a href="#idempotency-making-send-twice-safe">Idempotency: making "send twice" safe</a></li><li><a href="#creating-reading-editing-publishing-deleting">Creating, reading, editing, publishing, deleting</a></li><li><a href="#likes">Likes</a></li><li><a href="#replies">Replies</a></li><li><a href="#timelines-community-page-feed-discover">Timelines: community page, feed, discover</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

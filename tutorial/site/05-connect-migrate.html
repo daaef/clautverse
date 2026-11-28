@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect, migrate, seed and check health · Build Clautverse</title>
+<meta name="description" content="Turn the table descriptions into real tables, add starter data, and build the health endpoint.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="05-connect-migrate">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate" aria-current="page">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 2 · Foundations</p><h1>Connect, migrate, seed and check health</h1><p class="meta">About 4 min read</p><p class="lead">Now the app meets the database. You will write the connection helper, create the real tables, add a few starter rows, and build the first real endpoint: a health check.</p>
+
+<h2 id="the-connection-helper">The connection helper<a class="anchor" href="#the-connection-helper" aria-label="Link to this section">#</a></h2>
+<p>Create the folder <code>server/utils</code> and the file <code>server/utils/db.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/db.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { drizzle } <span class="t-k">from</span> <span class="t-s">'drizzle-orm/postgres-js'</span>
+<span class="t-k">import</span> postgres <span class="t-k">from</span> <span class="t-s">'postgres'</span>
+<span class="t-k">import</span> * <span class="t-k">as</span> schema <span class="t-k">from</span> <span class="t-s">'../db/schema'</span>
+
+<span class="t-k">let</span> _db: ReturnType&lt;<span class="t-k">typeof</span> drizzle&lt;<span class="t-k">typeof</span> schema&gt;&gt; | <span class="t-k">undefined</span>
+
+<span class="t-k">export</span> <span class="t-k">function</span> useDb() {
+  <span class="t-k">if</span> (!_db) {
+    <span class="t-k">const</span> url = useRuntimeConfig().databaseUrl
+    <span class="t-k">if</span> (!url) <span class="t-k">throw</span> <span class="t-k">new</span> Error(<span class="t-s">'NUXT_DATABASE_URL is not set'</span>)
+    <span class="t-c">// prepare:false keeps us compatible with Neon's pooled (PgBouncer) endpoint.</span>
+    _db = drizzle(postgres(url, { prepare: <span class="t-k">false</span>, max: <span class="t-n">5</span> }), { schema })
+  }
+  <span class="t-k">return</span> _db
+}
+
+<span class="t-k">export</span> { schema }</code></pre></figure>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Opening a connection is slow, so we open it once, the first time anyone needs it, and then reuse it. <code>useDb()</code> is the door every endpoint walks through to reach the database.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<ul>
+<li><code>let _db</code> at the top is a <strong>lazy singleton</strong>: created on first call, reused afterwards.</li>
+<li><code>useRuntimeConfig().databaseUrl</code> reads the setting from chapter 2. No URL means a clear error instead of a confusing one later.</li>
+<li><code>prepare: false</code> turns off prepared statements. The comment explains why: it keeps us compatible with Neon's pooled (PgBouncer) database endpoint, a hosted Postgres we may use later.</li>
+<li><code>max: 5</code> allows at most five connections at once.</li>
+<li><code>export { schema }</code> makes the table definitions available everywhere. Because Nitro auto-imports exports from <code>server/utils</code>, any endpoint can write <code>useDb()</code> and <code>schema.community</code> with no import.</li>
+</ul>
+</aside>
+
+<h2 id="create-the-real-tables-migrations">Create the real tables (migrations)<a class="anchor" href="#create-the-real-tables-migrations" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>A <strong>migration</strong> is a dated instruction like "add this drawer to the filing cabinet". Instead of editing the database by hand, we generate instructions from our TypeScript and run them in order. Anyone who runs the same instructions ends up with the same cabinet, and every change is saved in git.</p>
+</aside>
+<p>First, make your <code>.env</code> values visible to the two Drizzle commands. (Nuxt reads <code>.env</code> by itself when the app runs, but <code>drizzle-kit</code> is a separate tool and does not.) Run this once per terminal window:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>set -a; . ./.env; set +a</code></pre></figure>
+<p><em>Windows PowerShell: use the <code>.env</code> loader from <a href="02-config.html#secrets-the-env-file">chapter 2</a> instead of the line above.</em></p>
+<p>Then generate and apply the migration:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>pnpm db:generate
+pnpm db:migrate</code></pre></figure>
+<ul>
+  <li><code>db:generate</code> compares your schema files with the previous state and writes a numbered SQL file into <code>server/db/migrations</code>, such as <code>0000_something_random.sql</code>, plus a <code>meta</code> folder that remembers the state. The random name part is chosen by the tool.</li>
+  <li><code>db:migrate</code> runs any migration files the database has not seen yet.</li>
+</ul>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>Open the generated <code>.sql</code> file: it is ordinary <code>CREATE TABLE</code> statements, one per table, with the constraints from your TypeScript. The project you are copying has nine migration files because its tables grew over time (for example shows and seasons were added and later removed). Yours will have one, because you are creating the final shape in one go. The result is the same set of tables.</p>
+</aside>
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p><em>(Local PostgreSQL without Docker? Use the <code>psql "$NUXT_DATABASE_URL"</code> form from <a href="90-postgres-without-docker.html#4-replace-the-docker-commands">the appendix</a> instead of <code>docker exec</code>.)</em></p>
+<p>Look inside the database. This runs a command inside the Docker container and lists the tables:</p>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>docker exec clautverse-pg psql -U postgres -d clautverse -c <span class="t-s">'\dt'</span></code></pre></figure>
+<p>You should see 30 tables. (Drizzle also keeps its own record of which migrations have run, in a separate place that this list does not show.)</p>
+</aside>
+<aside class="callout warn"><p class="callout-label">Watch out</p>
+<p>After this point, <strong>never change a table by editing the database by hand</strong>. Edit the schema file, run <code>pnpm db:generate</code>, then <code>pnpm db:migrate</code>. That keeps your project and your database in agreement.</p>
+</aside>
+
+<h2 id="starter-data-the-seed">Starter data (the seed)<a class="anchor" href="#starter-data-the-seed" aria-label="Link to this section">#</a></h2>
+<p>The tables are empty. Fans pick a category and favourite Stars during onboarding, so we need some to exist. Create <code>scripts/seed.mjs</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">scripts/seed.mjs</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-c">// Seeds categories, countries and Stars for local dev/tests. Idempotent. Usage: node --env-file=.env scripts/seed.mjs</span>
+<span class="t-k">import</span> postgres <span class="t-k">from</span> <span class="t-s">'postgres'</span>
+
+<span class="t-k">const</span> sql = postgres(process.env.NUXT_DATABASE_URL, { prepare: <span class="t-k">false</span>, max: <span class="t-n">1</span> })
+<span class="t-k">await</span> sql.begin(<span class="t-k">async</span> (tx) =&gt; {
+  <span class="t-k">await</span> tx<span class="t-s">`insert into category (slug, name, active, sort_order) values
+    ('reality-tv', 'Reality TV', true, 0), ('music', 'Music', false, 1), ('sports', 'Sports', false, 2)
+    on conflict (slug) do nothing`</span>
+  <span class="t-k">await</span> tx<span class="t-s">`insert into country (code, name) values ('NG', 'Nigeria'), ('GH', 'Ghana'), ('ZA', 'South Africa')
+    on conflict (code) do nothing`</span>
+  <span class="t-c">// Placeholder Stars until task 5 seeds the fictional pilot set.</span>
+  <span class="t-k">await</span> tx<span class="t-s">`insert into talent (slug, name, category_id, country_id, known_for, bio)
+    select v.slug, v.name, c.id, k.id, v.known_for, 'Housemate' from (values
+      ('ada', 'Ada', 'Housemate, Season 10 · 2025'), ('bisi', 'Bisi', 'Housemate, Season 10 · 2025'), ('chidi', 'Chidi', 'Housemate, Season 10 · 2025')
+    ) as v(slug, name, known_for)
+    join category c on c.slug = 'reality-tv' join country k on k.code = 'NG'
+    on conflict (slug) do nothing`</span>
+})
+<span class="t-k">await</span> sql.end()
+console.log(<span class="t-s">'seeded'</span>)</code></pre></figure>
+<ul>
+  <li>It inserts three categories (only <strong>Reality TV</strong> is <code>active</code>), three countries, and three placeholder Stars (Ada, Bisi, Chidi).</li>
+  <li><code>on conflict (slug) do nothing</code> makes the script <strong>idempotent</strong>: running it twice does not create duplicates.</li>
+  <li><code>sql.begin(async (tx) =&gt; ...)</code> wraps everything in a transaction, so either all rows go in or none.</li>
+</ul>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>pnpm db:seed</code></pre></figure>
+<aside class="callout check"><p class="callout-label">Checkpoint</p><p>The terminal prints <code>seeded</code>.</p></aside>
+
+<h2 id="the-health-endpoint">The health endpoint<a class="anchor" href="#the-health-endpoint" aria-label="Link to this section">#</a></h2>
+<p>A health check is a tiny endpoint that says "I am running, and my database answers". Hosting services and humans ping it. Create <code>server/api/health.get.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/api/health.get.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">// OPS-01</span>
+<span class="t-k">export</span> <span class="t-k">default</span> defineEventHandler(<span class="t-k">async</span> (event) =&gt; {
+  setResponseHeader(event, <span class="t-s">'Cache-Control'</span>, <span class="t-s">'no-store'</span>)
+  <span class="t-k">const</span> version = useRuntimeConfig().appVersion
+  <span class="t-k">try</span> {
+    <span class="t-k">await</span> useDb().execute(sql<span class="t-s">`select 1`</span>)
+    <span class="t-k">return</span> { status: <span class="t-s">'ok'</span>, db: <span class="t-s">'ok'</span>, version }
+  }
+  <span class="t-k">catch</span> {
+    setResponseStatus(event, <span class="t-n">503</span>)
+    <span class="t-k">return</span> { status: <span class="t-s">'error'</span>, db: <span class="t-s">'error'</span>, version }
+  }
+})</code></pre></figure>
+<ul>
+  <li><code>setResponseHeader(event, 'Cache-Control', 'no-store')</code> tells browsers and proxies not to remember the answer.</li>
+  <li><code>select 1</code> is the cheapest possible question to the database. If it answers, the database is alive.</li>
+  <li>On failure the endpoint still replies (so monitors get a clear answer), but with status <code>503</code> (service unavailable).</li>
+</ul>
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Start the app with <code>pnpm dev</code>, then run <code>curl http://localhost:3000/api/health</code>. Expected, from reading the code: <code>{"status":"ok","db":"ok","version":"dev"}</code>. Now stop the database with <code>docker stop clautverse-pg</code> and call it again: you should get <code>status: "error"</code> with a 503. Start it again with <code>docker start clautverse-pg</code>.</p>
+</aside>
+<p>Commit: <code>git add -A && git commit -m "Connect to Postgres, add migrations, seed and health check"</code>.</p>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="04-database-tables.html"><small>Previous</small>Run PostgreSQL and design the tables</a><a class="next" href="06-errors.html"><small>Next</small>One shape for every error</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#the-connection-helper">The connection helper</a></li><li><a href="#create-the-real-tables-migrations">Create the real tables (migrations)</a></li><li><a href="#starter-data-the-seed">Starter data (the seed)</a></li><li><a href="#the-health-endpoint">The health endpoint</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

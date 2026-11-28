@@ -1,0 +1,67 @@
+<!--@meta
+part: Part 6 · Explorer and tests
+title: The API contract (OpenAPI)
+summary: A written description of every route that tools, and our Explorer page, can read.
+-->
+<p class="lead">So far the only description of our API is the code. This chapter adds a second one that machines and humans can both read: an <strong>OpenAPI contract</strong>. Then we add the one endpoint that serves it to the API Explorer.</p>
+
+<h2>What OpenAPI is</h2>
+<plain>
+<p>A restaurant has a menu so customers know what they can order without walking into the kitchen. OpenAPI is the menu for an API: for each address it lists the method, what you must send, and what the answers look like. Tools can read it to build documentation pages, test clients and, in our case, the API Explorer.</p>
+</plain>
+<tech>
+<p>OpenAPI (version 3.1 here) is a YAML or JSON file. The project keeps it by hand at <code>openapi/clautverse.yaml</code> and treats it as the <strong>source of truth</strong> for the Explorer. It is about 3,400 lines for roughly 110 operations, which is why this guide teaches the structure instead of asking you to type all of it.</p>
+</tech>
+
+<h2>Anatomy of the file</h2>
+<p>The top of the file names the API:</p>
+<!--@code yaml | openapi/clautverse.yaml (the top)-->
+openapi: 3.1.0
+info:
+  title: Clautverse API
+  version: 2.0.0
+servers:
+  - url: /
+paths:
+<!--@/code-->
+<p>Under <code>paths:</code> each address has one entry per method. This is the simplest one, the health check:</p>
+<!--@block openapi/clautverse.yaml "/api/health:" | the health operation-->
+<ul>
+  <li><code>operationId</code> and <code>x-route-id</code>: the route's short name (<code>OPS-01</code>). Names starting with <code>x-</code> are our own additions. The same IDs appear in comments at the top of the route files (such as <code>// OPS-01</code>).</li>
+  <li><code>tags</code>: the group in the Explorer's sidebar (<code>OPS</code>, <code>COM</code>, <code>ADM</code>…).</li>
+  <li><code>x-status</code>: <code>implemented</code>, <code>planned</code> or <code>deferred</code>. The Explorer shows a coloured badge for anything not implemented.</li>
+  <li><code>responses.default</code> points at a shared error description defined once, below.</li>
+</ul>
+<p>An operation that takes input adds <code>parameters</code> (for the path, the query string, headers) and a <code>requestBody</code>. Here is the join operation from chapter 11:</p>
+<!--@block openapi/clautverse.yaml "/api/communities/{id}/join:" | the join operation-->
+<p>Notice how each field describes itself: <code>type</code>, <code>format</code>, allowed values (<code>enum</code>), limits (<code>minimum</code>, <code>maxLength</code>), and an <code>example</code>. The Explorer turns exactly these into dropdowns, number boxes with limits and sample data. That is why the contract matters to the page you build in chapter 19.</p>
+<p>Finally, shared pieces live under <code>components</code>, so they are written once:</p>
+<!--@block openapi/clautverse.yaml "components:" | shared pieces-->
+<p>The <code>Error</code> schema there lists the same error codes as chapter 6, and <code>Page</code> describes the <code>{ items, nextCursor }</code> shape from chapter 7.</p>
+
+<h2>Create your own starter file</h2>
+<plain>
+<p>You do not have to write 110 entries to continue. Start with a few and add more whenever you like. Each new route needs an entry that follows the join example above.</p>
+</plain>
+<p>Create <code>openapi/clautverse.yaml</code> with the header above, the <code>/api/health</code> block under <code>paths:</code>, and the <code>components:</code> section. To get the complete contract, copy the file from the project repository; it is the exact one the Explorer in this guide shows.</p>
+
+<h2>The route that serves the contract</h2>
+<p>The browser cannot read a YAML file from the project folder, so we add an endpoint that reads it, converts it to JSON and sends it. It also adds one extra feature: for every operation it works out which parts of the system the route uses and attaches them as <code>x-services</code> labels (the little chips on each Explorer card). Create <code>server/api/_docs/openapi.get.ts</code>:</p>
+<!--@file server/api/_docs/openapi.get.ts-->
+<ul>
+  <li><strong>Caching by file time.</strong> The parsed contract is kept in memory and only rebuilt when the file's modification time changes, so edits show up without restarting.</li>
+  <li><strong><code>routeKey</code></strong> converts a route file name to a contract path (<code>[id]</code> becomes <code>{id}</code>, <code>index</code> disappears), the reverse of chapter 3's rule.</li>
+  <li><strong><code>utilExports</code> and <code>servicesPerRoute</code></strong> read every util file, collect the names it exports, then search each route file's text for those names. A route that mentions <code>requireUser</code> gets the "Session guard" chip. It is a simple text scan, not magic: it can only be as accurate as the names are distinctive.</li>
+  <li>If anything fails, it answers <code>500 OpenAPI spec unavailable</code>.</li>
+</ul>
+<tech>
+<p>The folder name <code>_docs</code> has no special meaning to Nitro; the leading underscore is just a naming habit. The address is <code>/api/_docs/openapi</code>.</p>
+</tech>
+
+<check>
+<p>Restart <code>pnpm dev</code> and fetch it:</p>
+<!--@code bash | terminal-->
+curl -s http://localhost:3000/api/_docs/openapi | head -c 400
+<!--@/code-->
+<p>You should see JSON starting with <code>{"openapi":"3.1.0","info":{"title":"Clautverse API"…</code> and then the paths. Commit: <code>git add -A && git commit -m "OpenAPI contract and docs endpoint"</code>.</p>
+</check>

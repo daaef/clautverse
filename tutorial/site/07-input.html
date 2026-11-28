@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checking input, paging and rate limits · Build Clautverse</title>
+<meta name="description" content="Reject bad data early, serve long lists page by page with tamper-proof cursors, and slow down abusers.">
+<script>try{var t=localStorage.getItem('bt-theme');if(t)document.documentElement.dataset.theme=t;var v=localStorage.getItem('bt-view');if(v)document.documentElement.dataset.view=v}catch(e){}</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="07-input">
+<header class="top">
+  <button class="icon" id="menu" aria-label="Open chapter list">&#9776;</button>
+  <a class="brand" href="index.html">Build Clautverse</a>
+  <div class="search"><input id="q" type="search" placeholder="Search the guide…" autocomplete="off" aria-label="Search the guide"><ul id="results" hidden></ul></div>
+  <div class="view" role="group" aria-label="Which notes to show">
+    <button data-view="both" title="Show plain-words and programming notes">Both</button>
+    <button data-view="plain" title="Hide programming notes">Plain</button>
+    <button data-view="tech" title="Hide plain-words notes">Technical</button>
+  </div>
+  <button class="icon" id="theme" aria-label="Toggle dark mode">&#9680;</button>
+</header>
+<div class="layout">
+  <nav class="side" id="side" aria-label="Chapters"><section class="nav-part"><h2>Start here</h2><ul><li><a href="00-big-picture.html" data-slug="00-big-picture">The big picture</a></li></ul></section><section class="nav-part"><h2>Part 1 · Set up</h2><ul><li><a href="01-setup.html" data-slug="01-setup">Install tools and create the project</a></li><li><a href="02-config.html" data-slug="02-config">Packages, settings and secrets</a></li><li><a href="03-first-endpoint.html" data-slug="03-first-endpoint">Your first endpoint</a></li></ul></section><section class="nav-part"><h2>Part 2 · Foundations</h2><ul><li><a href="04-database-tables.html" data-slug="04-database-tables">Run PostgreSQL and design the tables</a></li><li><a href="05-connect-migrate.html" data-slug="05-connect-migrate">Connect, migrate, seed and check health</a></li><li><a href="06-errors.html" data-slug="06-errors">One shape for every error</a></li><li><a href="07-input.html" data-slug="07-input" aria-current="page">Checking input, paging and rate limits</a></li></ul></section><section class="nav-part"><h2>Part 3 · People</h2><ul><li><a href="08-accounts.html" data-slug="08-accounts">Accounts, sign-in and sessions</a></li><li><a href="09-profile.html" data-slug="09-profile">My account: profile and deletion</a></li><li><a href="10-catalog.html" data-slug="10-catalog">Categories, Stars and onboarding</a></li></ul></section><section class="nav-part"><h2>Part 4 · Features</h2><ul><li><a href="11-communities.html" data-slug="11-communities">Communities, joining and Originals</a></li><li><a href="12-drops.html" data-slug="12-drops">Drops, replies, likes and the feed</a></li><li><a href="13-missions.html" data-slug="13-missions">Missions, XP and badges</a></li><li><a href="14-parties-notifications.html" data-slug="14-parties-notifications">Watch parties, notifications and background jobs</a></li></ul></section><section class="nav-part"><h2>Part 5 · Stars, safety and admin</h2><ul><li><a href="15-stars.html" data-slug="15-stars">Becoming a Star</a></li><li><a href="16-safety.html" data-slug="16-safety">Reports and blocks</a></li><li><a href="17-admin.html" data-slug="17-admin">The admin area and the audit trail</a></li></ul></section><section class="nav-part"><h2>Part 6 · Explorer and tests</h2><ul><li><a href="18-contract.html" data-slug="18-contract">The API contract (OpenAPI)</a></li><li><a href="19-explorer.html" data-slug="19-explorer">The API Explorer page (Vue)</a></li><li><a href="20-tests.html" data-slug="20-tests">Automated tests</a></li></ul></section><section class="nav-part"><h2>Finish</h2><ul><li><a href="21-finish.html" data-slug="21-finish">Check everything and what comes next</a></li></ul></section><section class="nav-part"><h2>Appendix</h2><ul><li><a href="90-postgres-without-docker.html" data-slug="90-postgres-without-docker">PostgreSQL without Docker</a></li><li><a href="99-glossary.html" data-slug="99-glossary">Glossary</a></li></ul></section><section class="nav-part"><h2>Reference</h2><ul><li><a href="ref-config.html">Config and setup files</a></li><li><a href="ref-database.html">Database files</a></li><li><a href="ref-helpers.html">Server helpers</a></li><li><a href="ref-routes.html">API routes</a></li><li><a href="ref-app.html">API Explorer (front end)</a></li><li><a href="ref-tests.html">Tests</a></li><li><a href="ref-endpoints.html">Every API route</a></li></ul></section></nav>
+  <main id="main">
+    <article class="prose">
+      <p class="kicker">Part 2 · Foundations</p><h1>Checking input, paging and rate limits</h1><p class="meta">About 5 min read</p><p class="lead">Three helpers that almost every endpoint uses: one that checks incoming data, one that splits long lists into pages, and one that limits how often someone can call. We also write our first automated test.</p>
+
+<h2 id="checking-incoming-data-with-zod">Checking incoming data with Zod<a class="anchor" href="#checking-incoming-data-with-zod" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Never trust what arrives from outside. A request might have a missing field, a number where text should be, or something hostile. So each endpoint first describes the shape it expects, and anything that does not fit is rejected with a clear message <em>before</em> it can touch the database.</p>
+</aside>
+<p>Zod lets us describe that shape in code. A tiny example, which is not part of the project:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">a Zod shape</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">const</span> body = z.object({
+  lane: z.enum([<span class="t-s">'rider'</span>, <span class="t-s">'creator'</span>]),
+  alertsEnabled: z.boolean().optional(),
+}).strict()</code></pre></figure>
+<p>This says: the body must be an object with a <code>lane</code> that is one of two words, optionally an <code>alertsEnabled</code> true/false, and <strong>nothing else</strong> (<code>.strict()</code> rejects unknown fields; most real endpoints use it, so a typo in a field name is an error rather than silently ignored).</p>
+<p>Create <code>server/utils/validate.ts</code>, the helpers every endpoint uses to apply such a shape:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/validate.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> <span class="t-k">type</span> { H3Event } <span class="t-k">from</span> <span class="t-s">'h3'</span>
+<span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-k">function</span> toFields(error: z.ZodError) {
+  <span class="t-k">const</span> fields: Record&lt;string, string&gt; = {}
+  <span class="t-k">for</span> (<span class="t-k">const</span> issue <span class="t-k">of</span> error.issues) {
+    <span class="t-k">const</span> key = issue.path.reduce&lt;string&gt;((acc, p) =&gt; <span class="t-k">typeof</span> p === <span class="t-s">'number'</span> ? <span class="t-s">`${acc}[${p}]`</span> : acc ? <span class="t-s">`${acc}.${String(p)}`</span> : String(p), <span class="t-s">''</span>) || <span class="t-s">'_'</span>
+    fields[key] ??= issue.message
+  }
+  <span class="t-k">return</span> fields
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> parseOrThrow&lt;T <span class="t-k">extends</span> z.ZodType&gt;(schema: T, input: unknown): z.infer&lt;T&gt; {
+  <span class="t-k">const</span> result = schema.safeParse(input)
+  <span class="t-k">if</span> (!result.success) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Some fields are invalid.'</span>, { fields: toFields(result.error) })
+  <span class="t-k">return</span> result.data
+}
+
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> readJsonBody&lt;T <span class="t-k">extends</span> z.ZodType&gt;(event: H3Event, schema: T) {
+  <span class="t-k">let</span> body: unknown
+  <span class="t-k">try</span> {
+    body = <span class="t-k">await</span> readRawBody(event).then(raw =&gt; (raw ? JSON.parse(raw) : {}))
+  }
+  <span class="t-k">catch</span> {
+    <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Body must be valid JSON.'</span>)
+  }
+  <span class="t-k">return</span> parseOrThrow(schema, body)
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> readQuery&lt;T <span class="t-k">extends</span> z.ZodType&gt;(event: H3Event, schema: T) {
+  <span class="t-k">return</span> parseOrThrow(schema, getQuery(event))
+}
+
+<span class="t-k">export</span> <span class="t-k">const</span> idParam = z.object({ id: z.uuid() })
+
+<span class="t-k">export</span> <span class="t-k">function</span> readIdParam(event: H3Event) {
+  <span class="t-k">const</span> result = idParam.safeParse(getRouterParams(event))
+  <span class="t-k">if</span> (!result.success) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Not found.'</span>)
+  <span class="t-k">return</span> result.data.id
+}
+
+<span class="t-c">/** Better Auth user ids are opaque strings, not UUIDs. */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> readUserIdParam(event: H3Event) {
+  <span class="t-k">const</span> id = getRouterParam(event, <span class="t-s">'id'</span>)
+  <span class="t-k">if</span> (!id || id.length &gt; <span class="t-n">100</span> || !/^[\w-]+$/.test(id)) <span class="t-k">throw</span> apiError(<span class="t-s">'NOT_FOUND'</span>, <span class="t-s">'Not found.'</span>)
+  <span class="t-k">return</span> id
+}</code></pre></figure>
+<ul>
+  <li><code>toFields</code> turns Zod's list of problems into <code>{ "lane": "Invalid option…" }</code>, which is what the error's <code>details.fields</code> shows. Array positions are written like <code>links[0].url</code>.</li>
+  <li><code>readJsonBody(event, schema)</code> reads the request body, refuses invalid JSON, then validates it. <code>readQuery</code> does the same for <code>?a=1&amp;b=2</code> parts of the address.</li>
+  <li><code>readIdParam(event)</code> reads <code>[id]</code> from the path and insists it is a UUID. A malformed ID is answered with <code>NOT_FOUND</code> (not a validation error), so a made-up ID looks the same as an ID that simply does not exist.</li>
+  <li><code>readUserIdParam</code> exists because user IDs from Better Auth are opaque text, not UUIDs.</li>
+</ul>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>Every failure is thrown as <code>apiError('VALIDATION_FAILED', …)</code> from chapter 6, so a bad request automatically gets the standard error shape. <code>z.infer&lt;T&gt;</code> gives you the TypeScript type of validated data, so after <code>readJsonBody</code> returns you are working with correctly typed values.</p>
+</aside>
+
+<h2 id="long-lists-pages-and-cursors">Long lists: pages and cursors<a class="anchor" href="#long-lists-pages-and-cursors" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>A list of 50,000 communities cannot be sent in one go. We send a page (say 20), plus a bookmark ("cursor") saying where the next page starts. The caller sends the bookmark back to get the next page.</p>
+</aside>
+<aside class="callout tech"><p class="callout-label">In programming terms</p>
+<p>The classic way is <code>page=2</code> (offset pagination), but it breaks when rows are added while someone is scrolling: items shift and you see duplicates or skip some. We use <strong>keyset pagination</strong>: the bookmark records the last item's sort values (such as its timestamp and ID), and the next query says "give me rows after this one". That stays stable and is fast with an index.</p>
+</aside>
+<p>The bookmark must be <strong>tamper-proof</strong>; otherwise someone could invent one. So it is signed. Create <code>server/utils/cursor.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/cursor.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { createHmac, timingSafeEqual } <span class="t-k">from</span> <span class="t-s">'node:crypto'</span>
+
+<span class="t-c">// Opaque, signed keyset cursor: base64url(json).base64url(hmac)</span>
+<span class="t-k">export</span> <span class="t-k">function</span> encodeCursor(payload: Record&lt;string, unknown&gt;, secret: string): string {
+  <span class="t-k">const</span> body = Buffer.<span class="t-k">from</span>(JSON.stringify(payload)).toString(<span class="t-s">'base64url'</span>)
+  <span class="t-k">const</span> sig = createHmac(<span class="t-s">'sha256'</span>, secret).update(body).digest(<span class="t-s">'base64url'</span>)
+  <span class="t-k">return</span> <span class="t-s">`${body}.${sig}`</span>
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> decodeCursor&lt;T = Record&lt;string, unknown&gt;&gt;(cursor: string, secret: string): T | <span class="t-k">null</span> {
+  <span class="t-k">const</span> [body, sig] = cursor.split(<span class="t-s">'.'</span>)
+  <span class="t-k">if</span> (!body || !sig) <span class="t-k">return</span> <span class="t-k">null</span>
+  <span class="t-k">const</span> expected = createHmac(<span class="t-s">'sha256'</span>, secret).update(body).digest()
+  <span class="t-k">const</span> given = Buffer.<span class="t-k">from</span>(sig, <span class="t-s">'base64url'</span>)
+  <span class="t-k">if</span> (given.length !== expected.length || !timingSafeEqual(given, expected)) <span class="t-k">return</span> <span class="t-k">null</span>
+  <span class="t-k">try</span> {
+    <span class="t-k">return</span> JSON.parse(Buffer.<span class="t-k">from</span>(body, <span class="t-s">'base64url'</span>).toString(<span class="t-s">'utf8'</span>)) <span class="t-k">as</span> T
+  }
+  <span class="t-k">catch</span> {
+    <span class="t-k">return</span> <span class="t-k">null</span>
+  }
+}</code></pre></figure>
+<ul>
+  <li>The cursor is <code>base64url(json) + "." + base64url(signature)</code>. The signature is an HMAC (a fingerprint made with a secret, here <code>cursorSecret</code> from chapter 2).</li>
+  <li>When decoding, we recompute the fingerprint and compare with <code>timingSafeEqual</code>, which takes the same time whether or not the first bytes match. That prevents guessing a signature by timing. A forged or garbled cursor decodes to <code>null</code>.</li>
+</ul>
+<p>Now the helper that endpoints use. Create <code>server/utils/paginate.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/paginate.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { z } <span class="t-k">from</span> <span class="t-s">'zod'</span>
+
+<span class="t-k">export</span> <span class="t-k">const</span> pageQuery = { limit: z.coerce.number().int().min(<span class="t-n">1</span>).max(<span class="t-n">100</span>).<span class="t-k">default</span>(<span class="t-n">20</span>), cursor: z.string().max(<span class="t-n">500</span>).optional() }
+
+<span class="t-c">/** Decodes a signed cursor; `scope` stops a cursor from one list/sort being reused on another. */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> readCursor&lt;T <span class="t-k">extends</span> Record&lt;string, unknown&gt;&gt;(cursor: string | <span class="t-k">undefined</span>, scope: string): T | <span class="t-k">null</span> {
+  <span class="t-k">if</span> (!cursor) <span class="t-k">return</span> <span class="t-k">null</span>
+  <span class="t-k">const</span> data = decodeCursor&lt;T &amp; { s: string }&gt;(cursor, useRuntimeConfig().cursorSecret)
+  <span class="t-k">if</span> (!data || data.s !== scope) <span class="t-k">throw</span> apiError(<span class="t-s">'VALIDATION_FAILED'</span>, <span class="t-s">'Invalid cursor.'</span>, { fields: { cursor: <span class="t-s">'invalid'</span> } })
+  <span class="t-k">return</span> data
+}
+
+<span class="t-c">/** Pass `limit + 1` rows; returns `{ items, nextCursor }`. */</span>
+<span class="t-k">export</span> <span class="t-k">function</span> toPage&lt;R, I&gt;(rows: R[], limit: number, scope: string, key: (r: R) =&gt; Record&lt;string, unknown&gt;, map: (r: R) =&gt; I) {
+  <span class="t-k">const</span> more = rows.length &gt; limit
+  <span class="t-k">const</span> slice = more ? rows.slice(<span class="t-n">0</span>, limit) : rows
+  <span class="t-k">const</span> last = slice.at(-<span class="t-n">1</span>)
+  <span class="t-k">return</span> {
+    items: slice.map(map),
+    nextCursor: more &amp;&amp; last ? encodeCursor({ ...key(last), s: scope }, useRuntimeConfig().cursorSecret) : <span class="t-k">null</span>,
+  }
+}</code></pre></figure>
+<ul>
+  <li><code>pageQuery</code> is the shared <code>?limit=&amp;cursor=</code> shape: <code>limit</code> from 1 to 100 (default 20). <code>z.coerce.number()</code> turns the text <code>"20"</code> from the address into a number.</li>
+  <li><code>readCursor(cursor, scope)</code> verifies the signature <em>and</em> that the cursor was made for the same <code>scope</code>. The scope is a label such as <code>com-popular</code>; it stops a cursor from the "popular" list being reused on the "newest" list.</li>
+  <li><code>toPage(rows, limit, …)</code> expects you to ask the database for <strong><code>limit + 1</code></strong> rows. If you got more than <code>limit</code>, there is a next page, and the last kept row becomes the new cursor. Fetching one extra row avoids a separate "is there more?" query.</li>
+  <li>The result is always <code>{ items, nextCursor }</code>; <code>nextCursor</code> is <code>null</code> on the last page.</li>
+</ul>
+
+<h2 id="rate-limiting">Rate limiting<a class="anchor" href="#rate-limiting" aria-label="Link to this section">#</a></h2>
+<aside class="callout plain"><p class="callout-label">In plain words</p>
+<p>Without limits, one person (or a script) could hammer the server or try thousands of passwords. A rate limit says "at most N calls per minute".</p>
+</aside>
+<p>Create <code>server/utils/rate-limit.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">server/utils/rate-limit.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> <span class="t-k">type</span> { H3Event } <span class="t-k">from</span> <span class="t-s">'h3'</span>
+<span class="t-k">import</span> { sql } <span class="t-k">from</span> <span class="t-s">'drizzle-orm'</span>
+
+<span class="t-c">/**
+ * Fixed-window rate limit stored in Postgres (no Redis needed).
+ * Throws RATE_LIMITED with Retry-After when `limit` is exceeded within `windowSeconds`.
+ */</span>
+<span class="t-k">export</span> <span class="t-k">async</span> <span class="t-k">function</span> rateLimit(event: H3Event, name: string, subject: string, limit: number, windowSeconds: number) {
+  <span class="t-k">const</span> key = <span class="t-s">`${name}:${subject}`</span>
+  <span class="t-k">const</span> rows = <span class="t-k">await</span> useDb().execute&lt;{ count: number, window_start: Date }&gt;(sql<span class="t-s">`
+    insert into api_rate_limit (key, window_start, count) values (${key}, now(), 1)
+    on conflict (key) do update set
+      count = case when api_rate_limit.window_start &lt; now() - make_interval(secs =&gt; ${windowSeconds}) then 1 else api_rate_limit.count + 1 end,
+      window_start = case when api_rate_limit.window_start &lt; now() - make_interval(secs =&gt; ${windowSeconds}) then now() else api_rate_limit.window_start end
+    returning count, window_start`</span>)
+  <span class="t-k">const</span> row = rows[<span class="t-n">0</span>]!
+  <span class="t-k">if</span> (row.count &gt; limit) {
+    <span class="t-k">const</span> retryAfter = Math.max(<span class="t-n">1</span>, Math.ceil((<span class="t-k">new</span> Date(row.window_start).getTime() + windowSeconds * <span class="t-n">1000</span> - Date.now()) / <span class="t-n">1000</span>))
+    setResponseHeader(event, <span class="t-s">'Retry-After'</span>, retryAfter)
+    <span class="t-k">throw</span> apiError(<span class="t-s">'RATE_LIMITED'</span>, <span class="t-s">'Too many requests. Try again later.'</span>, { retryAfterSeconds: retryAfter })
+  }
+}
+
+<span class="t-k">export</span> <span class="t-k">function</span> clientIp(event: H3Event) {
+  <span class="t-k">return</span> getRequestIP(event, { xForwardedFor: <span class="t-k">true</span> }) ?? <span class="t-s">'unknown'</span>
+}</code></pre></figure>
+<ul>
+  <li>Usage reads like <code>await rateLimit(event, 'drop', user.id, 30, 60)</code>: "at most 30 <code>drop</code> calls per user per 60 seconds".</li>
+  <li>It uses the <code>api_rate_limit</code> table from chapter 4. One SQL statement either inserts the first hit, resets an expired window, or adds one to the count, and returns the new count. Doing it in one statement makes it safe when many requests arrive at the same instant.</li>
+  <li>When the limit is passed it sets a <code>Retry-After</code> header and throws <code>RATE_LIMITED</code> (HTTP 429).</li>
+  <li><code>clientIp</code> finds the caller's address for endpoints used by signed-out visitors.</li>
+</ul>
+<aside class="callout tech"><p class="callout-label">In programming terms</p><p>This is a <strong>fixed-window</strong> limiter stored in Postgres, which avoids running a separate Redis service. The trade-off is that a burst straddling two windows can briefly exceed the average rate. That is acceptable here.</p></aside>
+
+<h2 id="your-first-automated-test">Your first automated test<a class="anchor" href="#your-first-automated-test" aria-label="Link to this section">#</a></h2>
+<p>The cursor code is security-sensitive, so it deserves a test. Create the test runner's settings file, <code>vitest.config.ts</code>. It defines two groups of tests: fast <em>unit</em> tests, and <em>end-to-end</em> tests that start the whole app (chapter 20):</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">vitest.config.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { defineConfig } <span class="t-k">from</span> <span class="t-s">'vitest/config'</span>
+
+<span class="t-k">export</span> <span class="t-k">default</span> defineConfig({
+  test: {
+    projects: [
+      { test: { name: <span class="t-s">'unit'</span>, include: [<span class="t-s">'tests/unit/**/*.test.ts'</span>], environment: <span class="t-s">'node'</span> } },
+      {
+        test: {
+          name: <span class="t-s">'e2e'</span>,
+          include: [<span class="t-s">'tests/e2e/**/*.test.ts'</span>],
+          environment: <span class="t-s">'node'</span>,
+          globalSetup: [<span class="t-s">'tests/e2e/global-setup.ts'</span>],
+          testTimeout: <span class="t-n">30_000</span>,
+          hookTimeout: <span class="t-n">240_000</span>,
+          fileParallelism: <span class="t-k">false</span>,
+        },
+      },
+    ],
+  },
+})</code></pre></figure>
+<p>Then <code>tests/unit/cursor.test.ts</code>:</p>
+<figure class="code" data-lang="ts"><div class="code-head"><span class="code-file">tests/unit/cursor.test.ts</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code><span class="t-k">import</span> { describe, expect, it } <span class="t-k">from</span> <span class="t-s">'vitest'</span>
+<span class="t-k">import</span> { decodeCursor, encodeCursor } <span class="t-k">from</span> <span class="t-s">'../../server/utils/cursor'</span>
+
+describe(<span class="t-s">'signed cursor'</span>, () =&gt; {
+  <span class="t-k">const</span> secret = <span class="t-s">'test-secret'</span>
+  it(<span class="t-s">'round-trips'</span>, () =&gt; {
+    <span class="t-k">const</span> c = encodeCursor({ createdAt: <span class="t-s">'2026-10-31T00:00:00Z'</span>, id: <span class="t-s">'abc'</span> }, secret)
+    expect(decodeCursor(c, secret)).toEqual({ createdAt: <span class="t-s">'2026-10-31T00:00:00Z'</span>, id: <span class="t-s">'abc'</span> })
+  })
+  it(<span class="t-s">'rejects tampering'</span>, () =&gt; {
+    <span class="t-k">const</span> c = encodeCursor({ id: <span class="t-s">'abc'</span> }, secret)
+    <span class="t-k">const</span> forged = <span class="t-s">`${Buffer.from(JSON.stringify({ id: 'zzz' })).toString('base64url')}.${c.split('.')[1]}`</span>
+    expect(decodeCursor(forged, secret)).toBeNull()
+  })
+  it(<span class="t-s">'rejects a different secret and garbage'</span>, () =&gt; {
+    expect(decodeCursor(encodeCursor({ id: <span class="t-n">1</span> }, secret), <span class="t-s">'other'</span>)).toBeNull()
+    expect(decodeCursor(<span class="t-s">'not-a-cursor'</span>, secret)).toBeNull()
+  })
+})</code></pre></figure>
+<ul>
+  <li>Each <code>it('…', () =&gt; { … })</code> is one test. <code>expect(a).toEqual(b)</code> says "these must match".</li>
+  <li>The three tests prove: a cursor decodes back to what went in; a cursor with its content swapped but the old signature is rejected; a different secret or garbage text is rejected.</li>
+</ul>
+<figure class="code" data-lang="bash"><div class="code-head"><span class="code-file">terminal</span><button type="button" class="copy" aria-label="Copy code">Copy</button></div><pre><code>pnpm test:unit</code></pre></figure>
+<aside class="callout check"><p class="callout-label">Checkpoint</p>
+<p>Vitest prints one test file with 3 passing tests. Commit: <code>git add -A && git commit -m "Validation, cursor paging, rate limit and first test"</code>.</p>
+</aside>
+
+      <label class="done"><input type="checkbox" id="done"> I finished this chapter</label>
+      <nav class="pn"><a class="prev" href="06-errors.html"><small>Previous</small>One shape for every error</a><a class="next" href="08-accounts.html"><small>Next</small>Accounts, sign-in and sessions</a></nav>
+    </article>
+    <footer class="foot">Code on these pages is copied from the repository at build time (commit <code>759db48</code>). Rebuild with <code>node tutorial/build.mjs</code>.</footer>
+  </main>
+  <aside class="toc"><p>On this page</p><ul><li><a href="#checking-incoming-data-with-zod">Checking incoming data with Zod</a></li><li><a href="#long-lists-pages-and-cursors">Long lists: pages and cursors</a></li><li><a href="#rate-limiting">Rate limiting</a></li><li><a href="#your-first-automated-test">Your first automated test</a></li></ul></aside>
+</div>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

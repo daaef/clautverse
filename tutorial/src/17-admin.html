@@ -1,0 +1,81 @@
+<!--@meta
+part: Part 5 · Stars, safety and admin
+title: The admin area and the audit trail
+summary: Reviewing applications, hiding communities, working the report queue, correcting XP, and logging every step.
+-->
+<p class="lead">Admins keep the platform healthy. Their endpoints all live under <code>/api/admin</code> and share one rule: <strong>every action is checked, reasoned and recorded</strong>. This chapter shows the pattern with the most important routes and lists the rest.</p>
+
+<h2>How admin access works</h2>
+<plain>
+<p>An admin is a normal account with an extra role word, <code>super_admin</code>, in its <code>roles</code> text. There is deliberately no public way to get that role: sign-up forces <code>roles</code> to <code>fan</code> (chapter 8). You grant it by hand in the database, as you did in the chapter 12 check:</p>
+</plain>
+<!--@code sql | granting admin by hand (local development)-->
+update "user" set roles = 'fan,super_admin' where email = 'ada@example.com';
+<!--@/code-->
+<p>Every admin endpoint begins with <code>const admin = await requireAdmin(event)</code> (from <code>admin.ts</code>, chapter 11), which answers <code>UNAUTHENTICATED</code> or <code>FORBIDDEN</code> as appropriate.</p>
+<tech>
+<p>The same four-part shape repeats in almost every admin write: <strong>1)</strong> <code>requireAdmin</code>; <strong>2)</strong> validate the body (a reason is usually required); <strong>3)</strong> a transaction that locks the row (<code>.for('update')</code>), checks its current state, changes it; <strong>4)</strong> <code>audit(...)</code> and often <code>notify(...)</code> <em>inside that same transaction</em>, so a change can never exist without its audit row.</p>
+</tech>
+
+<h2>Accepting a Star's application</h2>
+<p>This is the endpoint that turns a fan into a Star. You wrote the application side in chapter 15.</p>
+<!--@file server/api/admin/applications/[id]/accept.post.ts-->
+<p>Inside one transaction it: locks the application; returns quietly if it is already accepted (safe to retry); refuses if it was declined; creates the <code>talent</code> profile with a unique slug (or reuses one); creates the Star's community with <code>ensureTalentCommunity</code>; adds the <code>talent</code> role with <code>grantRole</code>; marks the application accepted; writes the audit row; and notifies the applicant. If any step fails, none of it happens.</p>
+
+<h2>Working the report queue</h2>
+<p><code>server/api/admin/reports/[id]/actions.post.ts</code> applies one of five actions to a report and closes it:</p>
+<!--@file server/api/admin/reports/[id]/actions.post.ts-->
+<ul>
+  <li><code>dismiss</code>, <code>remove_content</code>, <code>suspend_user</code>, <code>remove_member</code> or <code>veto_community</code>.</li>
+  <li>It first looks up what was reported with <code>reportSubject</code> (chapter 16), and rejects an action that makes no sense for that target (for example <code>remove_content</code> on a user report) with <code>not_applicable</code>.</li>
+  <li><code>suspend_user</code> and <code>remove_member</code> reuse <code>suspendUser</code> and <code>removeMember</code> so the rules are written once.</li>
+</ul>
+
+<h2>Hiding a community (veto)</h2>
+<!--@file server/api/admin/communities/[id]/veto.post.ts-->
+<p>Veto only flips <code>status</code> to <code>vetoed</code>. Memberships and Originals numbers are untouched, so a restore brings everything back. The hiding itself is done by <code>loadVisibleCommunity</code> (chapter 11).</p>
+
+<h2>Correcting XP without rewriting history</h2>
+<!--@file server/api/admin/xp-adjustments.post.ts-->
+<ul>
+  <li>A correction is a <strong>new ledger row</strong> (positive or negative, never zero) with a required reason and the admin's ID. A random UUID is used as <code>sourceId</code> because each adjustment is its own event.</li>
+  <li>It is also written to the audit log.</li>
+</ul>
+
+<h2>The audit log</h2>
+<!--@file server/api/admin/audit.get.ts-->
+<p>This is read-only: no route in the project updates or deletes <code>admin_audit</code> rows. Admins can filter by who, what kind of target and a time range.</p>
+
+<h2>Suspending a user</h2>
+<!--@file server/api/admin/users/[id]/suspend.post.ts-->
+<p>The handler is three lines because the logic lives in <code>suspendUser</code> (chapter 11): admins cannot be suspended, and suspending deletes the person's sessions so they are signed out everywhere.</p>
+
+<h2>Every admin route</h2>
+<p>The remaining files follow the same pattern. Each link opens the full code in the reference pages, ready to copy.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Area</th><th>Route files (under <code>server/api/admin</code>)</th></tr></thead>
+<tbody>
+<tr><td>Overview</td><td><!--@ref server/api/admin/dashboard.get.ts | dashboard.get.ts--> (six counts, fetched in parallel)</td></tr>
+<tr><td>Applications</td><td><!--@ref server/api/admin/applications/index.get.ts | applications/index.get.ts-->, <!--@ref server/api/admin/applications/[id]/index.get.ts | applications/[id]/index.get.ts-->, accept (above), <!--@ref server/api/admin/applications/[id]/decline.post.ts | applications/[id]/decline.post.ts--> (needs a reason for the applicant)</td></tr>
+<tr><td>Identity claims (to be removed)</td><td><!--@ref server/api/admin/claims/index.get.ts | claims/index.get.ts-->, <!--@ref server/api/admin/claims/[id]/index.get.ts | claims/[id]/index.get.ts-->, <!--@ref server/api/admin/claims/[id]/verify.post.ts | claims/[id]/verify.post.ts-->, <!--@ref server/api/admin/claims/[id]/reject.post.ts | claims/[id]/reject.post.ts--></td></tr>
+<tr><td>Communities</td><td><!--@ref server/api/admin/communities/index.get.ts | communities/index.get.ts--> (includes vetoed ones), <!--@ref server/api/admin/communities/index.post.ts | communities/index.post.ts-->, veto (above), <!--@ref server/api/admin/communities/[id]/restore.post.ts | communities/[id]/restore.post.ts-->, <!--@ref server/api/admin/communities/[id]/members/[userId]/reinstate.post.ts | communities/[id]/members/[userId]/reinstate.post.ts--></td></tr>
+<tr><td>Users</td><td><!--@ref server/api/admin/users/index.get.ts | users/index.get.ts--> (search), suspend (above), <!--@ref server/api/admin/users/[id]/reinstate.post.ts | users/[id]/reinstate.post.ts--></td></tr>
+<tr><td>Reports</td><td><!--@ref server/api/admin/reports/index.get.ts | reports/index.get.ts--> (oldest first), actions (above)</td></tr>
+<tr><td>XP rules and corrections</td><td><!--@ref server/api/admin/xp-rules.get.ts | xp-rules.get.ts-->, <!--@ref server/api/admin/xp-rules.put.ts | xp-rules.put.ts-->, xp-adjustments (above)</td></tr>
+<tr><td>Badges</td><td><!--@ref server/api/admin/badges/index.get.ts | badges/index.get.ts-->, <!--@ref server/api/admin/badges/index.post.ts | badges/index.post.ts-->, <!--@ref server/api/admin/badges/[id]/index.get.ts | badges/[id]/index.get.ts-->, <!--@ref server/api/admin/badges/[id]/index.patch.ts | badges/[id]/index.patch.ts-->, <!--@ref server/api/admin/badges/[id]/awards.post.ts | badges/[id]/awards.post.ts--></td></tr>
+<tr><td>Audit</td><td>audit.get (above)</td></tr>
+</tbody></table></div>
+<aside class="callout tip"><p class="callout-label">Two small things to know</p>
+<p>The member-reinstate route carries the route ID <code>ADM-16</code>, the same number as the badge routes. The plan (task 2c) renumbers it to ADM-19. And the plan also removes two badge routes that exist only in the contract file, not as code.</p></aside>
+
+<check>
+<p>Accept the application you submitted in chapter 15 (you are an admin since chapter 12). Find its id from the list, then accept it:</p>
+<!--@code bash | terminal-->
+curl -b jar.txt "http://localhost:3000/api/admin/applications?status=pending"
+curl -b jar.txt -X POST http://localhost:3000/api/admin/applications/APPLICATION_ID/accept \
+  -H 'Content-Type: application/json' -d '{}'
+curl -b jar.txt "http://localhost:3000/api/admin/audit"
+curl -b jar.txt http://localhost:3000/api/communities
+<!--@/code-->
+<p>Expected: the application becomes <code>accepted</code>; the audit list shows an <code>application.accepted</code> entry; and a new community named after the applicant appears in the public list. Check the dashboard too: <code>curl -b jar.txt http://localhost:3000/api/admin/dashboard</code>. Commit: <code>git add -A && git commit -m "Admin area and audit trail"</code>.</p>
+</check>
