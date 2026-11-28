@@ -75,6 +75,11 @@ function expand(body, slug) {
       if (!used.has(p)) used.set(p, slug)
       return figure({ lang: langOf(p), file: p, title: p, caption: cap ?? 'excerpt', code: blk.join('\n') })
     })
+    .replace(/<!--@pkg ([\w@\/.-]+)-->/g, (_, n) => {
+      const v = pkg.dependencies?.[n] ?? pkg.devDependencies?.[n] ?? pkg.engines?.[n]
+      if (!v) { problems.push(`${slug}: package ${n} not in package.json`); return '?' }
+      return v
+    })
     .replace(/<!--@code (\w+)(?: \| (.*?))?-->\n?([\s\S]*?)<!--@\/code-->/g, (_, lang, title, code) => figure({ lang, title: title ?? lang, code }))
     .replace(/<!--@ref (\S+?)(?: \| (.*?))?-->/g, (_, p, label) => {
       const g = REF_GROUPS.find(x => x.test(p))
@@ -83,11 +88,6 @@ function expand(body, slug) {
       return `<a href="${g.slug}.html#${fileId(p)}"><code>${esc(label ?? p.replace(/^server\/api\//, ''))}</code></a>`
     })
     .replace(/<!--@tables-->/g, () => String(['auth', 'app'].reduce((n, f) => n + (repoFile(`server/db/schema/${f}.ts`).match(/pgTable\(/g) ?? []).length, 0)))
-    .replace(/<!--@pkg ([\w@\/.-]+)-->/g, (_, n) => {
-      const v = pkg.dependencies?.[n] ?? pkg.devDependencies?.[n] ?? pkg.engines?.[n]
-      if (!v) { problems.push(`${slug}: package ${n} not in package.json`); return '?' }
-      return v
-    })
     .replace(/<(plain|tech|tip|warn|check|try)>/g, (_, k) => `<aside class="callout ${k}"><p class="callout-label">${({ plain: 'In plain words', tech: 'In programming terms', tip: 'Tip', warn: 'Watch out', check: 'Checkpoint', try: 'Try it' })[k]}</p>`)
     .replace(/<\/(plain|tech|tip|warn|check|try)>/g, '</aside>')
 }

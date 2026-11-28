@@ -5,6 +5,45 @@ summary: Add the libraries, tell Nuxt about our settings, and keep passwords out
 -->
 <p class="lead">The starter is empty. Now we add the libraries Clautverse uses and set up the configuration files. Nothing visible changes yet; this is the groundwork.</p>
 
+<h2>On Windows: step by step</h2>
+<p>Everything on this page works on Windows. A few commands need a different spelling, and this section covers all of them. If you would rather skip the differences, use <strong>Git Bash</strong> (installed with Git for Windows) or <strong>WSL</strong> (Ubuntu inside Windows). Both run the guide's commands exactly as written. The steps below use <strong>PowerShell</strong>, which is already on your computer.</p>
+<ol class="flow">
+  <li><strong>Open PowerShell.</strong> Press the Windows key, type <code>PowerShell</code>, press Enter.</li>
+  <li><strong>Check the tools from chapter 1.</strong> Run <code>node -v</code> (it must print 24 or higher), <code>git --version</code> and <code>pnpm -v</code>. Anything missing can be installed from PowerShell with the Windows package manager:
+<!--@code powershell | PowerShell-->
+winget install OpenJS.NodeJS
+winget install Git.Git
+npm install -g pnpm
+<!--@/code-->
+Close and reopen PowerShell after installing so it sees the new programs.</li>
+  <li><strong>Allow pnpm to run.</strong> If PowerShell says <code>running scripts is disabled on this system</code> when you type <code>pnpm</code>, run this once, then reopen PowerShell:
+<!--@code powershell | PowerShell-->
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+<!--@/code-->
+</li>
+  <li><strong>Work in a short, plain folder.</strong> Keep the project somewhere like <code>C:\dev\clautverse</code>. Avoid folders synced by OneDrive or very long paths; syncing and long paths are common sources of odd install errors on Windows.</li>
+  <li><strong>Install the libraries.</strong> Inside the project folder, run the two <code>pnpm add</code> commands from the next section exactly as shown. They are single lines, so they work in PowerShell unchanged.</li>
+  <li><strong>Check that it worked.</strong>
+<!--@code powershell | PowerShell-->
+pnpm list --depth 0
+<!--@/code-->
+You should see every package from the table below with a version number. Then run <code>pnpm dev</code> and open <code>http://localhost:3000</code>.</li>
+</ol>
+<plain>
+<p>None of the project's packages should need a C++ compiler. If pnpm ever prints a failed "build" step for a package, copy the first error line and look it up; the most common cause on Windows is a project folder inside OneDrive or a path that is too long.</p>
+</plain>
+<tech>
+<p><code>winget</code> is Windows' built-in package manager (Windows 10 and 11). <code>pnpm-workspace.yaml</code> (later on this page) tells pnpm which packages may run install scripts; that file is the same on every system.</p>
+</tech>
+<aside class="callout tip"><p class="callout-label">Windows differences used later in the guide</p>
+<ul>
+<li><strong>Random secrets:</strong> <code>openssl</code> is not installed on Windows. Use Node instead (the "Secrets" section below shows it).</li>
+<li><strong>Loading <code>.env</code>:</strong> <code>set -a; . ./.env; set +a</code> (chapter 5) is bash only. The "Secrets" section gives the PowerShell version.</li>
+<li><strong><code>curl</code>:</strong> in Windows PowerShell, <code>curl</code> is a different tool. Type <code>curl.exe</code>, and note that the long <code>curl</code> examples with <code>'single quoted JSON'</code> are far easier in Git Bash or WSL. The API Explorer page (chapter 19) is a friendlier way to send those requests.</li>
+<li><strong>Database commands:</strong> see <a href="90-postgres-without-docker.html">PostgreSQL without Docker</a> if you do not want to use Docker Desktop (which needs WSL 2 on Windows).</li>
+</ul>
+</aside>
+
 <h2>Install the libraries</h2>
 <plain>
 <p>A <strong>package</strong> is code someone else wrote and shared. Instead of writing our own login system or database layer we install tested ones. <code>pnpm add</code> downloads a package and records it in <code>package.json</code>.</p>
@@ -101,7 +140,20 @@ cp .env.example .env
 openssl rand -base64 32
 openssl rand -base64 32
 <!--@/code-->
+<aside class="callout tip"><p class="callout-label">Windows</p>
+<p><code>cp</code> works in PowerShell. For the random strings, use Node (already installed) instead of <code>openssl</code>; run it once per secret:</p>
+<!--@code powershell | PowerShell-->
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+<!--@/code-->
+</aside>
 <p>Each <code>openssl</code> line prints a random string. Paste one after <code>NUXT_BETTER_AUTH_SECRET=</code> and the other after <code>NUXT_CURSOR_SECRET=</code>. For <code>NUXT_CRON_SECRET</code> you can paste a third. On Windows without <code>openssl</code>, any long random string works (a password manager can make one).</p>
+<aside class="callout tip"><p class="callout-label">Windows: loading <code>.env</code> into PowerShell</p>
+<p>Chapter 5 asks you to run <code>set -a; . ./.env; set +a</code>, which only works in bash. In PowerShell, run this once per window instead (it copies each line of <code>.env</code> into that window's settings):</p>
+<!--@code powershell | PowerShell-->
+Get-Content .env | ForEach-Object { if ($_ -match '^\s*([^#=\s]+)\s*=\s*(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2].Trim('"'), 'Process') } }
+<!--@/code-->
+<p>Check it with <code>echo $env:NUXT_DATABASE_URL</code>; it should print your database address.</p>
+</aside>
 <warn>
 <p><strong>Never save <code>.env</code> in git.</strong> It holds secrets. The next file prevents that. If you ever commit a real secret by accident, treat it as leaked and replace it.</p>
 </warn>
