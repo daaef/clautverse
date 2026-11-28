@@ -6,12 +6,18 @@ summary: Install PostgreSQL directly on your computer and swap the Docker comman
 <p class="lead">The guide uses Docker so the database is one command. If you would rather install PostgreSQL directly on your computer (or already have it), this page gives you the replacements. Everything else in the guide stays the same.</p>
 
 <h2>Which version</h2>
+<plain>
+<p>PostgreSQL is the program that stores all the data. Docker was only a convenient box to run it in. You can run the same program directly on your computer instead, and the app will not notice the difference.</p>
+</plain>
 <p>The guide uses <strong>PostgreSQL 17</strong> (the Docker image is <code>postgres:17</code>, from the project's README). Install 17 if you can. The project's tests drop a database with <code>with (force)</code>, which needs PostgreSQL 13 or newer, so any recent version should work, but 17 is the one the guide was written against. Check yours with:</p>
 <!--@code bash | terminal-->
 psql --version
 <!--@/code-->
 
 <h2>1. Install and start it</h2>
+<plain>
+<p>Installing gives you the database program plus a background "service" that keeps it running, like a shop that stays open while you work.</p>
+</plain>
 <div class="tablewrap"><table>
 <thead><tr><th>System</th><th>Install</th><th>Notes</th></tr></thead>
 <tbody>
@@ -30,6 +36,9 @@ psql --version
 create database clautverse;
 alter user postgres with password 'postgres';
 <!--@/code-->
+<check>
+<p>Still inside <code>psql</code>, type <code>\l</code>. The list of databases should include <code>clautverse</code>.</p>
+</check>
 <p>The second line is optional on macOS Homebrew, where you can use your own login without a password. It is a throwaway local password; never use it anywhere real. Type <code>\q</code> to leave.</p>
 
 <h2>3. Point the app at it</h2>
@@ -61,6 +70,9 @@ alter user postgres with password 'postgres';
 <tr><td>Chapter 20</td><td>Docker container must be running</td><td>The PostgreSQL service must be running, and see the next section.</td></tr>
 <tr><td>Chapter 21</td><td>Port 5432 already in use</td><td>Not an issue if the installed PostgreSQL is the one using it. Just do not also run the Docker container.</td></tr>
 </tbody></table></div>
+<tech>
+<p>The app and Drizzle only ever read the address in <code>NUXT_DATABASE_URL</code>; <code>postgres.js</code> (chapter 5) opens a normal TCP connection to it. Docker or a local install is invisible to the code, which is why only the setup commands change.</p>
+</tech>
 <p>Everything else (<code>pnpm db:generate</code>, <code>pnpm db:migrate</code>, <code>pnpm db:seed</code>, the health check) is identical, because the app only ever sees the address in <code>NUXT_DATABASE_URL</code>.</p>
 
 <h2>5. Tests with a local database</h2>
@@ -74,6 +86,10 @@ pnpm test:e2e
   <li>The test database name is built by replacing the last part of that address with <code>clautverse_test</code>, so keep the <code>/postgres</code> ending.</li>
   <li>Your real <code>clautverse</code> data is never touched by the tests.</li>
 </ul>
+
+<check>
+<p>With the local database running, chapters 5 onward work unchanged: <code>pnpm db:migrate</code>, <code>pnpm db:seed</code>, then <code>curl http://localhost:3000/api/health</code> should return <code>{"status":"ok","db":"ok","version":"dev"}</code>. Commit as usual.</p>
+</check>
 
 <h2>Docker or local: which should I use?</h2>
 <ul>
